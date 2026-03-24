@@ -25,6 +25,9 @@ import WalletScreen from '../screens/WalletScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ActiveDeliveryScreen from '../screens/ActiveDeliveryScreen';
 import ChatScreen from '../screens/ChatScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
+import OrdersScreen from '../screens/OrdersScreen';
+import ReviewScreen from '../screens/ReviewScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -175,11 +178,22 @@ export default function AppNavigator() {
           <Stack.Screen
             name="Chat"
             component={ChatScreen}
-            options={({ route }) => ({
-              title: t('chat'),
-              headerStyle: { backgroundColor: COLORS.primary },
-              headerTintColor: COLORS.white,
-            })}
+            options={{ title: t('chat'), headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
+          />
+          <Stack.Screen
+            name="Notifications"
+            component={NotificationsScreen}
+            options={{ title: t('notifications'), headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
+          />
+          <Stack.Screen
+            name="Orders"
+            component={OrdersScreen}
+            options={{ title: t('deliveryHistory'), headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
+          />
+          <Stack.Screen
+            name="Review"
+            component={ReviewScreen}
+            options={{ title: '⭐ Rate Delivery', headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
           />
         </Stack.Navigator>
       ) : (

@@ -85,9 +85,9 @@ export default function ProfileScreen({ navigation }) {
 
       {/* Menu Items */}
       <View style={styles.menu}>
-        <MenuButton icon="📜" label={`${t('deliveryHistory', lang)} / ${t('deliveryHistory', lang === 'am' ? 'en' : 'am')}`} onPress={() => navigation.navigate('Orders')} />
-        <MenuButton icon="💰" label={`${t('earnings', lang)} / ገቢ`} onPress={() => navigation.navigate('Earnings')} />
-        <MenuButton icon="🔔" label={`${t('notifications', lang)}`} onPress={() => {}} />
+        <MenuButton icon="📜" label={`${t('deliveryHistory', lang)} / Delivery History`} onPress={() => navigation.navigate('Orders')} />
+        <MenuButton icon="💰" label={`${t('earnings', lang)}`} onPress={() => navigation.navigate('Earnings')} />
+        <MenuButton icon="🔔" label={`${t('notifications', lang)}`} onPress={() => navigation.navigate('Notifications')} />
         <MenuButton icon="❓" label={`${t('helpSupport', lang)}`} onPress={() => {}} />
 
         {/* Language Toggle */}

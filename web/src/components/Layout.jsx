@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../store/authSlice';
+import { io } from 'socket.io-client';
 
 const storeNav = [
   { to: '/store', label: 'Dashboard', icon: '📊', end: true },
@@ -24,6 +25,52 @@ export default function Layout() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [orderAlert, setOrderAlert] = useState(null); // { orderId, orderNumber, status }
+  const socketRef = useRef(null);
+
+  // Real-time order alerts for store users
+  useEffect(() => {
+    if (user?.role !== 'STORE') return;
+    const token = localStorage.getItem('accessToken');
+    const socket = io('/', { auth: { token } });
+
+    socket.on('order_status_updated', (data) => {
+      setOrderAlert({ ...data, ts: Date.now() });
+      // Browser notification if permission granted
+      if (Notification.permission === 'granted') {
+        new Notification('Abay Driver — Order Update', {
+          body: `Order #${data.orderNumber}: ${data.status?.replace(/_/g, ' ')}`,
+          icon: '/favicon.svg',
+        });
+      }
+    });
+
+    socket.on('order_assigned', (data) => {
+      setOrderAlert({ ...data, ts: Date.now() });
+      if (Notification.permission === 'granted') {
+        new Notification('🚗 Driver Assigned!', {
+          body: `A driver has been assigned to order #${data.orderNumber}`,
+          icon: '/favicon.svg',
+        });
+      }
+    });
+
+    socketRef.current = socket;
+
+    // Request browser notification permission
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    return () => socket.disconnect();
+  }, [user]);
+
+  // Auto-dismiss alert after 6 seconds
+  useEffect(() => {
+    if (!orderAlert) return;
+    const timer = setTimeout(() => setOrderAlert(null), 6000);
+    return () => clearTimeout(timer);
+  }, [orderAlert?.ts]);
 
   const navItems = user?.role === 'ADMIN' ? adminNav : storeNav;
 
@@ -109,6 +156,24 @@ export default function Layout() {
             </div>
           </div>
         </header>
+
+        {/* Real-time order alert banner */}
+        {orderAlert && (
+          <div className="bg-primary-600 text-white px-6 py-3 flex items-center justify-between text-sm animate-pulse-once flex-shrink-0">
+            <span>
+              📦 <strong>Order #{orderAlert.orderNumber}</strong> — {orderAlert.status?.replace(/_/g, ' ')}
+            </span>
+            <div className="flex items-center gap-3">
+              <Link
+                to={`/store/orders/${orderAlert.orderId}/track`}
+                className="bg-white text-primary-700 font-semibold px-3 py-1 rounded-lg text-xs hover:bg-primary-50"
+              >
+                Track →
+              </Link>
+              <button onClick={() => setOrderAlert(null)} className="text-primary-200 hover:text-white text-lg leading-none">×</button>
+            </div>
+          </div>
+        )}
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto">

@@ -15,6 +15,7 @@ const adminRoutes = require('./routes/admin');
 const uploadRoutes = require('./routes/upload');
 const chatRoutes = require('./routes/chat');
 const walletRoutes = require('./routes/wallet');
+const notificationRoutes = require('./routes/notifications');
 const errorHandler = require('./middleware/errorHandler');
 const { initSocket } = require('./services/socketService');
 
@@ -64,6 +65,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/wallet', walletRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check
 app.get('/health', (_req, res) => {
