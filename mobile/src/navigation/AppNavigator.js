@@ -29,6 +29,7 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import OrdersScreen from '../screens/OrdersScreen';
 import ReviewScreen from '../screens/ReviewScreen';
 import HelpSupportScreen from '../screens/HelpSupportScreen';
+import OrderDetailScreen from '../screens/OrderDetailScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -200,6 +201,11 @@ export default function AppNavigator() {
             name="HelpSupport"
             component={HelpSupportScreen}
             options={{ title: 'Help & Support / እርዳታ', headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
+          />
+          <Stack.Screen
+            name="OrderDetail"
+            component={OrderDetailScreen}
+            options={{ title: 'Order Details', headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
           />
         </Stack.Navigator>
       ) : (

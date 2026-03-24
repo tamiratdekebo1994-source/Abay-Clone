@@ -17,6 +17,7 @@ import AdminOrders from './pages/admin/AdminOrders';
 import AdminWithdrawals from './pages/admin/AdminWithdrawals';
 import AdminSurge from './pages/admin/AdminSurge';
 import StoreProfile from './pages/store/StoreProfile';
+import PaymentResult from './pages/store/PaymentResult';
 import Layout from './components/Layout';
 
 function PrivateRoute({ children, roles }) {
@@ -46,6 +47,7 @@ export default function App() {
         <Route path="orders" element={<StoreOrders />} />
         <Route path="orders/new" element={<CreateOrder />} />
         <Route path="orders/:orderId/track" element={<OrderTracking />} />
+        <Route path="orders/:orderId/payment-result" element={<PaymentResult />} />
         <Route path="profile" element={<StoreProfile />} />
       </Route>
 
