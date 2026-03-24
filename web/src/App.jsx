@@ -15,6 +15,8 @@ import AdminDrivers from './pages/admin/AdminDrivers';
 import AdminStores from './pages/admin/AdminStores';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminWithdrawals from './pages/admin/AdminWithdrawals';
+import AdminSurge from './pages/admin/AdminSurge';
+import StoreProfile from './pages/store/StoreProfile';
 import Layout from './components/Layout';
 
 function PrivateRoute({ children, roles }) {
@@ -44,6 +46,7 @@ export default function App() {
         <Route path="orders" element={<StoreOrders />} />
         <Route path="orders/new" element={<CreateOrder />} />
         <Route path="orders/:orderId/track" element={<OrderTracking />} />
+        <Route path="profile" element={<StoreProfile />} />
       </Route>
 
       {/* Admin Routes */}
@@ -53,6 +56,7 @@ export default function App() {
         <Route path="stores" element={<AdminStores />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="withdrawals" element={<AdminWithdrawals />} />
+        <Route path="surge" element={<AdminSurge />} />
       </Route>
 
       {/* Default redirect based on role */}

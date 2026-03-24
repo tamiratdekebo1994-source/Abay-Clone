@@ -7,6 +7,7 @@ const storeNav = [
   { to: '/store', label: 'Dashboard', icon: '📊', end: true },
   { to: '/store/orders', label: 'My Orders', icon: '📦' },
   { to: '/store/orders/new', label: 'New Delivery', icon: '➕' },
+  { to: '/store/profile', label: 'Store Profile', icon: '🏪' },
 ];
 
 const adminNav = [
@@ -15,6 +16,7 @@ const adminNav = [
   { to: '/admin/stores', label: 'Stores', icon: '🏪' },
   { to: '/admin/orders', label: 'All Orders', icon: '📦' },
   { to: '/admin/withdrawals', label: 'Withdrawals', icon: '💸' },
+  { to: '/admin/surge', label: 'Surge Pricing', icon: '🔥' },
 ];
 
 export default function Layout() {

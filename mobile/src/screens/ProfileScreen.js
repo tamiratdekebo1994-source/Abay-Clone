@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, Alert,
@@ -6,16 +6,24 @@ import {
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../store/authStore';
 import { COLORS, VEHICLE_TYPES } from '../utils/constants';
+import { t, setLanguage, getLanguage } from '../utils/i18n';
 
 export default function ProfileScreen({ navigation }) {
   const dispatch = useDispatch();
   const { user, driver } = useSelector((state) => state.auth);
+  const [lang, setLang] = useState(getLanguage());
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', style: 'destructive', onPress: () => dispatch(logout()) },
+    Alert.alert(t('logout'), t('confirm') + '?', [
+      { text: t('cancel'), style: 'cancel' },
+      { text: t('logout'), style: 'destructive', onPress: () => dispatch(logout()) },
     ]);
+  };
+
+  const toggleLanguage = () => {
+    const newLang = lang === 'am' ? 'en' : 'am';
+    setLanguage(newLang);
+    setLang(newLang);
   };
 
   const getStatusColor = (status) => {
@@ -77,16 +85,29 @@ export default function ProfileScreen({ navigation }) {
 
       {/* Menu Items */}
       <View style={styles.menu}>
-        <MenuButton icon="📜" label="Delivery History / የማድረስ ታሪክ" onPress={() => navigation.navigate('Orders')} />
-        <MenuButton icon="💰" label="Earnings / ገቢ" onPress={() => navigation.navigate('Earnings')} />
-        <MenuButton icon="🔔" label="Notifications / ማሳወቂያዎች" onPress={() => {}} />
-        <MenuButton icon="❓" label="Help & Support / እርዳታ" onPress={() => {}} />
-        <MenuButton icon="📋" label="Terms of Service / የአገልግሎት ውሎች" onPress={() => {}} />
+        <MenuButton icon="📜" label={`${t('deliveryHistory', lang)} / ${t('deliveryHistory', lang === 'am' ? 'en' : 'am')}`} onPress={() => navigation.navigate('Orders')} />
+        <MenuButton icon="💰" label={`${t('earnings', lang)} / ገቢ`} onPress={() => navigation.navigate('Earnings')} />
+        <MenuButton icon="🔔" label={`${t('notifications', lang)}`} onPress={() => {}} />
+        <MenuButton icon="❓" label={`${t('helpSupport', lang)}`} onPress={() => {}} />
+
+        {/* Language Toggle */}
+        <TouchableOpacity style={styles.menuItem} onPress={toggleLanguage}>
+          <Text style={styles.menuIcon}>🌐</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.menuLabel}>{t('language', lang)}</Text>
+            <Text style={styles.menuSub}>{lang === 'am' ? 'አማርኛ (ቀይ ወደ English)' : 'English (switch to አማርኛ)'}</Text>
+          </View>
+          <View style={[styles.langBadge, { backgroundColor: lang === 'am' ? COLORS.primary : COLORS.accent }]}>
+            <Text style={[styles.langBadgeText, { color: lang === 'am' ? COLORS.white : COLORS.primary }]}>
+              {lang === 'am' ? 'አማ' : 'EN'}
+            </Text>
+          </View>
+        </TouchableOpacity>
       </View>
 
       {/* Logout */}
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-        <Text style={styles.logoutText}>🚪 Logout / ውጣ</Text>
+        <Text style={styles.logoutText}>🚪 {t('logout', lang)}</Text>
       </TouchableOpacity>
 
       <View style={styles.footer}>
@@ -148,8 +169,11 @@ const styles = StyleSheet.create({
   menu: { backgroundColor: COLORS.white, margin: 16, marginTop: 0, borderRadius: 12, overflow: 'hidden' },
   menuItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: COLORS.grayLight },
   menuIcon: { fontSize: 20, marginRight: 12 },
-  menuLabel: { flex: 1, fontSize: 15, color: COLORS.text },
+  menuLabel: { fontSize: 15, color: COLORS.text },
+  menuSub: { fontSize: 11, color: COLORS.gray, marginTop: 1 },
   menuArrow: { fontSize: 20, color: COLORS.gray },
+  langBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  langBadgeText: { fontSize: 12, fontWeight: '700' },
   logoutBtn: {
     margin: 16, backgroundColor: '#FEE2E2',
     borderRadius: 12, padding: 16, alignItems: 'center',
