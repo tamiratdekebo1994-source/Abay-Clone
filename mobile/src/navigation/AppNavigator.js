@@ -28,6 +28,7 @@ import ChatScreen from '../screens/ChatScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import OrdersScreen from '../screens/OrdersScreen';
 import ReviewScreen from '../screens/ReviewScreen';
+import HelpSupportScreen from '../screens/HelpSupportScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -194,6 +195,11 @@ export default function AppNavigator() {
             name="Review"
             component={ReviewScreen}
             options={{ title: '⭐ Rate Delivery', headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
+          />
+          <Stack.Screen
+            name="HelpSupport"
+            component={HelpSupportScreen}
+            options={{ title: 'Help & Support / እርዳታ', headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
           />
         </Stack.Navigator>
       ) : (

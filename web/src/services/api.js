@@ -49,6 +49,7 @@ export const storeAPI = {
 };
 
 export const orderAPI = {
+  estimate: (data) => api.post('/orders/estimate', data),
   create: (data) => api.post('/orders', data),
   getMyOrders: (params) => api.get('/orders', { params }),
   getOrder: (id) => api.get(`/orders/${id}`),
@@ -58,10 +59,24 @@ export const orderAPI = {
 
 export const adminAPI = {
   getDashboard: () => api.get('/admin/dashboard'),
+  getAnalytics: (period = '7d') => api.get('/admin/analytics', { params: { period } }),
   getDrivers: (params) => api.get('/admin/drivers', { params }),
   approveDriver: (id, action) => api.patch(`/admin/drivers/${id}/status`, { action }),
   getStores: (params) => api.get('/admin/stores', { params }),
   getAllOrders: (params) => api.get('/admin/orders', { params }),
+  getSurge: () => api.get('/admin/surge'),
+  setSurge: (city, multiplier) => api.post('/admin/surge', { city, multiplier }),
+};
+
+export const walletAPI = {
+  getPendingWithdrawals: (status) => api.get('/wallet/pending', { params: { status } }),
+  processWithdrawal: (id, data) => api.patch(`/wallet/${id}/process`, data),
+};
+
+export const notificationAPI = {
+  list: (params) => api.get('/notifications', { params }),
+  markAllRead: () => api.patch('/notifications/read-all'),
+  markRead: (id) => api.patch(`/notifications/${id}/read`),
 };
 
 export default api;

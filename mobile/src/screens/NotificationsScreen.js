@@ -3,10 +3,9 @@ import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, ActivityIndicator, RefreshControl,
 } from 'react-native';
+import { notificationAPI } from '../services/api';
 import { COLORS } from '../utils/constants';
 import { t } from '../utils/i18n';
-
-const API_URL_BASE = require('../services/api').default?.defaults?.baseURL || '';
 
 const TYPE_ICONS = {
   ORDER_NEW:       '🆕',
@@ -20,30 +19,15 @@ const TYPE_ICONS = {
   SYSTEM:          '📢',
 };
 
-async function fetchNotifications(token, page = 1) {
-  const res = await fetch(
-    `${API_URL_BASE.replace('/api', '')}/api/notifications?page=${page}&limit=30`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  return res.json();
+function getTimeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
-
-async function markAllRead(token) {
-  await fetch(`${API_URL_BASE.replace('/api', '')}/api/notifications/read-all`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
-async function markOneRead(token, id) {
-  await fetch(`${API_URL_BASE.replace('/api', '')}/api/notifications/${id}/read`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
-import { useSelector } from 'react-redux';
-import * as SecureStore from 'expo-secure-store';
 
 export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState([]);
@@ -54,8 +38,7 @@ export default function NotificationsScreen() {
   const load = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) setRefreshing(true);
-      const token = await SecureStore.getItemAsync('accessToken');
-      const data = await fetchNotifications(token);
+      const { data } = await notificationAPI.list({ limit: 30 });
       if (data.success) {
         setNotifications(data.data.notifications);
         setUnreadCount(data.data.unreadCount);
@@ -71,16 +54,14 @@ export default function NotificationsScreen() {
   useEffect(() => { load(); }, []);
 
   const handleMarkAllRead = async () => {
-    const token = await SecureStore.getItemAsync('accessToken');
-    await markAllRead(token);
+    await notificationAPI.markAllRead();
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     setUnreadCount(0);
   };
 
   const handleTap = async (item) => {
     if (!item.isRead) {
-      const token = await SecureStore.getItemAsync('accessToken');
-      await markOneRead(token, item.id);
+      await notificationAPI.markRead(item.id);
       setNotifications((prev) =>
         prev.map((n) => (n.id === item.id ? { ...n, isRead: true } : n))
       );
@@ -90,7 +71,6 @@ export default function NotificationsScreen() {
 
   const renderItem = ({ item }) => {
     const icon = TYPE_ICONS[item.type] || '🔔';
-    const timeAgo = getTimeAgo(item.createdAt);
     return (
       <TouchableOpacity
         style={[styles.item, !item.isRead && styles.itemUnread]}
@@ -104,10 +84,8 @@ export default function NotificationsScreen() {
           <Text style={[styles.title, !item.isRead && styles.titleUnread]} numberOfLines={1}>
             {item.titleAm || item.title}
           </Text>
-          <Text style={styles.body} numberOfLines={2}>
-            {item.bodyAm || item.body}
-          </Text>
-          <Text style={styles.time}>{timeAgo}</Text>
+          <Text style={styles.body} numberOfLines={2}>{item.bodyAm || item.body}</Text>
+          <Text style={styles.time}>{getTimeAgo(item.createdAt)}</Text>
         </View>
         {!item.isRead && <View style={styles.unreadDot} />}
       </TouchableOpacity>
@@ -124,23 +102,17 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header actions */}
       {unreadCount > 0 && (
         <TouchableOpacity style={styles.markAllBtn} onPress={handleMarkAllRead}>
           <Text style={styles.markAllText}>✓ Mark all as read ({unreadCount})</Text>
         </TouchableOpacity>
       )}
-
       <FlatList
         data={notifications}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => load(true)}
-            colors={[COLORS.primary]}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} colors={[COLORS.primary]} />
         }
         ListEmptyComponent={
           <View style={styles.empty}>
@@ -155,49 +127,27 @@ export default function NotificationsScreen() {
   );
 }
 
-function getTimeAgo(dateStr) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   markAllBtn: {
-    backgroundColor: COLORS.primaryLight,
-    marginHorizontal: 16,
-    marginTop: 12,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    marginHorizontal: 16, marginTop: 12,
+    borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center',
   },
   markAllText: { color: COLORS.white, fontWeight: '600', fontSize: 14 },
   item: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    flexDirection: 'row', alignItems: 'flex-start',
+    paddingHorizontal: 16, paddingVertical: 14,
     backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.grayLight,
+    borderBottomWidth: 1, borderBottomColor: COLORS.grayLight,
   },
   itemUnread: { backgroundColor: '#F0FDF4' },
   iconBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: COLORS.grayLighter,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    flexShrink: 0,
+    alignItems: 'center', justifyContent: 'center',
+    marginRight: 12, flexShrink: 0,
   },
   iconBadgeUnread: { backgroundColor: '#DCFCE7' },
   icon: { fontSize: 20 },

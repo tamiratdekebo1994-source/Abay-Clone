@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { adminAPI } from '../../services/api';
 
 const CITIES = [
   'Addis Ababa', 'Dire Dawa', 'Hawassa', 'Bahir Dar',
@@ -38,11 +39,7 @@ export default function AdminSurge() {
 
   const loadSurge = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch('/api/admin/surge', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
+      const { data } = await adminAPI.getSurge();
       if (data.success) setSurgeData(data.data);
     } catch (err) {
       console.error(err);
@@ -59,13 +56,7 @@ export default function AdminSurge() {
     }
     setIsSaving(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch('/api/admin/surge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ city: editCity, multiplier: val }),
-      });
-      const data = await res.json();
+      const { data } = await adminAPI.setSurge(editCity, val);
       if (!data.success) { showToast(data.message, 'error'); return; }
       showToast(`${editCity} surge set to ${val}x`, 'success');
       setEditCity(null);

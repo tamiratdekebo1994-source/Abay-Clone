@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { walletAPI } from '../../services/api';
 
 const PAYMENT_METHOD_LABELS = {
   TELEBIRR: { label: 'Telebirr', icon: '📱' },
@@ -33,11 +34,7 @@ export default function AdminWithdrawals() {
   const loadWithdrawals = async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/api/wallet/pending?status=${filter}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
+      const { data } = await walletAPI.getPendingWithdrawals(filter);
       setWithdrawals(data.data?.withdrawals || data.data || []);
     } catch (err) {
       console.error(err);
@@ -50,24 +47,12 @@ export default function AdminWithdrawals() {
     if (!selectedWithdrawal) return;
     setProcessingId(selectedWithdrawal.id);
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/api/wallet/${selectedWithdrawal.id}/process`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          status: actionStatus,
-          txRef: txRef || undefined,
-          failureReason: actionStatus === 'FAILED' ? failureReason : undefined,
-        }),
+      const { data } = await walletAPI.processWithdrawal(selectedWithdrawal.id, {
+        status: actionStatus,
+        txRef: txRef || undefined,
+        failureReason: actionStatus === 'FAILED' ? failureReason : undefined,
       });
-      const data = await res.json();
-      if (!data.success) {
-        showToast(data.message, 'error');
-        return;
-      }
+      if (!data.success) { showToast(data.message, 'error'); return; }
       showToast(
         actionStatus === 'COMPLETED'
           ? `ETB ${selectedWithdrawal.amount} withdrawal processed successfully`

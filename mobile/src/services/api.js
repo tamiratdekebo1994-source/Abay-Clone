@@ -94,4 +94,18 @@ export const chatAPI = {
   getUnreadCount: () => api.get('/chat/unread'),
 };
 
+// Notifications
+export const notificationAPI = {
+  list: (params) => api.get('/notifications', { params }),
+  markAllRead: () => api.patch('/notifications/read-all'),
+  markRead: (id) => api.patch(`/notifications/${id}/read`),
+};
+
+// Payments
+export const paymentAPI = {
+  initiateTelebirr: (orderId) => api.post('/payments/telebirr/initiate', { orderId }),
+  initiateCBE: (orderId) => api.post('/payments/cbe/initiate', { orderId }),
+  checkStatus: (paymentRef) => api.get(`/payments/status/${paymentRef}`),
+};
+
 export default api;

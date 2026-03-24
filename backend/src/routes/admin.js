@@ -44,4 +44,59 @@ router.post('/surge', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// Analytics — real time-series data for the last N days
+router.get('/analytics', async (req, res, next) => {
+  try {
+    const days = parseInt(req.query.days) || 7;
+    const results = [];
+
+    for (let i = days - 1; i >= 0; i--) {
+      const start = new Date();
+      start.setDate(start.getDate() - i);
+      start.setHours(0, 0, 0, 0);
+
+      const end = new Date(start);
+      end.setHours(23, 59, 59, 999);
+
+      const [orders, revenue, newDrivers] = await Promise.all([
+        prisma.order.count({ where: { createdAt: { gte: start, lte: end } } }),
+        prisma.order.aggregate({
+          where: { createdAt: { gte: start, lte: end }, status: 'DELIVERED' },
+          _sum: { totalAmount: true },
+        }),
+        prisma.driver.count({ where: { createdAt: { gte: start, lte: end } } }),
+      ]);
+
+      results.push({
+        date: start.toISOString().split('T')[0],
+        day: start.toLocaleDateString('en-US', { weekday: 'short' }),
+        orders,
+        revenue: parseFloat((revenue._sum.totalAmount || 0).toFixed(2)),
+        newDrivers,
+      });
+    }
+
+    // Summary totals
+    const [totalOrders, totalRevenue, activeDrivers, totalStores] = await Promise.all([
+      prisma.order.count(),
+      prisma.order.aggregate({ where: { status: 'DELIVERED' }, _sum: { totalAmount: true } }),
+      prisma.driver.count({ where: { status: { in: ['ONLINE', 'BUSY'] } } }),
+      prisma.store.count({ where: { isActive: true } }),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        timeSeries: results,
+        summary: {
+          totalOrders,
+          totalRevenue: parseFloat((totalRevenue._sum.totalAmount || 0).toFixed(2)),
+          activeDrivers,
+          totalStores,
+        },
+      },
+    });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
