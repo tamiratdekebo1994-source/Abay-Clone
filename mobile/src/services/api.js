@@ -1,0 +1,82 @@
+import axios from 'axios';
+import * as SecureStore from 'expo-secure-store';
+import { API_URL } from '../utils/constants';
+
+const api = axios.create({
+  baseURL: API_URL,
+  timeout: 15000,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+// Request interceptor - attach token
+api.interceptors.request.use(
+  async (config) => {
+    const token = await SecureStore.getItemAsync('accessToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response interceptor - handle token refresh
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && error.response?.data?.code === 'TOKEN_EXPIRED' && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshToken = await SecureStore.getItemAsync('refreshToken');
+        const { data } = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
+
+        await SecureStore.setItemAsync('accessToken', data.data.accessToken);
+        await SecureStore.setItemAsync('refreshToken', data.data.refreshToken);
+
+        originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        await SecureStore.deleteItemAsync('accessToken');
+        await SecureStore.deleteItemAsync('refreshToken');
+        // Navigate to login - handled by auth store
+        return Promise.reject(refreshError);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+// Auth
+export const authAPI = {
+  register: (data) => api.post('/auth/register', data),
+  login: (data) => api.post('/auth/login', data),
+  getMe: () => api.get('/auth/me'),
+  logout: (refreshToken) => api.post('/auth/logout', { refreshToken }),
+};
+
+// Driver
+export const driverAPI = {
+  register: (data) => api.post('/driver/register', data),
+  getProfile: () => api.get('/driver/profile'),
+  updateLocation: (lat, lng) => api.patch('/driver/location', { lat, lng }),
+  toggleOnline: () => api.post('/driver/toggle-online'),
+  getNearbyOrders: (lat, lng, radius = 10) =>
+    api.get('/driver/orders/nearby', { params: { lat, lng, radius } }),
+  getEarnings: (period) => api.get('/driver/earnings', { params: { period } }),
+};
+
+// Orders
+export const orderAPI = {
+  getMyOrders: (params) => api.get('/orders', { params }),
+  getOrder: (id) => api.get(`/orders/${id}`),
+  acceptOrder: (id) => api.post(`/orders/${id}/accept`),
+  updateStatus: (id, status) => api.patch(`/orders/${id}/status`, { status }),
+  cancelOrder: (id, reason) => api.post(`/orders/${id}/cancel`, { reason }),
+  submitReview: (id, data) => api.post(`/orders/${id}/review`, data),
+};
+
+export default api;

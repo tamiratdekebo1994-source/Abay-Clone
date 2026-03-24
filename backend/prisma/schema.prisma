@@ -1,0 +1,266 @@
+// Abay Driver - Ethiopia's Spark Driver Clone
+// Prisma Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  DRIVER
+  STORE
+  ADMIN
+}
+
+enum DriverStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
+  OFFLINE
+  ONLINE
+  BUSY
+}
+
+enum OrderStatus {
+  PENDING
+  SEARCHING_DRIVER
+  DRIVER_ASSIGNED
+  DRIVER_AT_STORE
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+  FAILED
+}
+
+enum VehicleType {
+  MOTORCYCLE
+  BAJAJ
+  CAR
+  VAN
+  TRUCK
+}
+
+enum PaymentMethod {
+  TELEBIRR
+  CBE_BIRR
+  AWASH_BANK
+  DASHEN_BANK
+  CASH
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  phone        String   @unique
+  email        String?  @unique
+  passwordHash String
+  role         UserRole
+  fullName     String
+  avatarUrl    String?
+  isVerified   Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  driver Driver?
+  store  Store?
+  notifications Notification[]
+  refreshTokens RefreshToken[]
+}
+
+model Driver {
+  id              String      @id @default(uuid())
+  userId          String      @unique
+  user            User        @relation(fields: [userId], references: [id])
+  licenseNumber   String      @unique
+  licenseExpiry   DateTime
+  vehicleType     VehicleType
+  vehiclePlate    String      @unique
+  vehicleModel    String
+  vehicleColor    String
+  vehicleYear     Int
+  idCardUrl       String?
+  licensePhotoUrl String?
+  status          DriverStatus @default(PENDING)
+  rating          Float        @default(0)
+  totalDeliveries Int          @default(0)
+  totalEarnings   Float        @default(0)
+  currentLat      Float?
+  currentLng      Float?
+  lastLocationAt  DateTime?
+  city            String
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  orders       Order[]       @relation("DriverOrders")
+  earnings     Earning[]
+  reviews      Review[]      @relation("DriverReviews")
+}
+
+model Store {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  storeName   String
+  storeType   String
+  address     String
+  city        String
+  subcity     String?
+  woreda      String?
+  lat         Float
+  lng         Float
+  phone       String
+  logoUrl     String?
+  description String?
+  isVerified  Boolean  @default(false)
+  rating      Float    @default(0)
+  totalOrders Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orders Order[]
+  reviews Review[] @relation("StoreReviews")
+}
+
+model Order {
+  id              String        @id @default(uuid())
+  orderNumber     String        @unique @default(cuid())
+  storeId         String
+  store           Store         @relation(fields: [storeId], references: [id])
+  driverId        String?
+  driver          Driver?       @relation("DriverOrders", fields: [driverId], references: [id])
+  status          OrderStatus   @default(PENDING)
+
+  // Pickup info
+  pickupAddress   String
+  pickupLat       Float
+  pickupLng       Float
+  pickupNotes     String?
+
+  // Delivery info
+  deliveryAddress String
+  deliveryLat     Float
+  deliveryLng     Float
+  deliveryNotes   String?
+  recipientName   String
+  recipientPhone  String
+
+  // Cargo info
+  description     String
+  weight          Float?        // kg
+  isFragile       Boolean       @default(false)
+  requiresRefrigeration Boolean @default(false)
+  photoUrl        String?
+
+  // Pricing
+  distanceKm      Float
+  baseFee         Float
+  driverFee       Float
+  platformFee     Float
+  totalAmount     Float
+  currency        String        @default("ETB")
+
+  // Payment
+  paymentMethod   PaymentMethod?
+  paymentStatus   PaymentStatus @default(PENDING)
+  paymentRef      String?
+
+  // Tracking
+  driverAssignedAt DateTime?
+  pickedUpAt       DateTime?
+  deliveredAt      DateTime?
+  cancelledAt      DateTime?
+  cancelReason     String?
+
+  // Driver location at key moments
+  pickupLat_driver Float?
+  pickupLng_driver Float?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  tracking        OrderTracking[]
+  earning         Earning?
+  review          Review?
+}
+
+model OrderTracking {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  lat       Float
+  lng       Float
+  speed     Float?
+  heading   Float?
+  timestamp DateTime @default(now())
+}
+
+model Earning {
+  id          String   @id @default(uuid())
+  driverId    String
+  driver      Driver   @relation(fields: [driverId], references: [id])
+  orderId     String   @unique
+  order       Order    @relation(fields: [orderId], references: [id])
+  amount      Float
+  currency    String   @default("ETB")
+  isPaid      Boolean  @default(false)
+  paidAt      DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id])
+  driverId  String?
+  driver    Driver?  @relation("DriverReviews", fields: [driverId], references: [id])
+  storeId   String?
+  store     Store?   @relation("StoreReviews", fields: [storeId], references: [id])
+  rating    Int      // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  titleAm   String?  // Amharic title
+  body      String
+  bodyAm    String?  // Amharic body
+  type      String
+  data      Json?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Zone {
+  id          String  @id @default(uuid())
+  name        String
+  nameAm      String  // Amharic name
+  city        String
+  baseFeeETB  Float
+  perKmFeeETB Float
+  isActive    Boolean @default(true)
+}
