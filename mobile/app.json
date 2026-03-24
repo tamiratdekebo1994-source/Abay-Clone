@@ -15,6 +15,9 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "et.abaydriver.app",
+      "config": {
+        "googleMapsApiKey": "YOUR_GOOGLE_MAPS_IOS_API_KEY"
+      },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Abay Driver needs your location to show nearby deliveries and update your position.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Abay Driver needs background location to track your delivery routes.",
@@ -28,6 +31,11 @@
         "backgroundColor": "#1B4332"
       },
       "package": "et.abaydriver.app",
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_GOOGLE_MAPS_ANDROID_API_KEY"
+        }
+      },
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
@@ -39,7 +47,6 @@
       ]
     },
     "plugins": [
-      "expo-router",
       "expo-secure-store",
       [
         "expo-location",
@@ -55,6 +62,9 @@
         }
       ]
     ],
-    "scheme": "abay-driver"
+    "scheme": "abay-driver",
+    "extra": {
+      "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+    }
   }
 }

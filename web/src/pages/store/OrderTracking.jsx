@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { io } from 'socket.io-client';
 import { orderAPI } from '../../services/api';
+import { useSelector } from 'react-redux';
 
 // Fix leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -35,16 +36,28 @@ function MapUpdater({ center }) {
 
 export default function OrderTracking() {
   const { orderId } = useParams();
+  const { user } = useSelector((s) => s.auth);
   const [order, setOrder] = useState(null);
   const [driverPos, setDriverPos] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const socketRef = useRef(null);
 
+  // Chat state
+  const [messages, setMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const messagesEndRef = useRef(null);
+
   useEffect(() => {
     loadOrder();
+    loadMessages();
     setupSocket();
     return () => { socketRef.current?.disconnect(); };
   }, [orderId]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const loadOrder = async () => {
     try {
@@ -60,6 +73,40 @@ export default function OrderTracking() {
     }
   };
 
+  const loadMessages = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`/api/chat/order/${orderId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) setMessages(data.data.messages || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const sendMessage = async () => {
+    const text = chatInput.trim();
+    if (!text || isSending) return;
+    setIsSending(true);
+    setChatInput('');
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`/api/chat/order/${orderId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ message: text }),
+      });
+      const data = await res.json();
+      if (data.success) setMessages((prev) => [...prev, data.data]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const setupSocket = () => {
     const token = localStorage.getItem('accessToken');
     const socket = io('/', { auth: { token } });
@@ -68,6 +115,13 @@ export default function OrderTracking() {
     socket.on('driver_location', ({ lat, lng }) => setDriverPos([lat, lng]));
     socket.on('order_status_updated', () => loadOrder());
     socket.on('order_cancelled', () => loadOrder());
+    socket.on('new_chat_message', (msg) => {
+      setMessages((prev) => {
+        // Avoid duplicates (our own sent messages already added)
+        if (prev.find((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+    });
 
     socketRef.current = socket;
   };
@@ -177,6 +231,71 @@ export default function OrderTracking() {
               <div className="flex justify-between border-t pt-2 font-bold"><span>Total</span><span className="text-primary-700">ETB {order.totalAmount?.toFixed(2)}</span></div>
             </div>
           </div>
+
+          {/* Chat Panel */}
+          {order.driver && (
+            <div className="card flex flex-col" style={{ height: 320 }}>
+              <h3 className="font-bold text-gray-900 mb-3 flex-shrink-0">
+                💬 Chat with Driver
+                <span className="text-xs font-normal text-gray-400 ml-2">ሾፌር ጋር ያነጋግሩ</span>
+              </h3>
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto space-y-2 mb-3 min-h-0">
+                {messages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-gray-400 text-sm text-center">
+                      No messages yet.<br/>
+                      <span className="text-xs">ምንም መልዕክት የለም</span>
+                    </p>
+                  </div>
+                ) : (
+                  messages.map((msg) => {
+                    const isMe = msg.senderId === user?.id;
+                    return (
+                      <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[75%] px-3 py-2 rounded-xl text-sm ${
+                          isMe
+                            ? 'bg-primary-600 text-white rounded-br-sm'
+                            : 'bg-gray-100 text-gray-800 rounded-bl-sm'
+                        }`}>
+                          {!isMe && (
+                            <div className="text-xs font-semibold mb-0.5 text-primary-700">
+                              {msg.sender?.fullName}
+                            </div>
+                          )}
+                          <div>{msg.message}</div>
+                          <div className={`text-xs mt-1 ${isMe ? 'text-primary-200' : 'text-gray-400'}`}>
+                            {new Date(msg.createdAt).toLocaleTimeString('en-ET', { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Input */}
+              <div className="flex gap-2 flex-shrink-0">
+                <input
+                  type="text"
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-500"
+                  placeholder="Type a message..."
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={!chatInput.trim() || isSending}
+                  className="bg-primary-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-primary-700 disabled:opacity-50 font-medium"
+                >
+                  {isSending ? '...' : '→'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

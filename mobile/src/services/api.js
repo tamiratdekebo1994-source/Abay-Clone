@@ -52,9 +52,15 @@ api.interceptors.response.use(
 
 // Auth
 export const authAPI = {
-  register: (data) => api.post('/auth/register', data),
+  // OTP flows
+  requestOtp: (phone, purpose) => api.post('/auth/otp/request', { phone, purpose }),
+  verifyOtpLogin: (phone, code) => api.post('/auth/otp/verify-login', { phone, code }),
+  verifyOtpRegister: (phone, code) => api.post('/auth/otp/verify-register', { phone, code }),
+  completeRegistration: (data) => api.post('/auth/register/complete', data),
+  // Legacy password (admin)
   login: (data) => api.post('/auth/login', data),
   getMe: () => api.get('/auth/me'),
+  updateProfile: (data) => api.patch('/auth/profile', data),
   logout: (refreshToken) => api.post('/auth/logout', { refreshToken }),
 };
 
@@ -67,6 +73,8 @@ export const driverAPI = {
   getNearbyOrders: (lat, lng, radius = 10) =>
     api.get('/driver/orders/nearby', { params: { lat, lng, radius } }),
   getEarnings: (period) => api.get('/driver/earnings', { params: { period } }),
+  registerPushToken: (token) => api.post('/driver/push-token', { token, platform: 'android' }),
+  getSurge: (city) => api.get('/driver/surge', { params: { city } }),
 };
 
 // Orders
@@ -77,6 +85,13 @@ export const orderAPI = {
   updateStatus: (id, status) => api.patch(`/orders/${id}/status`, { status }),
   cancelOrder: (id, reason) => api.post(`/orders/${id}/cancel`, { reason }),
   submitReview: (id, data) => api.post(`/orders/${id}/review`, data),
+};
+
+// Chat
+export const chatAPI = {
+  getMessages: (orderId) => api.get(`/chat/order/${orderId}`),
+  sendMessage: (orderId, message) => api.post(`/chat/order/${orderId}`, { message }),
+  getUnreadCount: () => api.get('/chat/unread'),
 };
 
 export default api;

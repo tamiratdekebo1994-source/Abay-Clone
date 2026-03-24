@@ -1,0 +1,169 @@
+const prisma = require('../config/database');
+
+/**
+ * Get driver wallet balance
+ */
+const getWallet = async (req, res, next) => {
+  try {
+    const driver = await prisma.driver.findUnique({ where: { userId: req.user.id } });
+    if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
+
+    let wallet = await prisma.wallet.findUnique({
+      where: { driverId: driver.id },
+      include: { withdrawals: { orderBy: { createdAt: 'desc' }, take: 10 } },
+    });
+
+    // Auto-create wallet if missing
+    if (!wallet) {
+      wallet = await prisma.wallet.create({
+        data: { driverId: driver.id },
+        include: { withdrawals: true },
+      });
+    }
+
+    res.json({ success: true, data: wallet });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Request a withdrawal
+ */
+const requestWithdrawal = async (req, res, next) => {
+  try {
+    const { amount, method, accountNumber, accountName } = req.body;
+
+    const driver = await prisma.driver.findUnique({ where: { userId: req.user.id } });
+    if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
+
+    const wallet = await prisma.wallet.findUnique({ where: { driverId: driver.id } });
+    if (!wallet) return res.status(404).json({ success: false, message: 'Wallet not found' });
+
+    const withdrawalAmount = parseFloat(amount);
+    const MIN_WITHDRAWAL = 100; // ETB 100 minimum
+
+    if (withdrawalAmount < MIN_WITHDRAWAL) {
+      return res.status(400).json({
+        success: false,
+        message: `Minimum withdrawal is ETB ${MIN_WITHDRAWAL}`,
+      });
+    }
+
+    if (withdrawalAmount > wallet.balance) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient balance. Available: ETB ${wallet.balance.toFixed(2)}`,
+      });
+    }
+
+    // Check for pending withdrawal
+    const pendingWithdrawal = await prisma.walletWithdrawal.findFirst({
+      where: { walletId: wallet.id, status: 'PENDING' },
+    });
+
+    if (pendingWithdrawal) {
+      return res.status(409).json({
+        success: false,
+        message: 'You already have a pending withdrawal request',
+      });
+    }
+
+    // Deduct from balance and add to pending
+    const [withdrawal] = await prisma.$transaction([
+      prisma.walletWithdrawal.create({
+        data: {
+          walletId: wallet.id,
+          amount: withdrawalAmount,
+          method,
+          accountNumber,
+          accountName,
+          status: 'PENDING',
+        },
+      }),
+      prisma.wallet.update({
+        where: { id: wallet.id },
+        data: {
+          balance: { decrement: withdrawalAmount },
+          pendingAmount: { increment: withdrawalAmount },
+        },
+      }),
+    ]);
+
+    res.status(201).json({
+      success: true,
+      message: 'Withdrawal request submitted. Processing within 24 hours.',
+      data: withdrawal,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Admin: Process a withdrawal
+ */
+const processWithdrawal = async (req, res, next) => {
+  try {
+    const { withdrawalId } = req.params;
+    const { action, reference } = req.body; // 'complete' | 'fail'
+
+    const withdrawal = await prisma.walletWithdrawal.findUnique({
+      where: { id: withdrawalId },
+      include: { wallet: true },
+    });
+
+    if (!withdrawal) return res.status(404).json({ success: false, message: 'Withdrawal not found' });
+    if (withdrawal.status !== 'PENDING') {
+      return res.status(400).json({ success: false, message: 'Withdrawal already processed' });
+    }
+
+    const newStatus = action === 'complete' ? 'COMPLETED' : 'FAILED';
+
+    await prisma.$transaction([
+      prisma.walletWithdrawal.update({
+        where: { id: withdrawalId },
+        data: { status: newStatus, reference, processedAt: new Date() },
+      }),
+      prisma.wallet.update({
+        where: { id: withdrawal.walletId },
+        data: {
+          pendingAmount: { decrement: withdrawal.amount },
+          // If failed, refund to balance
+          ...(newStatus === 'FAILED' && { balance: { increment: withdrawal.amount } }),
+        },
+      }),
+    ]);
+
+    res.json({ success: true, message: `Withdrawal ${newStatus.toLowerCase()}` });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Admin: Get all pending withdrawals
+ */
+const getPendingWithdrawals = async (req, res, next) => {
+  try {
+    const withdrawals = await prisma.walletWithdrawal.findMany({
+      where: { status: 'PENDING' },
+      include: {
+        wallet: {
+          include: {
+            driver: {
+              include: { user: { select: { fullName: true, phone: true } } },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    res.json({ success: true, data: withdrawals });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getWallet, requestWithdrawal, processWithdrawal, getPendingWithdrawals };

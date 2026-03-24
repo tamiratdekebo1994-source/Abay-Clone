@@ -5,6 +5,7 @@ import { loadUser } from './store/authSlice';
 
 // Pages
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import StoreDashboard from './pages/store/StoreDashboard';
 import CreateOrder from './pages/store/CreateOrder';
 import StoreOrders from './pages/store/StoreOrders';
@@ -13,6 +14,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminDrivers from './pages/admin/AdminDrivers';
 import AdminStores from './pages/admin/AdminStores';
 import AdminOrders from './pages/admin/AdminOrders';
+import AdminWithdrawals from './pages/admin/AdminWithdrawals';
 import Layout from './components/Layout';
 
 function PrivateRoute({ children, roles }) {
@@ -34,6 +36,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
 
       {/* Store Routes */}
       <Route path="/store" element={<PrivateRoute roles={['STORE']}><Layout /></PrivateRoute>}>
@@ -49,6 +52,7 @@ export default function App() {
         <Route path="drivers" element={<AdminDrivers />} />
         <Route path="stores" element={<AdminStores />} />
         <Route path="orders" element={<AdminOrders />} />
+        <Route path="withdrawals" element={<AdminWithdrawals />} />
       </Route>
 
       {/* Default redirect based on role */}

@@ -6,6 +6,19 @@ export const SOCKET_URL = __DEV__
   ? 'http://192.168.1.100:5000'
   : 'https://api.abaydriver.et';
 
+// Replace with your actual Google Maps API key
+// Get one at: https://console.cloud.google.com/
+// Enable: Maps SDK for Android, Maps SDK for iOS, Directions API
+export const GOOGLE_MAPS_API_KEY = 'YOUR_GOOGLE_MAPS_API_KEY';
+
+// Addis Ababa default center
+export const DEFAULT_MAP_REGION = {
+  latitude: 9.0192,
+  longitude: 38.7525,
+  latitudeDelta: 0.0922,
+  longitudeDelta: 0.0421,
+};
+
 export const COLORS = {
   primary: '#1B4332',      // Deep green - Ethiopian flag inspired
   primaryLight: '#2D6A4F',

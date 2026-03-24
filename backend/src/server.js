@@ -12,6 +12,9 @@ const driverRoutes = require('./routes/driver');
 const storeRoutes = require('./routes/store');
 const orderRoutes = require('./routes/order');
 const adminRoutes = require('./routes/admin');
+const uploadRoutes = require('./routes/upload');
+const chatRoutes = require('./routes/chat');
+const walletRoutes = require('./routes/wallet');
 const errorHandler = require('./middleware/errorHandler');
 const { initSocket } = require('./services/socketService');
 
@@ -58,6 +61,9 @@ app.use('/api/driver', driverRoutes);
 app.use('/api/store', storeRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/wallet', walletRoutes);
 
 // Health check
 app.get('/health', (_req, res) => {

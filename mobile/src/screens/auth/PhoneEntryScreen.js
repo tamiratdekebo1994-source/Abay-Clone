@@ -1,0 +1,184 @@
+import React, { useState } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity,
+  StyleSheet, KeyboardAvoidingView, Platform,
+  ActivityIndicator, Alert,
+} from 'react-native';
+import { authAPI } from '../../services/api';
+import { COLORS } from '../../utils/constants';
+import { t } from '../../utils/i18n';
+
+export default function PhoneEntryScreen({ navigation, route }) {
+  const purpose = route?.params?.purpose || 'LOGIN'; // LOGIN | REGISTER
+  const [phone, setPhone] = useState('+251');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const formatPhone = (text) => {
+    // Keep +251 prefix
+    let cleaned = text.replace(/[^\d+]/g, '');
+    if (!cleaned.startsWith('+251')) cleaned = '+251';
+    if (cleaned.length > 13) cleaned = cleaned.slice(0, 13);
+    setPhone(cleaned);
+    setError('');
+  };
+
+  const handleSend = async () => {
+    if (phone.length < 13) {
+      setError('Please enter a valid Ethiopian phone number (+251XXXXXXXXX)');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const { data } = await authAPI.requestOtp(phone, purpose);
+      navigation.navigate('OtpVerification', { phone, purpose, devCode: data.data?.devCode });
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to send code. Please try again.';
+      if (err.response?.status === 404 && purpose === 'LOGIN') {
+        Alert.alert(
+          'Phone Not Registered',
+          'This number is not registered. Would you like to sign up?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Sign Up', onPress: () => navigation.replace('PhoneEntry', { purpose: 'REGISTER' }) },
+          ]
+        );
+      } else if (err.response?.status === 409 && purpose === 'REGISTER') {
+        Alert.alert(
+          'Already Registered',
+          'This phone is already registered. Please login instead.',
+          [
+            { text: 'Login', onPress: () => navigation.replace('PhoneEntry', { purpose: 'LOGIN' }) },
+          ]
+        );
+      } else {
+        setError(msg);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const isLogin = purpose === 'LOGIN';
+
+  return (
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.logo}>
+          <Text style={styles.logoText}>አ</Text>
+        </View>
+        <Text style={styles.appName}>Abay Driver</Text>
+        <Text style={styles.tagline}>{t('tagline')}</Text>
+      </View>
+
+      {/* Form */}
+      <View style={styles.form}>
+        <Text style={styles.title}>
+          {isLogin ? `${t('welcomeBack')} / Welcome Back!` : `${t('createAccount')} / Create Account`}
+        </Text>
+        <Text style={styles.subtitle}>{t('enterPhone')}</Text>
+
+        {error ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
+
+        <View style={styles.phoneRow}>
+          <View style={styles.flagBadge}>
+            <Text style={styles.flagText}>🇪🇹</Text>
+          </View>
+          <TextInput
+            style={styles.phoneInput}
+            value={phone}
+            onChangeText={formatPhone}
+            keyboardType="phone-pad"
+            maxLength={13}
+            placeholder="+251912345678"
+            placeholderTextColor={COLORS.gray}
+            autoFocus
+          />
+        </View>
+
+        <TouchableOpacity
+          style={[styles.sendBtn, isLoading && styles.sendBtnDisabled]}
+          onPress={handleSend}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color={COLORS.white} />
+          ) : (
+            <Text style={styles.sendBtnText}>{t('sendCode')} →</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.switchLink}
+          onPress={() => navigation.replace('PhoneEntry', { purpose: isLogin ? 'REGISTER' : 'LOGIN' })}
+        >
+          <Text style={styles.switchText}>
+            {isLogin
+              ? `${t('noAccount')} ${t('signUp')}`
+              : `${t('haveAccount')} ${t('signIn')}`}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.footer}>{t('madeInEthiopia')}</Text>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.primary, justifyContent: 'space-between' },
+  header: { alignItems: 'center', paddingTop: 80, paddingBottom: 40 },
+  logo: {
+    width: 80, height: 80, borderRadius: 20,
+    backgroundColor: COLORS.accent,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 12,
+  },
+  logoText: { fontSize: 40, fontWeight: '800', color: COLORS.primary },
+  appName: { color: COLORS.white, fontSize: 28, fontWeight: '800' },
+  tagline: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 4 },
+  form: {
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    padding: 28, paddingTop: 32,
+  },
+  title: { fontSize: 18, fontWeight: '700', color: COLORS.black, marginBottom: 6 },
+  subtitle: { fontSize: 14, color: COLORS.gray, marginBottom: 20 },
+  errorBox: { backgroundColor: '#FEE2E2', borderRadius: 10, padding: 12, marginBottom: 16 },
+  errorText: { color: COLORS.error, fontSize: 13 },
+  phoneRow: {
+    flexDirection: 'row', alignItems: 'center',
+    borderWidth: 1.5, borderColor: COLORS.border,
+    borderRadius: 14, marginBottom: 20,
+    backgroundColor: COLORS.grayLighter,
+    overflow: 'hidden',
+  },
+  flagBadge: {
+    paddingHorizontal: 14, paddingVertical: 16,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    borderRightWidth: 1, borderRightColor: COLORS.border,
+  },
+  flagText: { fontSize: 22 },
+  phoneInput: {
+    flex: 1, fontSize: 18, fontWeight: '600',
+    paddingHorizontal: 14, paddingVertical: 14,
+    color: COLORS.text,
+  },
+  sendBtn: {
+    backgroundColor: COLORS.primary, borderRadius: 14,
+    paddingVertical: 16, alignItems: 'center',
+  },
+  sendBtnDisabled: { opacity: 0.6 },
+  sendBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '700' },
+  switchLink: { alignItems: 'center', marginTop: 16 },
+  switchText: { color: COLORS.primaryLight, fontSize: 14 },
+  footer: { color: 'rgba(255,255,255,0.5)', textAlign: 'center', paddingBottom: 24, fontSize: 12 },
+});

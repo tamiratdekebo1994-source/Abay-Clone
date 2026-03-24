@@ -77,6 +77,8 @@ model User {
   store  Store?
   notifications Notification[]
   refreshTokens RefreshToken[]
+  pushTokens    PushToken[]
+  sentMessages  ChatMessage[]
 }
 
 model Driver {
@@ -106,6 +108,7 @@ model Driver {
   orders       Order[]       @relation("DriverOrders")
   earnings     Earning[]
   reviews      Review[]      @relation("DriverReviews")
+  wallet       Wallet?
 }
 
 model Store {
@@ -193,6 +196,7 @@ model Order {
   tracking        OrderTracking[]
   earning         Earning?
   review          Review?
+  chatMessages    ChatMessage[]
 }
 
 model OrderTracking {
@@ -262,5 +266,68 @@ model Zone {
   city        String
   baseFeeETB  Float
   perKmFeeETB Float
+  surgeMultiplier Float @default(1.0)
   isActive    Boolean @default(true)
+}
+
+model OtpCode {
+  id        String   @id @default(uuid())
+  phone     String
+  code      String
+  purpose   String   // REGISTER | LOGIN | RESET
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([phone, purpose])
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id])
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+}
+
+model Wallet {
+  id            String   @id @default(uuid())
+  driverId      String   @unique
+  driver        Driver   @relation(fields: [driverId], references: [id])
+  balance       Float    @default(0)
+  pendingAmount Float    @default(0)
+  currency      String   @default("ETB")
+  updatedAt     DateTime @updatedAt
+
+  withdrawals WalletWithdrawal[]
+}
+
+model WalletWithdrawal {
+  id            String   @id @default(uuid())
+  walletId      String
+  wallet        Wallet   @relation(fields: [walletId], references: [id])
+  amount        Float
+  method        PaymentMethod
+  accountNumber String
+  accountName   String
+  status        String   @default("PENDING") // PENDING | APPROVED | COMPLETED | FAILED
+  reference     String?
+  createdAt     DateTime @default(now())
+  processedAt   DateTime?
+}
+
+model PushToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  token     String   @unique
+  platform  String   // ios | android
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

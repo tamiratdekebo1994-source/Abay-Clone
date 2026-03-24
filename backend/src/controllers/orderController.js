@@ -1,5 +1,7 @@
 const prisma = require('../config/database');
 const { calculateDeliveryFee, calculateDistance } = require('../utils/pricing');
+const pushService = require('../services/pushNotificationService');
+const { getSurgeMultiplier } = require('../services/surgeService');
 
 const createOrder = async (req, res, next) => {
   try {
@@ -21,7 +23,12 @@ const createOrder = async (req, res, next) => {
       parseFloat(deliveryLat), parseFloat(deliveryLng)
     );
 
-    const fees = calculateDeliveryFee(distanceKm, { isFragile, requiresRefrigeration });
+    // Apply surge pricing
+    const surge = await getSurgeMultiplier(store.city);
+    const fees = calculateDeliveryFee(distanceKm, {
+      isFragile, requiresRefrigeration,
+      surgeMultiplier: surge.multiplier,
+    });
 
     const order = await prisma.order.create({
       data: {
@@ -57,10 +64,13 @@ const createOrder = async (req, res, next) => {
       distanceKm: order.distanceKm,
     });
 
+    // Push notification to online drivers
+    pushService.notifyNearbyDrivers(order).catch(console.error);
+
     res.status(201).json({
       success: true,
       message: 'Order created and searching for driver',
-      data: order,
+      data: { ...order, surge: { isSurge: surge.isSurge, multiplier: surge.multiplier, reason: surge.reason } },
     });
   } catch (error) {
     next(error);
@@ -110,11 +120,17 @@ const acceptOrder = async (req, res, next) => {
       data: { status: 'BUSY' },
     });
 
-    // Notify store
+    // Notify store via socket + push
     req.io?.to(`store:${order.storeId}`).emit('driver_assigned', {
       orderId: order.id,
       driver: { id: driver.id, name: req.user.fullName },
     });
+
+    pushService.notifyDriverAssigned(
+      order.store?.user?.id || (await prisma.store.findUnique({ where: { id: order.storeId }, select: { userId: true } }))?.userId,
+      req.user.fullName,
+      order.orderNumber
+    ).catch(console.error);
 
     res.json({ success: true, message: 'Order accepted', data: updated });
   } catch (error) {
@@ -153,25 +169,41 @@ const updateOrderStatus = async (req, res, next) => {
     if (status === 'DELIVERED') {
       updateData.deliveredAt = new Date();
 
-      // Create earning record
-      await prisma.earning.create({
-        data: { driverId: driver.id, orderId: order.id, amount: order.driverFee },
-      });
+      // Create earning and update wallet in a transaction
+      await prisma.$transaction(async (tx) => {
+        // Earning record
+        await tx.earning.create({
+          data: { driverId: driver.id, orderId: order.id, amount: order.driverFee },
+        });
 
-      // Update driver stats
-      await prisma.driver.update({
-        where: { id: driver.id },
-        data: {
-          totalDeliveries: { increment: 1 },
-          totalEarnings: { increment: order.driverFee },
-          status: 'ONLINE',
-        },
-      });
+        // Update driver stats
+        await tx.driver.update({
+          where: { id: driver.id },
+          data: {
+            totalDeliveries: { increment: 1 },
+            totalEarnings: { increment: order.driverFee },
+            status: 'ONLINE',
+          },
+        });
 
-      // Update store stats
-      await prisma.store.update({
-        where: { id: order.storeId },
-        data: { totalOrders: { increment: 1 } },
+        // Credit driver wallet
+        const wallet = await tx.wallet.findUnique({ where: { driverId: driver.id } });
+        if (wallet) {
+          await tx.wallet.update({
+            where: { driverId: driver.id },
+            data: { balance: { increment: order.driverFee } },
+          });
+        } else {
+          await tx.wallet.create({
+            data: { driverId: driver.id, balance: order.driverFee },
+          });
+        }
+
+        // Update store stats
+        await tx.store.update({
+          where: { id: order.storeId },
+          data: { totalOrders: { increment: 1 } },
+        });
       });
     }
 
@@ -180,9 +212,15 @@ const updateOrderStatus = async (req, res, next) => {
       data: updateData,
     });
 
-    // Notify store and order room
+    // Notify store and order room via socket
     req.io?.to(`store:${order.storeId}`).emit('order_status_updated', { orderId, status });
     req.io?.to(`order:${orderId}`).emit('order_status_updated', { orderId, status });
+
+    // Push notification to store owner
+    const storeOwner = await prisma.store.findUnique({ where: { id: order.storeId }, select: { userId: true } });
+    if (storeOwner) {
+      pushService.notifyOrderStatus(storeOwner.userId, status, order.orderNumber).catch(console.error);
+    }
 
     res.json({ success: true, message: `Order status updated to ${status}`, data: updated });
   } catch (error) {

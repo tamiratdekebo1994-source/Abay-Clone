@@ -4,13 +4,14 @@ import {
   Switch, Alert, RefreshControl, ActivityIndicator,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
-import * as Location from 'expo-location';
 import { useSelector, useDispatch } from 'react-redux';
 import { driverAPI, orderAPI } from '../services/api';
 import { updateDriver } from '../store/authStore';
 import { COLORS, ORDER_STATUS_LABELS } from '../utils/constants';
+import { t } from '../utils/i18n';
 import OrderOfferCard from '../components/OrderOfferCard';
 import EarningsSummary from '../components/EarningsSummary';
+import { startBackgroundTracking, stopBackgroundTracking, getCurrentLocation } from '../services/locationService';
 
 export default function HomeScreen({ navigation }) {
   const dispatch = useDispatch();
@@ -20,36 +21,24 @@ export default function HomeScreen({ navigation }) {
   const [nearbyOrders, setNearbyOrders] = useState([]);
   const [activeOrder, setActiveOrder] = useState(null);
   const [todayEarnings, setTodayEarnings] = useState(null);
+  const [surge, setSurge] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const locationSubscription = useRef(null);
   const mapRef = useRef(null);
 
   useEffect(() => {
     setupLocation();
     loadData();
-    return () => locationSubscription.current?.remove();
+    return () => stopBackgroundTracking();
   }, []);
 
   const setupLocation = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
+    const loc = await getCurrentLocation();
+    if (loc) {
+      setLocation({ latitude: loc.lat, longitude: loc.lng });
+    } else {
       Alert.alert('Location Required', 'Please enable location to receive delivery requests.');
-      return;
     }
-
-    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-    setLocation(loc.coords);
-
-    locationSubscription.current = await Location.watchPositionAsync(
-      { accuracy: Location.Accuracy.Balanced, timeInterval: 5000, distanceInterval: 10 },
-      (newLoc) => {
-        setLocation(newLoc.coords);
-        if (isOnline) {
-          driverAPI.updateLocation(newLoc.coords.latitude, newLoc.coords.longitude);
-        }
-      }
-    );
   };
 
   const loadData = async () => {
@@ -87,14 +76,26 @@ export default function HomeScreen({ navigation }) {
 
   const toggleOnline = async () => {
     if (driver?.status === 'PENDING') {
-      Alert.alert('Pending Approval', 'Your driver application is still being reviewed.');
+      Alert.alert('Pending Approval / ጸድቆ በመጠባበቅ ላይ', 'Your driver application is still being reviewed.\nማመልከቻዎ ገና ይገምገማል።');
       return;
     }
     try {
       setIsLoading(true);
       const { data } = await driverAPI.toggleOnline();
-      setIsOnline(data.data.status === 'ONLINE');
+      const nowOnline = data.data.status === 'ONLINE';
+      setIsOnline(nowOnline);
       dispatch(updateDriver({ status: data.data.status }));
+
+      if (nowOnline) {
+        // Start background location tracking
+        await startBackgroundTracking();
+        // Fetch surge info
+        const surgeRes = await driverAPI.getSurge(driver?.city || 'Addis Ababa');
+        setSurge(surgeRes.data.data);
+      } else {
+        await stopBackgroundTracking();
+        setSurge(null);
+      }
     } catch (err) {
       Alert.alert('Error', 'Failed to update status');
     } finally {
@@ -182,6 +183,17 @@ export default function HomeScreen({ navigation }) {
           </View>
         )}
 
+        {/* Surge Banner */}
+        {surge?.isSurge && (
+          <View style={styles.surgeBanner}>
+            <Text style={styles.surgeEmoji}>🔥</Text>
+            <View style={styles.surgeInfo}>
+              <Text style={styles.surgeTitle}>{t('surgeActive')} — {surge.multiplier}x</Text>
+              <Text style={styles.surgeReason}>{surge.reason}</Text>
+            </View>
+          </View>
+        )}
+
         {/* Today's Earnings */}
         {todayEarnings && <EarningsSummary earnings={todayEarnings} />}
 
@@ -257,6 +269,15 @@ const styles = StyleSheet.create({
   warningBox: { margin: 16, backgroundColor: '#FEF3C7', borderRadius: 10, padding: 14 },
   warningText: { color: '#92400E', fontSize: 14, fontWeight: '500' },
   warningTextAm: { color: '#92400E', fontSize: 12, marginTop: 4 },
+  surgeBanner: {
+    margin: 16, marginTop: 0, backgroundColor: '#FEF3C7',
+    borderRadius: 10, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderLeftWidth: 4, borderLeftColor: COLORS.accent,
+  },
+  surgeEmoji: { fontSize: 24 },
+  surgeInfo: { flex: 1 },
+  surgeTitle: { fontSize: 14, fontWeight: '700', color: '#92400E' },
+  surgeReason: { fontSize: 12, color: '#B45309', marginTop: 2 },
   section: { padding: 16 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 12 },
   emptyState: { alignItems: 'center', padding: 32 },

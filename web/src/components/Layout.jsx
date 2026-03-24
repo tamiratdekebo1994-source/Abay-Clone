@@ -14,6 +14,7 @@ const adminNav = [
   { to: '/admin/drivers', label: 'Drivers', icon: '🚗' },
   { to: '/admin/stores', label: 'Stores', icon: '🏪' },
   { to: '/admin/orders', label: 'All Orders', icon: '📦' },
+  { to: '/admin/withdrawals', label: 'Withdrawals', icon: '💸' },
 ];
 
 export default function Layout() {
