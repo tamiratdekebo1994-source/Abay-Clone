@@ -16,7 +16,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "et.abaydriver.app",
       "config": {
-        "googleMapsApiKey": "YOUR_GOOGLE_MAPS_IOS_API_KEY"
+        "googleMapsApiKey": "AIzaSyC2yi_vT54q1xU9OAoySHJaWkBjvXGHTyU"
       },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Abay Driver needs your location to show nearby deliveries and update your position.",
@@ -33,7 +33,7 @@
       "package": "et.abaydriver.app",
       "config": {
         "googleMaps": {
-          "apiKey": "YOUR_GOOGLE_MAPS_ANDROID_API_KEY"
+          "apiKey": "AIzaSyC2yi_vT54q1xU9OAoySHJaWkBjvXGHTyU"
         }
       },
       "permissions": [
@@ -64,7 +64,7 @@
     ],
     "scheme": "abay-driver",
     "extra": {
-      "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+      "googleMapsApiKey": "AIzaSyC2yi_vT54q1xU9OAoySHJaWkBjvXGHTyU"
     }
   }
 }

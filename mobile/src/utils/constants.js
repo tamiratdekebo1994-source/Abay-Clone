@@ -9,7 +9,7 @@ export const SOCKET_URL = __DEV__
 // Replace with your actual Google Maps API key
 // Get one at: https://console.cloud.google.com/
 // Enable: Maps SDK for Android, Maps SDK for iOS, Directions API
-export const GOOGLE_MAPS_API_KEY = 'YOUR_GOOGLE_MAPS_API_KEY';
+export const GOOGLE_MAPS_API_KEY = 'AIzaSyC2yi_vT54q1xU9OAoySHJaWkBjvXGHTyU';
 
 // Addis Ababa default center
 export const DEFAULT_MAP_REGION = {
