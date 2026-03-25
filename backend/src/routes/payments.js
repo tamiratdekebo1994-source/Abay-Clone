@@ -103,7 +103,7 @@ router.post('/telebirr/callback', async (req, res, next) => {
       });
 
       // Notify store via socket
-      req.io?.to(`store_${order.storeId}`).emit('payment_confirmed', {
+      req.io?.to(`store:${order.storeId}`).emit('payment_confirmed', {
         orderId: order.id,
         orderNumber: order.orderNumber,
         amount: order.totalAmount,
@@ -175,7 +175,7 @@ router.post('/cbe/callback', async (req, res, next) => {
         where: { id: order.id },
         data: { paymentStatus: 'PAID', paymentRef: transactionRef || orderRef },
       });
-      req.io?.to(`store_${order.storeId}`).emit('payment_confirmed', {
+      req.io?.to(`store:${order.storeId}`).emit('payment_confirmed', {
         orderId: order.id,
         orderNumber: order.orderNumber,
         amount: order.totalAmount,
