@@ -13,7 +13,7 @@ router.use(authenticate);
 
 // Store routes
 router.post('/', authorize('STORE'), createOrder);
-router.post('/:orderId/cancel', authorize('STORE', 'ADMIN'), cancelOrder);
+router.post('/:orderId/cancel', authorize('STORE', 'ADMIN', 'DRIVER'), cancelOrder);
 router.post('/:orderId/review', submitReview);
 
 // Driver routes

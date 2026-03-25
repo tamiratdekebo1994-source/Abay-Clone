@@ -81,7 +81,7 @@ router.get('/analytics', async (req, res, next) => {
       prisma.order.count(),
       prisma.order.aggregate({ where: { status: 'DELIVERED' }, _sum: { totalAmount: true } }),
       prisma.driver.count({ where: { status: { in: ['ONLINE', 'BUSY'] } } }),
-      prisma.store.count({ where: { isActive: true } }),
+      prisma.store.count(),
     ]);
 
     res.json({

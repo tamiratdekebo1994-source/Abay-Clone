@@ -220,7 +220,7 @@ export default function OrderDetailScreen({ route, navigation }) {
         {isActive && (
           <TouchableOpacity
             style={styles.chatBtn}
-            onPress={() => navigation.navigate('Chat', { orderId: order.id })}
+            onPress={() => navigation.navigate('Chat', { orderId: order.id, orderNumber: order.orderNumber })}
           >
             <Text style={styles.chatBtnText}>💬 Chat</Text>
           </TouchableOpacity>
