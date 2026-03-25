@@ -59,7 +59,7 @@ export const orderAPI = {
 
 export const adminAPI = {
   getDashboard: () => api.get('/admin/dashboard'),
-  getAnalytics: (period = '7d') => api.get('/admin/analytics', { params: { period } }),
+  getAnalytics: (days = 7) => api.get('/admin/analytics', { params: { days } }),
   getDrivers: (params) => api.get('/admin/drivers', { params }),
   approveDriver: (id, action) => api.patch(`/admin/drivers/${id}/status`, { action }),
   getStores: (params) => api.get('/admin/stores', { params }),

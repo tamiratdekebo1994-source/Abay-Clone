@@ -92,8 +92,9 @@ model Driver {
   vehicleModel    String
   vehicleColor    String
   vehicleYear     Int
-  idCardUrl       String?
-  licensePhotoUrl String?
+  idCardUrl        String?
+  licensePhotoUrl  String?
+  vehiclePhotoUrl  String?
   status          DriverStatus @default(PENDING)
   rating          Float        @default(0)
   totalDeliveries Int          @default(0)

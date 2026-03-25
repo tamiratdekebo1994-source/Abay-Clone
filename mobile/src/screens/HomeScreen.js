@@ -4,10 +4,12 @@ import {
   Switch, Alert, RefreshControl, ActivityIndicator,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { io } from 'socket.io-client';
+import * as SecureStore from 'expo-secure-store';
 import { useSelector, useDispatch } from 'react-redux';
 import { driverAPI, orderAPI } from '../services/api';
 import { updateDriver } from '../store/authStore';
-import { COLORS, ORDER_STATUS_LABELS } from '../utils/constants';
+import { COLORS, ORDER_STATUS_LABELS, SOCKET_URL } from '../utils/constants';
 import { t } from '../utils/i18n';
 import OrderOfferCard from '../components/OrderOfferCard';
 import EarningsSummary from '../components/EarningsSummary';
@@ -25,12 +27,44 @@ export default function HomeScreen({ navigation }) {
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const mapRef = useRef(null);
+  const socketRef = useRef(null);
+  const isOnlineRef = useRef(driver?.status === 'ONLINE');
 
   useEffect(() => {
     setupLocation();
     loadData();
-    return () => stopBackgroundTracking();
+    connectSocket();
+    return () => {
+      stopBackgroundTracking();
+      socketRef.current?.disconnect();
+    };
   }, []);
+
+  const connectSocket = async () => {
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      const socket = io(SOCKET_URL, { auth: { token }, transports: ['websocket'] });
+
+      socket.on('new_order_available', (order) => {
+        if (isOnlineRef.current) {
+          setNearbyOrders((prev) => {
+            if (prev.find((o) => o.orderId === order.orderId || o.id === order.orderId)) return prev;
+            return [order, ...prev];
+          });
+        }
+      });
+
+      socket.on('driver_assigned', () => {
+        // Another driver took an order — refresh list
+        loadNearbyOrders();
+      });
+
+      socketRef.current = socket;
+    } catch (err) {
+      console.log('[Socket] Connection failed:', err.message);
+    }
+  };
 
   const setupLocation = async () => {
     const loc = await getCurrentLocation();
@@ -70,6 +104,7 @@ export default function HomeScreen({ navigation }) {
   };
 
   useEffect(() => {
+    isOnlineRef.current = isOnline;
     if (isOnline) loadNearbyOrders();
     else setNearbyOrders([]);
   }, [isOnline, location]);
