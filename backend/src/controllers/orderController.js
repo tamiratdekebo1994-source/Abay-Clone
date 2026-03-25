@@ -57,11 +57,18 @@ const createOrder = async (req, res, next) => {
 
     // Notify nearby online drivers via socket
     req.io?.emit('new_order_available', {
+      id: order.id,
       orderId: order.id,
-      pickup: { address: order.pickupAddress, lat: order.pickupLat, lng: order.pickupLng },
-      delivery: { address: order.deliveryAddress },
-      fee: order.driverFee,
+      orderNumber: order.orderNumber,
+      pickupAddress: order.pickupAddress,
+      pickupLat: order.pickupLat,
+      pickupLng: order.pickupLng,
+      deliveryAddress: order.deliveryAddress,
+      driverFee: order.driverFee,
       distanceKm: order.distanceKm,
+      isFragile: order.isFragile,
+      requiresRefrigeration: order.requiresRefrigeration,
+      store: order.store,
     });
 
     // Push notification to online drivers
