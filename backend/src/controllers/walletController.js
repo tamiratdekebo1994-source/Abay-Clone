@@ -106,7 +106,17 @@ const requestWithdrawal = async (req, res, next) => {
 const processWithdrawal = async (req, res, next) => {
   try {
     const { withdrawalId } = req.params;
-    const { action, reference } = req.body; // 'complete' | 'fail'
+    // Accept both { action: 'complete'|'fail' } and { status: 'COMPLETED'|'FAILED' }
+    const { action, status: bodyStatus, reference, txRef } = req.body;
+    const ref = reference || txRef;
+    let newStatus;
+    if (bodyStatus === 'COMPLETED' || action === 'complete') {
+      newStatus = 'COMPLETED';
+    } else if (bodyStatus === 'FAILED' || action === 'fail') {
+      newStatus = 'FAILED';
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid action. Use status: COMPLETED or FAILED' });
+    }
 
     const withdrawal = await prisma.walletWithdrawal.findUnique({
       where: { id: withdrawalId },
@@ -118,12 +128,10 @@ const processWithdrawal = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Withdrawal already processed' });
     }
 
-    const newStatus = action === 'complete' ? 'COMPLETED' : 'FAILED';
-
     await prisma.$transaction([
       prisma.walletWithdrawal.update({
         where: { id: withdrawalId },
-        data: { status: newStatus, reference, processedAt: new Date() },
+        data: { status: newStatus, reference: ref, processedAt: new Date() },
       }),
       prisma.wallet.update({
         where: { id: withdrawal.walletId },
@@ -142,12 +150,16 @@ const processWithdrawal = async (req, res, next) => {
 };
 
 /**
- * Admin: Get all pending withdrawals
+ * Admin: Get withdrawals filtered by status
  */
 const getPendingWithdrawals = async (req, res, next) => {
   try {
+    const { status = 'PENDING' } = req.query;
+    const validStatuses = ['PENDING', 'COMPLETED', 'FAILED'];
+    const where = validStatuses.includes(status) ? { status } : { status: 'PENDING' };
+
     const withdrawals = await prisma.walletWithdrawal.findMany({
-      where: { status: 'PENDING' },
+      where,
       include: {
         wallet: {
           include: {
