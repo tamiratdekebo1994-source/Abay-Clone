@@ -212,7 +212,7 @@ export default function AdminDrivers() {
 
               {/* Documents */}
               {[
-                { key: 'licenseUrl', label: "Driver's License", icon: '🪪' },
+                { key: 'licensePhotoUrl', label: "Driver's License", icon: '🪪' },
                 { key: 'idCardUrl', label: 'National ID', icon: '🆔' },
                 { key: 'vehiclePhotoUrl', label: 'Vehicle Photo', icon: '🚗' },
               ].map(({ key, label, icon }) => (

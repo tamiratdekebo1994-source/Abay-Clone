@@ -42,7 +42,10 @@ export default function ChatScreen({ route }) {
     const socket = io(SOCKET_URL, { auth: { token } });
     socket.emit('join_order', orderId);
     socket.on('new_chat_message', (msg) => {
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prev) => {
+        if (prev.find((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
     });
     socketRef.current = socket;
