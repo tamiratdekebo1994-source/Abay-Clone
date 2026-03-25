@@ -1,3 +1,5 @@
+import Constants from 'expo-constants';
+
 export const API_URL = __DEV__
   ? 'http://192.168.1.100:5000/api'  // Change to your local IP
   : 'https://api.abaydriver.et/api';
@@ -6,10 +8,9 @@ export const SOCKET_URL = __DEV__
   ? 'http://192.168.1.100:5000'
   : 'https://api.abaydriver.et';
 
-// Replace with your actual Google Maps API key
-// Get one at: https://console.cloud.google.com/
-// Enable: Maps SDK for Android, Maps SDK for iOS, Directions API
-export const GOOGLE_MAPS_API_KEY = 'AIzaSyC2yi_vT54q1xU9OAoySHJaWkBjvXGHTyU';
+// Google Maps API key — injected at build time via app.config.js from GOOGLE_MAPS_API_KEY env var
+// See: mobile/.env.example
+export const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey ?? '';
 
 // Addis Ababa default center
 export const DEFAULT_MAP_REGION = {

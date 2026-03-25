@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate, authorize } = require('../middleware/auth');
+const validate = require('../middleware/validate');
+const orderValidators = require('../validators/order');
 const {
   createOrder, acceptOrder, updateOrderStatus,
   getOrderDetails, getMyOrders, cancelOrder, submitReview,
@@ -12,7 +14,7 @@ const prisma = require('../config/database');
 router.use(authenticate);
 
 // Store routes
-router.post('/', authorize('STORE'), createOrder);
+router.post('/', authorize('STORE'), validate(orderValidators.createOrder), createOrder);
 router.post('/:orderId/cancel', authorize('STORE', 'ADMIN', 'DRIVER'), cancelOrder);
 router.post('/:orderId/review', submitReview);
 
@@ -21,13 +23,14 @@ router.post('/:orderId/accept', authorize('DRIVER'), acceptOrder);
 router.patch('/:orderId/status', authorize('DRIVER'), updateOrderStatus);
 
 // Fare estimate — called before order creation to show live price with surge
-router.post('/estimate', authorize('STORE'), async (req, res, next) => {
+router.post('/estimate', authorize('STORE'), validate(orderValidators.estimate), async (req, res, next) => {
   try {
     const {
       pickupLat, pickupLng, deliveryLat, deliveryLng,
       isFragile = false, requiresRefrigeration = false,
     } = req.body;
 
+    // Basic presence check — full coordinate validation handled by validate(orderValidators.estimate)
     if (!pickupLat || !pickupLng || !deliveryLat || !deliveryLng) {
       return res.status(400).json({ success: false, message: 'pickup and delivery coordinates required' });
     }

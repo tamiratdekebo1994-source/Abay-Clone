@@ -43,8 +43,11 @@ app.use(rateLimit({
   max: 200,
 }));
 
-// Parsing
-app.use(express.json({ limit: '10mb' }));
+// Parsing — capture raw body for payment webhook signature verification
+app.use(express.json({
+  limit: '10mb',
+  verify: (req, _res, buf) => { req.rawBody = buf; },
+}));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan('dev'));
 

@@ -12,6 +12,31 @@ router.use(authenticate);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+/**
+ * Verifies an HMAC-SHA256 webhook signature.
+ * @param {Buffer} rawBody  - Raw request body captured before JSON parsing
+ * @param {string} signature - Signature header value (hex or "sha256=<hex>")
+ * @param {string} secret    - HMAC secret from environment variable
+ * @returns {boolean} true if valid, false if invalid, true if secret not configured (dev mode)
+ */
+function verifyWebhookSignature(rawBody, signature, secret) {
+  if (!secret) {
+    // Secret not configured — skip verification in development
+    if (process.env.NODE_ENV !== 'test') {
+      console.warn('[payments] Webhook signature verification skipped (secret not configured)');
+    }
+    return true;
+  }
+  if (!signature || !rawBody) return false;
+  const sigHex = signature.startsWith('sha256=') ? signature.slice(7) : signature;
+  const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+  try {
+    return crypto.timingSafeEqual(Buffer.from(sigHex, 'hex'), Buffer.from(expected, 'hex'));
+  } catch {
+    return false;
+  }
+}
+
 function generatePayRef(prefix = 'PAY') {
   return `${prefix}-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 }
@@ -90,7 +115,12 @@ router.post('/telebirr/callback', async (req, res, next) => {
   try {
     const { outTradeNo, tradeStatus, transactionNo } = req.body;
 
-    // In production: verify HMAC signature from TeleBirr
+    // Verify HMAC-SHA256 signature sent by TeleBirr in X-Telebirr-Signature header
+    const signature = req.headers['x-telebirr-signature'];
+    if (!verifyWebhookSignature(req.rawBody, signature, process.env.TELEBIRR_APP_KEY)) {
+      return res.status(401).send('FAIL');
+    }
+
     if (!outTradeNo) return res.status(400).send('FAIL');
 
     const order = await prisma.order.findFirst({ where: { paymentRef: outTradeNo } });
@@ -165,6 +195,13 @@ router.post('/cbe/initiate', authorize('STORE'), async (req, res, next) => {
 router.post('/cbe/callback', async (req, res, next) => {
   try {
     const { orderRef, status, transactionRef } = req.body;
+
+    // Verify HMAC-SHA256 signature sent by CBE in X-CBE-Signature header
+    const signature = req.headers['x-cbe-signature'];
+    if (!verifyWebhookSignature(req.rawBody, signature, process.env.CBE_SECRET_KEY)) {
+      return res.status(401).send('FAIL');
+    }
+
     if (!orderRef) return res.status(400).send('FAIL');
 
     const order = await prisma.order.findFirst({ where: { paymentRef: orderRef } });

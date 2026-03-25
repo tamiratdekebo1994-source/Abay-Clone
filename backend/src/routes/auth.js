@@ -5,6 +5,8 @@ const {
   login, refreshToken, logout, getMe, updateProfile,
 } = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
+const validate = require('../middleware/validate');
+const authValidators = require('../validators/auth');
 const rateLimit = require('express-rate-limit');
 
 // Tight rate limit for OTP requests
@@ -15,13 +17,13 @@ const otpRateLimit = rateLimit({
 });
 
 // OTP flows
-router.post('/otp/request', otpRateLimit, requestOtp);
-router.post('/otp/verify-login', loginWithOtp);
-router.post('/otp/verify-register', verifyRegistrationOtp);
-router.post('/register/complete', completeRegistration);
+router.post('/otp/request', otpRateLimit, validate(authValidators.otpRequest), requestOtp);
+router.post('/otp/verify-login', validate(authValidators.otpVerify), loginWithOtp);
+router.post('/otp/verify-register', validate(authValidators.otpVerify), verifyRegistrationOtp);
+router.post('/register/complete', validate(authValidators.completeRegistration), completeRegistration);
 
 // Password login (admin)
-router.post('/login', login);
+router.post('/login', validate(authValidators.login), login);
 
 // Token management
 router.post('/refresh', refreshToken);
