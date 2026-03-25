@@ -296,7 +296,11 @@ const getMyOrders = async (req, res, next) => {
       where.driverId = driver?.id;
     }
 
-    if (status) where.status = status;
+    if (status) {
+      where.status = status.includes(',')
+        ? { in: status.split(',').map((s) => s.trim()) }
+        : status;
+    }
 
     const [orders, total] = await Promise.all([
       prisma.order.findMany({

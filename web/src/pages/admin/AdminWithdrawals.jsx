@@ -189,8 +189,8 @@ export default function AdminWithdrawals() {
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[w.status]}`}>
                         {w.status}
                       </span>
-                      {w.txRef && (
-                        <div className="text-xs text-gray-400 mt-1">Ref: {w.txRef}</div>
+                      {w.reference && (
+                        <div className="text-xs text-gray-400 mt-1">Ref: {w.reference}</div>
                       )}
                     </td>
                     <td className="px-4 py-3">
