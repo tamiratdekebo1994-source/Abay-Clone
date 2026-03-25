@@ -80,7 +80,7 @@ export default function OrderTracking() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (data.success) setMessages(data.data.messages || []);
+      if (data.success) setMessages(data.data || []);
     } catch (err) {
       console.error(err);
     }
