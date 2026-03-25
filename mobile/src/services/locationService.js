@@ -7,12 +7,13 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import * as SecureStore from 'expo-secure-store';
+import { API_URL } from '../utils/constants';
 
 const LOCATION_TASK = 'abay-driver-background-location';
 const LOCATION_UPDATE_INTERVAL = 5000;   // 5 seconds
 const LOCATION_UPDATE_DISTANCE = 10;     // 10 meters
 
-let apiBaseUrl = 'http://localhost:5000/api';
+let apiBaseUrl = API_URL;
 
 // ── Background Task Definition ────────────────────────────────────────────────
 // Must be defined at top level (not inside components)
