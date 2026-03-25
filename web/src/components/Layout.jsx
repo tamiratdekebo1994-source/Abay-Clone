@@ -45,7 +45,7 @@ export default function Layout() {
       }
     });
 
-    socket.on('order_assigned', (data) => {
+    socket.on('driver_assigned', (data) => {
       setOrderAlert({ ...data, ts: Date.now() });
       if (Notification.permission === 'granted') {
         new Notification('🚗 Driver Assigned!', {

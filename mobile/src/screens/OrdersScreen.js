@@ -32,7 +32,7 @@ export default function OrdersScreen({ navigation }) {
       });
       const fetched = data.data.orders;
       setOrders(reset ? fetched : (prev) => [...prev, ...fetched]);
-      setTotal(data.data.total);
+      setTotal(data.data.pagination.total);
       if (reset) setPage(2);
       else setPage((p) => p + 1);
     } catch (err) {

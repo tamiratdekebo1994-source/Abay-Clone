@@ -130,6 +130,7 @@ const acceptOrder = async (req, res, next) => {
     // Notify store via socket + push
     req.io?.to(`store:${order.storeId}`).emit('driver_assigned', {
       orderId: order.id,
+      orderNumber: order.orderNumber,
       driver: { id: driver.id, name: req.user.fullName },
     });
 
@@ -220,8 +221,8 @@ const updateOrderStatus = async (req, res, next) => {
     });
 
     // Notify store and order room via socket
-    req.io?.to(`store:${order.storeId}`).emit('order_status_updated', { orderId, status });
-    req.io?.to(`order:${orderId}`).emit('order_status_updated', { orderId, status });
+    req.io?.to(`store:${order.storeId}`).emit('order_status_updated', { orderId, orderNumber: order.orderNumber, status });
+    req.io?.to(`order:${orderId}`).emit('order_status_updated', { orderId, orderNumber: order.orderNumber, status });
 
     // Push notification to store owner
     const storeOwner = await prisma.store.findUnique({ where: { id: order.storeId }, select: { userId: true } });
