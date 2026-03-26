@@ -6,6 +6,8 @@ import { io } from 'socket.io-client';
 import { orderAPI, chatAPI } from '../../services/api';
 import { useSelector } from 'react-redux';
 
+const FRONTEND_URL = window.location.origin;
+
 // Fix leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -40,6 +42,7 @@ export default function OrderTracking() {
   const [order, setOrder] = useState(null);
   const [driverPos, setDriverPos] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [linkCopied, setLinkCopied] = useState(false);
   const socketRef = useRef(null);
 
   // Chat state
@@ -131,12 +134,25 @@ export default function OrderTracking() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Link to="/store/orders" className="text-gray-400 hover:text-gray-600">← Back</Link>
-        <div>
-          <h1 className="text-2xl font-black text-gray-900">Tracking Order #{order.orderNumber}</h1>
-          <p className="text-gray-500 text-sm">ትዕዛዝ መከታተያ</p>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-4">
+          <Link to="/store/orders" className="text-gray-400 hover:text-gray-600">← Back</Link>
+          <div>
+            <h1 className="text-2xl font-black text-gray-900">Tracking Order #{order.orderNumber}</h1>
+            <p className="text-gray-500 text-sm">ትዕዛዝ መከታተያ</p>
+          </div>
         </div>
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(`${FRONTEND_URL}/track/${orderId}`);
+            setLinkCopied(true);
+            setTimeout(() => setLinkCopied(false), 2000);
+          }}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+          title="Copy customer tracking link"
+        >
+          {linkCopied ? '✓ Link Copied!' : '🔗 Share Tracking Link'}
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

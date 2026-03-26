@@ -139,7 +139,8 @@ const processWithdrawal = async (req, res, next) => {
         where: { id: withdrawal.walletId },
         data: {
           pendingAmount: { decrement: withdrawal.amount },
-          // If failed, refund to balance
+          // If completed, record in totalWithdrawn; if failed, refund to balance
+          ...(newStatus === 'COMPLETED' && { totalWithdrawn: { increment: withdrawal.amount } }),
           ...(newStatus === 'FAILED' && { balance: { increment: withdrawal.amount } }),
         },
       }),

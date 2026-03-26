@@ -5,8 +5,16 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../config/database');
+const { makeRateLimiter } = require('../utils/rateLimiter');
 
-router.get('/:orderId', async (req, res, next) => {
+// 60 lookups per IP per 15 minutes — generous for real customers, protective against scrapers
+const trackLimit = makeRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  message: { success: false, message: 'Too many requests, please slow down' },
+});
+
+router.get('/:orderId', trackLimit, async (req, res, next) => {
   try {
     const order = await prisma.order.findUnique({
       where: { id: req.params.orderId },
