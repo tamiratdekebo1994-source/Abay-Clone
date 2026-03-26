@@ -33,7 +33,7 @@ export default function AdminStores() {
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      await downloadCSV('/admin/export/drivers.csv', `drivers_${Date.now()}.csv`);
+      await downloadCSV('/admin/export/stores.csv', `stores_${Date.now()}.csv`);
     } catch (err) { console.error(err); }
     finally { setIsExporting(false); }
   };

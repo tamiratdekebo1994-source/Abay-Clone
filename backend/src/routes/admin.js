@@ -167,6 +167,38 @@ router.get('/export/drivers.csv', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/admin/export/stores.csv
+router.get('/export/stores.csv', async (req, res, next) => {
+  try {
+    const stores = await prisma.store.findMany({
+      include: {
+        user: { select: { fullName: true, phone: true, email: true, isActive: true } },
+        _count: { select: { orders: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const csv = toCSV(
+      ['Store Name', 'Type', 'Owner', 'Phone', 'Email', 'City', 'Address',
+        'Verified', 'Active', 'Rating', 'Total Orders', 'Joined At'],
+      stores.map((s) => [
+        s.storeName, s.storeType,
+        s.user.fullName, s.user.phone, s.user.email || '',
+        s.city, s.address,
+        s.isVerified ? 'Yes' : 'No',
+        s.user.isActive ? 'Yes' : 'No',
+        s.rating?.toFixed(2) ?? '',
+        s._count.orders,
+        s.createdAt.toISOString(),
+      ]),
+    );
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="stores_${Date.now()}.csv"`);
+    res.send(csv);
+  } catch (err) { next(err); }
+});
+
 // GET /api/admin/export/withdrawals.csv
 router.get('/export/withdrawals.csv', async (req, res, next) => {
   try {

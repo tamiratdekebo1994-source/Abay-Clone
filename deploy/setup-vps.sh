@@ -87,7 +87,7 @@ fi
 # ── 6. Environment file ──────────────────────────────────────────────────────
 if [[ ! -f "$APP_DIR/.env" ]]; then
   info "Creating .env from template..."
-  cp "$APP_DIR/backend/.env.example" "$APP_DIR/.env"
+  cp "$APP_DIR/.env.production.example" "$APP_DIR/.env"
   warn "⚠️  You MUST edit $APP_DIR/.env before starting the app:"
   warn "   - Set POSTGRES_PASSWORD, REDIS_PASSWORD"
   warn "   - Set JWT_SECRET, JWT_REFRESH_SECRET (use: openssl rand -hex 64)"
