@@ -17,12 +17,11 @@ enum UserRole {
 }
 
 enum DriverStatus {
-  PENDING
-  APPROVED
-  SUSPENDED
-  OFFLINE
-  ONLINE
-  BUSY
+  PENDING    // submitted, awaiting admin review
+  SUSPENDED  // banned by admin
+  OFFLINE    // approved and available but not taking orders
+  ONLINE     // active and visible to stores
+  BUSY       // currently on a delivery
 }
 
 enum OrderStatus {

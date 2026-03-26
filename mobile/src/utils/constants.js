@@ -1,11 +1,14 @@
 import Constants from 'expo-constants';
 
+// Dev server base URL — set API_BASE_URL in your .env file (see .env.example)
+const _devBase = Constants.expoConfig?.extra?.apiBaseUrl ?? 'http://192.168.1.100:5000';
+
 export const API_URL = __DEV__
-  ? 'http://192.168.1.100:5000/api'  // Change to your local IP
+  ? `${_devBase}/api`
   : 'https://api.abaydriver.et/api';
 
 export const SOCKET_URL = __DEV__
-  ? 'http://192.168.1.100:5000'
+  ? _devBase
   : 'https://api.abaydriver.et';
 
 // Google Maps API key — injected at build time via app.config.js from GOOGLE_MAPS_API_KEY env var
