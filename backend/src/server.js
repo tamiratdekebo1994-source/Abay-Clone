@@ -1,4 +1,6 @@
 require('dotenv').config();
+const validateEnv = require('./config/validateEnv');
+validateEnv();
 const http = require('http');
 const express = require('express');
 const cors = require('cors');
@@ -9,6 +11,7 @@ const { Sentry, initSentry } = require('./config/sentry');
 const logger = require('./config/logger');
 const requestId = require('./middleware/requestId');
 const { makeRateLimiter } = require('./utils/rateLimiter');
+const prisma = require('./config/database');
 
 const authRoutes = require('./routes/auth');
 const driverRoutes = require('./routes/driver');
@@ -96,14 +99,26 @@ app.use('/api/wallet', walletRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
 
-// Health check
-app.get('/health', (_req, res) => {
-  res.json({
-    status: 'ok',
-    app: 'Abay Driver API',
-    version: '1.0.0',
-    timestamp: new Date().toISOString(),
-  });
+// Health check — used by Docker and load balancers
+app.get('/health', async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({
+      status: 'ok',
+      app: 'Abay Driver API',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+      db: 'ok',
+    });
+  } catch {
+    res.status(503).json({
+      status: 'error',
+      app: 'Abay Driver API',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+      db: 'unreachable',
+    });
+  }
 });
 
 // 404
