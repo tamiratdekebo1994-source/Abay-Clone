@@ -2,7 +2,12 @@
   "name": "abay-driver",
   "version": "1.0.0",
   "description": "Abay Driver - Ethiopia's Spark Driver Clone connecting stores and drivers",
+  "license": "MIT",
   "private": true,
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
   "workspaces": ["backend", "mobile", "web"],
   "scripts": {
     "backend": "npm run dev --workspace=backend",

@@ -254,6 +254,8 @@ After running `node backend/src/utils/seed.js`:
 | 🏪 Store | +251922000001 | Store@1234 |
 | 🚗 Driver | +251933000002 | Driver@1234 |
 
+> **Production warning:** These are insecure demo passwords. Change them immediately after seeding a production database — especially the admin account.
+
 ---
 
 ## Pricing Model (ETB)
