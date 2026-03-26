@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { API_URL } from '../utils/constants';
 
 const api = axios.create({
@@ -73,7 +74,7 @@ export const driverAPI = {
   getNearbyOrders: (lat, lng, radius = 10) =>
     api.get('/driver/orders/nearby', { params: { lat, lng, radius } }),
   getEarnings: (period) => api.get('/driver/earnings', { params: { period } }),
-  registerPushToken: (token) => api.post('/driver/push-token', { token, platform: 'android' }),
+  registerPushToken: (token) => api.post('/driver/push-token', { token, platform: Platform.OS }),
   getSurge: (city) => api.get('/driver/surge', { params: { city } }),
 };
 

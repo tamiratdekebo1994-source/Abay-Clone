@@ -9,6 +9,7 @@ const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY || '';
 const apiBaseUrl = process.env.API_BASE_URL || 'http://192.168.1.100:5000';
 // EAS project ID — get from `eas init` or https://expo.dev/accounts/<username>/projects
 const easProjectId = process.env.EAS_PROJECT_ID || '';
+const sentryDsn = process.env.SENTRY_DSN || '';
 
 module.exports = ({ config }) => ({
   ...config,
@@ -30,6 +31,7 @@ module.exports = ({ config }) => ({
     ...config.extra,
     googleMapsApiKey,
     apiBaseUrl,
+    sentryDsn,
     eas: { projectId: easProjectId },
   },
 });

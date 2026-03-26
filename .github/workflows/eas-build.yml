@@ -1,0 +1,70 @@
+name: EAS Build
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'        # production release: v1.2.3
+      - 'v*.*.*-rc*'    # release candidate: v1.2.3-rc1
+
+jobs:
+  build-android:
+    name: Android Production Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Build Android (AAB)
+        working-directory: mobile
+        run: eas build --platform android --profile production --non-interactive
+        env:
+          EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_MOBILE }}
+
+  build-ios:
+    name: iOS Production Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Build iOS (IPA)
+        working-directory: mobile
+        run: eas build --platform ios --profile production --non-interactive
+        env:
+          EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_MOBILE }}

@@ -41,13 +41,16 @@ router.patch('/read-all', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// PATCH /api/notifications/:id/read — mark one as read
+// PATCH /api/notifications/:id/read — mark one as read (own notifications only)
 router.patch('/:id/read', async (req, res, next) => {
   try {
-    await prisma.notification.update({
-      where: { id: req.params.id },
+    const updated = await prisma.notification.updateMany({
+      where: { id: req.params.id, userId: req.user.id },
       data: { isRead: true },
     });
+    if (updated.count === 0) {
+      return res.status(404).json({ success: false, message: 'Notification not found' });
+    }
     res.json({ success: true });
   } catch (err) { next(err); }
 });

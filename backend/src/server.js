@@ -4,9 +4,11 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
 const path = require('path');
-const { getRedis } = require('./config/redis');
+const { Sentry, initSentry } = require('./config/sentry');
+const logger = require('./config/logger');
+const requestId = require('./middleware/requestId');
+const { makeRateLimiter } = require('./utils/rateLimiter');
 
 const authRoutes = require('./routes/auth');
 const driverRoutes = require('./routes/driver');
@@ -22,8 +24,12 @@ const errorHandler = require('./middleware/errorHandler');
 const { initSocket } = require('./services/socketService');
 
 const app = express();
+initSentry(app);
 const httpServer = http.createServer(app);
 const io = initSocket(httpServer);
+
+// Request ID — must be first so all subsequent middleware can use req.requestId
+app.use(requestId);
 
 // Security middleware
 app.use(helmet());
@@ -32,18 +38,7 @@ app.use(cors({
   credentials: true,
 }));
 
-// Rate limiting — use Redis store when available so limits survive restarts
-// and are shared across multiple server instances
-function makeRateLimiter(options) {
-  const redis = getRedis();
-  if (redis) {
-    // eslint-disable-next-line global-require
-    const { RedisStore } = require('rate-limit-redis');
-    return rateLimit({ ...options, store: new RedisStore({ sendCommand: (...args) => redis.call(...args) }) });
-  }
-  return rateLimit(options);
-}
-
+// Rate limiting — Redis-backed when REDIS_URL is set
 app.use('/api/auth', makeRateLimiter({
   windowMs: 15 * 60 * 1000,
   max: 20,
@@ -61,7 +56,24 @@ app.use(express.json({
   verify: (req, _res, buf) => { req.rawBody = buf; },
 }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(morgan('dev'));
+// HTTP request logging
+if (process.env.NODE_ENV === 'production') {
+  morgan.token('request-id', (req) => req.requestId);
+  app.use(morgan((tokens, req, res) => JSON.stringify({
+    timestamp: new Date().toISOString(),
+    level: 'info',
+    service: 'abay-driver-api',
+    requestId: tokens['request-id'](req, res),
+    method: tokens.method(req, res),
+    url: tokens.url(req, res),
+    status: parseInt(tokens.status(req, res), 10),
+    responseTime: parseFloat(tokens['response-time'](req, res)),
+    contentLength: tokens.res(req, res, 'content-length'),
+    userAgent: tokens['user-agent'](req, res),
+  })));
+} else {
+  app.use(morgan('dev'));
+}
 
 // Serve uploads
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -99,14 +111,19 @@ app.use((_req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
 });
 
+// Sentry error handler (must come before custom error handler)
+app.use(Sentry.expressErrorHandler());
+
 // Error handler
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {
-  console.log(`\n🚀 Abay Driver API running on port ${PORT}`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Health: http://localhost:${PORT}/health\n`);
+  logger.info('Abay Driver API started', {
+    port: PORT,
+    env: process.env.NODE_ENV || 'development',
+    health: `http://localhost:${PORT}/health`,
+  });
 });
 
 module.exports = { app, io };

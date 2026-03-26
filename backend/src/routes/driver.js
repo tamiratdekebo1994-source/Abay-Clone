@@ -3,6 +3,15 @@ const router = express.Router();
 const { authenticate, authorize } = require('../middleware/auth');
 const prisma = require('../config/database');
 const { getSurgeMultiplier } = require('../services/surgeService');
+const validate = require('../middleware/validate');
+const driverValidators = require('../validators/driver');
+const { makeRateLimiter } = require('../utils/rateLimiter');
+
+const pushTokenLimit = makeRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, message: 'Too many push token registration requests.' },
+});
 const {
   registerDriver, getDriverProfile, updateLocation,
   toggleOnline, getNearbyOrders, getEarnings,
@@ -11,15 +20,15 @@ const {
 router.use(authenticate);
 router.use(authorize('DRIVER'));
 
-router.post('/register', registerDriver);
+router.post('/register', validate(driverValidators.register), registerDriver);
 router.get('/profile', getDriverProfile);
-router.patch('/location', updateLocation);
+router.patch('/location', validate(driverValidators.location), updateLocation);
 router.post('/toggle-online', toggleOnline);
 router.get('/orders/nearby', getNearbyOrders);
 router.get('/earnings', getEarnings);
 
 // Push token registration
-router.post('/push-token', async (req, res, next) => {
+router.post('/push-token', pushTokenLimit, validate(driverValidators.pushToken), async (req, res, next) => {
   try {
     const { token, platform } = req.body;
     await prisma.pushToken.upsert({

@@ -4,13 +4,15 @@ const { authenticate, authorize } = require('../middleware/auth');
 const { getDashboard, getDrivers, approveDriver, getStores, getAllOrders } = require('../controllers/adminController');
 const { getSurgeMultiplier, setManualSurge } = require('../services/surgeService');
 const prisma = require('../config/database');
+const validate = require('../middleware/validate');
+const adminValidators = require('../validators/admin');
 
 router.use(authenticate);
 router.use(authorize('ADMIN'));
 
 router.get('/dashboard', getDashboard);
 router.get('/drivers', getDrivers);
-router.patch('/drivers/:driverId/status', approveDriver);
+router.patch('/drivers/:driverId/status', validate(adminValidators.approveDriver), approveDriver);
 router.get('/stores', getStores);
 router.get('/orders', getAllOrders);
 
@@ -32,12 +34,9 @@ router.get('/surge', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/surge', async (req, res, next) => {
+router.post('/surge', validate(adminValidators.surge), async (req, res, next) => {
   try {
     const { city, multiplier } = req.body;
-    if (!city || multiplier === undefined) {
-      return res.status(400).json({ success: false, message: 'city and multiplier are required' });
-    }
     await setManualSurge(city, parseFloat(multiplier));
     const updated = await getSurgeMultiplier(city);
     res.json({ success: true, data: updated });

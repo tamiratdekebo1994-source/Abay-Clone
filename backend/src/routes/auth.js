@@ -7,10 +7,10 @@ const {
 const { authenticate } = require('../middleware/auth');
 const validate = require('../middleware/validate');
 const authValidators = require('../validators/auth');
-const rateLimit = require('express-rate-limit');
+const { makeRateLimiter } = require('../utils/rateLimiter');
 
-// Tight rate limit for OTP requests
-const otpRateLimit = rateLimit({
+// Tight rate limit for OTP requests (Redis-backed when available)
+const otpRateLimit = makeRateLimiter({
   windowMs: 10 * 60 * 1000,  // 10 minutes
   max: 5,
   message: { success: false, message: 'Too many OTP requests. Please try again later.' },

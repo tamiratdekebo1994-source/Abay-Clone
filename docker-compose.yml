@@ -78,6 +78,34 @@ services:
       retries: 3
       start_period: 40s
 
+  # ─── Database Backup ───────────────────────────────────────────────────────
+  # Runs pg_dump daily at 02:00 UTC and keeps the last 7 backups.
+  # Backups are stored in the db_backups volume as timestamped .sql.gz files.
+  db-backup:
+    image: postgres:15-alpine
+    container_name: abay_db_backup
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_backups:/backups
+    entrypoint: >
+      sh -c "
+        echo 'Starting backup scheduler...';
+        while true; do
+          FILENAME=/backups/abay_$$(date +%Y%m%d_%H%M%S).sql.gz;
+          echo \"[backup] dumping to $$FILENAME\";
+          pg_dump -h postgres -U ${POSTGRES_USER:-abay} ${POSTGRES_DB:-abaydriver} | gzip > $$FILENAME;
+          echo \"[backup] done. Pruning old backups (keep last 7)...\";
+          ls -t /backups/*.sql.gz 2>/dev/null | tail -n +8 | xargs -r rm --;
+          echo \"[backup] sleeping 24h...\";
+          sleep 86400;
+        done
+      "
+
   # ─── Web Dashboard ─────────────────────────────────────────────────────────
   web:
     build:
@@ -95,6 +123,7 @@ volumes:
   postgres_data:
   redis_data:
   uploads_data:
+  db_backups:
 
 networks:
   default:

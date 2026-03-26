@@ -75,11 +75,11 @@ export default function ChatScreen({ route }) {
       <View style={[styles.msgRow, isMe ? styles.msgRowMe : styles.msgRowThem]}>
         {!isMe && (
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{item.sender?.fullName?.charAt(0)}</Text>
+            <Text style={styles.avatarText}>{(item.sender?.fullName || 'D').charAt(0)}</Text>
           </View>
         )}
         <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleThem]}>
-          {!isMe && <Text style={styles.senderName}>{item.sender?.fullName}</Text>}
+          {!isMe && <Text style={styles.senderName}>{item.sender?.fullName || 'Driver'}</Text>}
           <Text style={[styles.msgText, isMe && styles.msgTextMe]}>{item.message}</Text>
           <Text style={[styles.msgTime, isMe && styles.msgTimeMe]}>
             {new Date(item.createdAt).toLocaleTimeString('en-ET', { hour: '2-digit', minute: '2-digit' })}
