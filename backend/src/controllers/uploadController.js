@@ -1,18 +1,9 @@
-const path = require('path');
-const fs = require('fs');
 const sharp = require('sharp');
 const prisma = require('../config/database');
-
-const UPLOADS_DIR = path.join(__dirname, '../../uploads');
-
-// Ensure upload directories exist
-['documents', 'avatars', 'cargo'].forEach((dir) => {
-  const p = path.join(UPLOADS_DIR, dir);
-  if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
-});
+const { storeFile } = require('../config/storage');
 
 /**
- * Upload driver document (license photo, ID card)
+ * Upload driver document (license photo, ID card, vehicle photo)
  */
 const uploadDriverDocument = async (req, res, next) => {
   try {
@@ -31,28 +22,20 @@ const uploadDriverDocument = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Driver profile not found' });
     }
 
-    // Optimize image with sharp
     const filename = `${driver.id}_${docType}_${Date.now()}.webp`;
-    const outputPath = path.join(UPLOADS_DIR, 'documents', filename);
-
-    await sharp(req.file.buffer)
+    const buffer = await sharp(req.file.buffer)
       .resize({ width: 1200, withoutEnlargement: true })
       .webp({ quality: 85 })
-      .toFile(outputPath);
+      .toBuffer();
+    const fileUrl = await storeFile(buffer, `documents/${filename}`);
 
-    const fileUrl = `/uploads/documents/${filename}`;
-
-    // Update driver record
     const updateField = {
       license: 'licensePhotoUrl',
       id_card: 'idCardUrl',
       vehicle: 'vehiclePhotoUrl',
     }[docType];
 
-    await prisma.driver.update({
-      where: { id: driver.id },
-      data: { [updateField]: fileUrl },
-    });
+    await prisma.driver.update({ where: { id: driver.id }, data: { [updateField]: fileUrl } });
 
     res.json({ success: true, message: 'Document uploaded successfully', data: { url: fileUrl } });
   } catch (error) {
@@ -70,20 +53,13 @@ const uploadAvatar = async (req, res, next) => {
     }
 
     const filename = `avatar_${req.user.id}_${Date.now()}.webp`;
-    const outputPath = path.join(UPLOADS_DIR, 'avatars', filename);
-
-    await sharp(req.file.buffer)
+    const buffer = await sharp(req.file.buffer)
       .resize(400, 400, { fit: 'cover' })
       .webp({ quality: 90 })
-      .toFile(outputPath);
+      .toBuffer();
+    const avatarUrl = await storeFile(buffer, `avatars/${filename}`);
 
-    const avatarUrl = `/uploads/avatars/${filename}`;
-
-    await prisma.user.update({
-      where: { id: req.user.id },
-      data: { avatarUrl },
-    });
-
+    await prisma.user.update({ where: { id: req.user.id }, data: { avatarUrl } });
     res.json({ success: true, data: { avatarUrl } });
   } catch (error) {
     next(error);
@@ -91,7 +67,7 @@ const uploadAvatar = async (req, res, next) => {
 };
 
 /**
- * Upload order/cargo photo
+ * Upload order/cargo photo — only the store owner or assigned driver may upload
  */
 const uploadCargoPhoto = async (req, res, next) => {
   try {
@@ -115,17 +91,13 @@ const uploadCargoPhoto = async (req, res, next) => {
     }
 
     const filename = `cargo_${orderId}_${Date.now()}.webp`;
-    const outputPath = path.join(UPLOADS_DIR, 'cargo', filename);
-
-    await sharp(req.file.buffer)
+    const buffer = await sharp(req.file.buffer)
       .resize({ width: 800, withoutEnlargement: true })
       .webp({ quality: 85 })
-      .toFile(outputPath);
-
-    const photoUrl = `/uploads/cargo/${filename}`;
+      .toBuffer();
+    const photoUrl = await storeFile(buffer, `cargo/${filename}`);
 
     await prisma.order.update({ where: { id: orderId }, data: { photoUrl } });
-
     res.json({ success: true, data: { photoUrl } });
   } catch (error) {
     next(error);

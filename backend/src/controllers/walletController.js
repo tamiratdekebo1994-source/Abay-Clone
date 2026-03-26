@@ -1,4 +1,6 @@
 const prisma = require('../config/database');
+const pushService = require('../services/pushNotificationService');
+const emailService = require('../services/emailService');
 
 /**
  * Get driver wallet balance
@@ -142,6 +144,24 @@ const processWithdrawal = async (req, res, next) => {
         },
       }),
     ]);
+
+    // Notify driver via push + email
+    const walletWithDriver = await prisma.wallet.findUnique({
+      where: { id: withdrawal.walletId },
+      include: { driver: { include: { user: { select: { id: true, fullName: true, email: true } } } } },
+    });
+    const driverUser = walletWithDriver?.driver?.user;
+    if (driverUser) {
+      const pushTitle = newStatus === 'COMPLETED' ? '💰 Withdrawal Processed' : '❌ Withdrawal Failed';
+      const pushBody = newStatus === 'COMPLETED'
+        ? `ETB ${withdrawal.amount.toFixed(2)} has been sent to your account.`
+        : `ETB ${withdrawal.amount.toFixed(2)} withdrawal failed. Amount refunded to your wallet.`;
+      pushService.sendToUser(driverUser.id, { title: pushTitle, body: pushBody, data: { type: 'WITHDRAWAL_UPDATE' } }).catch(console.error);
+
+      if (driverUser.email) {
+        emailService.sendWithdrawalUpdate(driverUser.email, driverUser.fullName, newStatus, withdrawal.amount).catch(console.error);
+      }
+    }
 
     res.json({ success: true, message: `Withdrawal ${newStatus.toLowerCase()}` });
   } catch (error) {

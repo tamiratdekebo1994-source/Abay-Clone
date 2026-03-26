@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate, authorize } = require('../middleware/auth');
-const { getDashboard, getDrivers, approveDriver, getStores, getAllOrders } = require('../controllers/adminController');
+const { getDashboard, getDrivers, approveDriver, getStores, getAllOrders, updateStoreStatus } = require('../controllers/adminController');
 const { getSurgeMultiplier, setManualSurge } = require('../services/surgeService');
 const prisma = require('../config/database');
 const validate = require('../middleware/validate');
@@ -14,6 +14,7 @@ router.get('/dashboard', getDashboard);
 router.get('/drivers', getDrivers);
 router.patch('/drivers/:driverId/status', validate(adminValidators.approveDriver), approveDriver);
 router.get('/stores', getStores);
+router.patch('/stores/:storeId/status', updateStoreStatus);
 router.get('/orders', getAllOrders);
 
 // Surge pricing management
@@ -95,6 +96,103 @@ router.get('/analytics', async (req, res, next) => {
         },
       },
     });
+  } catch (err) { next(err); }
+});
+
+// ─── CSV Exports ─────────────────────────────────────────────────────────────
+
+function toCSV(headers, rows) {
+  const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  return [headers, ...rows].map((r) => r.map(escape).join(',')).join('\n');
+}
+
+// GET /api/admin/export/orders.csv
+router.get('/export/orders.csv', async (req, res, next) => {
+  try {
+    const orders = await prisma.order.findMany({
+      include: {
+        store: { select: { storeName: true, city: true } },
+        driver: { select: { user: { select: { fullName: true, phone: true } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const csv = toCSV(
+      ['Order #', 'Status', 'Store', 'City', 'Driver', 'Driver Phone', 'Distance (km)',
+        'Total (ETB)', 'Driver Fee (ETB)', 'Platform Fee (ETB)', 'Payment Method',
+        'Payment Status', 'Created At', 'Delivered At'],
+      orders.map((o) => [
+        o.orderNumber, o.status,
+        o.store?.storeName, o.store?.city,
+        o.driver?.user?.fullName || '', o.driver?.user?.phone || '',
+        o.distanceKm?.toFixed(2), o.totalAmount?.toFixed(2),
+        o.driverFee?.toFixed(2), o.platformFee?.toFixed(2),
+        o.paymentMethod || '', o.paymentStatus,
+        o.createdAt.toISOString(), o.deliveredAt?.toISOString() || '',
+      ]),
+    );
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="orders_${Date.now()}.csv"`);
+    res.send(csv);
+  } catch (err) { next(err); }
+});
+
+// GET /api/admin/export/drivers.csv
+router.get('/export/drivers.csv', async (req, res, next) => {
+  try {
+    const drivers = await prisma.driver.findMany({
+      include: {
+        user: { select: { fullName: true, phone: true, email: true, createdAt: true } },
+        wallet: { select: { balance: true, totalWithdrawn: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const csv = toCSV(
+      ['Name', 'Phone', 'Email', 'Status', 'City', 'Vehicle Type', 'Vehicle Plate',
+        'Rating', 'Total Deliveries', 'Total Earnings (ETB)', 'Wallet Balance (ETB)', 'Joined At'],
+      drivers.map((d) => [
+        d.user.fullName, d.user.phone, d.user.email || '',
+        d.status, d.city, d.vehicleType, d.vehiclePlate,
+        d.rating?.toFixed(2), d.totalDeliveries, d.totalEarnings?.toFixed(2),
+        d.wallet?.balance?.toFixed(2) || '0.00',
+        d.user.createdAt.toISOString(),
+      ]),
+    );
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="drivers_${Date.now()}.csv"`);
+    res.send(csv);
+  } catch (err) { next(err); }
+});
+
+// GET /api/admin/export/withdrawals.csv
+router.get('/export/withdrawals.csv', async (req, res, next) => {
+  try {
+    const withdrawals = await prisma.walletWithdrawal.findMany({
+      include: {
+        wallet: {
+          include: { driver: { include: { user: { select: { fullName: true, phone: true } } } } },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const csv = toCSV(
+      ['Driver', 'Phone', 'Amount (ETB)', 'Method', 'Account Number', 'Account Name',
+        'Status', 'Reference', 'Requested At', 'Processed At'],
+      withdrawals.map((w) => [
+        w.wallet?.driver?.user?.fullName || '', w.wallet?.driver?.user?.phone || '',
+        w.amount?.toFixed(2), w.method, w.accountNumber, w.accountName || '',
+        w.status, w.reference || '',
+        w.createdAt.toISOString(), w.processedAt?.toISOString() || '',
+      ]),
+    );
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="withdrawals_${Date.now()}.csv"`);
+    res.send(csv);
   } catch (err) { next(err); }
 });
 

@@ -1,4 +1,5 @@
 const prisma = require('../config/database');
+const emailService = require('../services/emailService');
 
 const getDashboard = async (req, res, next) => {
   try {
@@ -92,6 +93,12 @@ const approveDriver = async (req, res, next) => {
       },
     });
 
+    // Send email notification if driver has an email on file
+    if (driver.user.email) {
+      const fn = action === 'approve' ? emailService.sendDriverApproved : emailService.sendDriverSuspended;
+      fn(driver.user.email, driver.user.fullName).catch(console.error);
+    }
+
     res.json({ success: true, message: `Driver ${action}d successfully`, data: driver });
   } catch (error) {
     next(error);
@@ -148,4 +155,55 @@ const getAllOrders = async (req, res, next) => {
   }
 };
 
-module.exports = { getDashboard, getDrivers, approveDriver, getStores, getAllOrders };
+const updateStoreStatus = async (req, res, next) => {
+  try {
+    const { storeId } = req.params;
+    const { action } = req.body; // 'verify' | 'unverify' | 'suspend' | 'unsuspend'
+
+    const validActions = ['verify', 'unverify', 'suspend', 'unsuspend'];
+    if (!validActions.includes(action)) {
+      return res.status(400).json({ success: false, message: `action must be one of: ${validActions.join(', ')}` });
+    }
+
+    const store = await prisma.store.findUnique({
+      where: { id: storeId },
+      include: { user: { select: { id: true, fullName: true, email: true } } },
+    });
+    if (!store) return res.status(404).json({ success: false, message: 'Store not found' });
+
+    if (action === 'verify' || action === 'unverify') {
+      await prisma.store.update({ where: { id: storeId }, data: { isVerified: action === 'verify' } });
+      if (action === 'verify' && store.user.email) {
+        emailService.sendStoreVerified(store.user.email, store.storeName).catch(console.error);
+      }
+    } else {
+      await prisma.user.update({ where: { id: store.userId }, data: { isActive: action === 'unsuspend' } });
+    }
+
+    const notifTitles = {
+      verify: 'Store Verified!', unverify: 'Store Verification Removed',
+      suspend: 'Store Suspended', unsuspend: 'Store Reinstated',
+    };
+    const notifBodies = {
+      verify: 'Your store has been verified. Customers will see a verified badge on your profile.',
+      unverify: 'Your store verification has been removed.',
+      suspend: 'Your store has been suspended. Please contact support.',
+      unsuspend: 'Your store account has been reinstated. You can resume operations.',
+    };
+
+    await prisma.notification.create({
+      data: {
+        userId: store.userId,
+        title: notifTitles[action],
+        body: notifBodies[action],
+        type: 'STORE_STATUS',
+      },
+    });
+
+    res.json({ success: true, message: `Store ${action}d successfully` });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getDashboard, getDrivers, approveDriver, getStores, getAllOrders, updateStoreStatus };
