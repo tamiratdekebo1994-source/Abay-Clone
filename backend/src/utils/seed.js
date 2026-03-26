@@ -6,6 +6,14 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding database...');
 
+  if (process.env.NODE_ENV === 'production') {
+    console.warn(
+      '\n⚠  WARNING: Running seed in production.\n' +
+      '   Change the admin password immediately after seeding:\n' +
+      '   UPDATE "User" SET "passwordHash" = crypt(\'<new-password>\', gen_salt(\'bf\')) WHERE phone = \'+251911000000\';\n'
+    );
+  }
+
   // Create admin user
   const adminHash = await bcrypt.hash('Admin@1234', 12);
   const admin = await prisma.user.upsert({
@@ -43,7 +51,7 @@ async function main() {
     create: {
       userId: storeUser.id,
       storeName: 'Merkato Supermarket',
-      storeType: 'Supermarket',
+      storeType: 'GROCERY',
       address: 'Merkato, Addis Ababa',
       city: 'Addis Ababa',
       subcity: 'Addis Ketema',

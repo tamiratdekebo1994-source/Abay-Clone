@@ -15,12 +15,12 @@ router.use(authenticate);
 
 // Store routes
 router.post('/', authorize('STORE'), validate(orderValidators.createOrder), createOrder);
-router.post('/:orderId/cancel', authorize('STORE', 'ADMIN', 'DRIVER'), cancelOrder);
-router.post('/:orderId/review', submitReview);
+router.post('/:orderId/cancel', authorize('STORE', 'ADMIN', 'DRIVER'), validate(orderValidators.cancel), cancelOrder);
+router.post('/:orderId/review', validate(orderValidators.review), submitReview);
 
 // Driver routes
 router.post('/:orderId/accept', authorize('DRIVER'), acceptOrder);
-router.patch('/:orderId/status', authorize('DRIVER'), updateOrderStatus);
+router.patch('/:orderId/status', authorize('DRIVER'), validate(orderValidators.updateStatus), updateOrderStatus);
 
 // Fare estimate — called before order creation to show live price with surge
 router.post('/estimate', authorize('STORE'), validate(orderValidators.estimate), async (req, res, next) => {
@@ -29,11 +29,6 @@ router.post('/estimate', authorize('STORE'), validate(orderValidators.estimate),
       pickupLat, pickupLng, deliveryLat, deliveryLng,
       isFragile = false, requiresRefrigeration = false,
     } = req.body;
-
-    // Basic presence check — full coordinate validation handled by validate(orderValidators.estimate)
-    if (!pickupLat || !pickupLng || !deliveryLat || !deliveryLng) {
-      return res.status(400).json({ success: false, message: 'pickup and delivery coordinates required' });
-    }
 
     const store = await prisma.store.findUnique({ where: { userId: req.user.id } });
     const city = store?.city || 'Addis Ababa';

@@ -41,4 +41,30 @@ module.exports = {
     lat('deliveryLat'),
     lng('deliveryLng'),
   ],
+
+  // Driver status transitions: the valid set of values the driver may submit
+  updateStatus: [
+    body('status')
+      .isIn(['DRIVER_AT_STORE', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'])
+      .withMessage('status must be a valid order status'),
+  ],
+
+  cancel: [
+    body('reason')
+      .optional()
+      .trim()
+      .isLength({ max: 500 })
+      .withMessage('reason must be 500 characters or fewer'),
+  ],
+
+  review: [
+    body('rating')
+      .isInt({ min: 1, max: 5 })
+      .withMessage('rating must be an integer between 1 and 5'),
+    body('comment')
+      .optional()
+      .trim()
+      .isLength({ max: 500 })
+      .withMessage('comment must be 500 characters or fewer'),
+  ],
 };

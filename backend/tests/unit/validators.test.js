@@ -9,6 +9,7 @@ const driverV = require('../../src/validators/driver');
 const storeV  = require('../../src/validators/store');
 const adminV  = require('../../src/validators/admin');
 const walletV = require('../../src/validators/wallet');
+const orderV  = require('../../src/validators/order');
 
 // Run an array of express-validator chains against a synthetic request
 async function run(chains, { body = {}, params = {}, query = {} } = {}) {
@@ -253,5 +254,69 @@ describe('walletValidators.processWithdrawal', () => {
   test('fails with invalid status', async () => {
     const errors = await run(walletV.processWithdrawal, { body: { status: 'APPROVED' } });
     expect(errors).toContain('status');
+  });
+});
+
+// ── Order validators (new endpoints) ─────────────────────────────────────────
+
+describe('orderValidators.updateStatus', () => {
+  const validStatuses = ['DRIVER_AT_STORE', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'];
+
+  test.each(validStatuses)('passes with status %s', async (status) => {
+    expect(await run(orderV.updateStatus, { body: { status } })).toHaveLength(0);
+  });
+
+  test('fails when status is missing', async () => {
+    expect(await run(orderV.updateStatus, { body: {} })).toContain('status');
+  });
+
+  test('fails with unknown status value', async () => {
+    expect(await run(orderV.updateStatus, { body: { status: 'FLYING' } })).toContain('status');
+  });
+});
+
+describe('orderValidators.cancel', () => {
+  test('passes with no body (reason is optional)', async () => {
+    expect(await run(orderV.cancel, { body: {} })).toHaveLength(0);
+  });
+
+  test('passes with a valid reason', async () => {
+    expect(await run(orderV.cancel, { body: { reason: 'Store closed' } })).toHaveLength(0);
+  });
+
+  test('fails when reason exceeds 500 characters', async () => {
+    const errors = await run(orderV.cancel, { body: { reason: 'x'.repeat(501) } });
+    expect(errors).toContain('reason');
+  });
+});
+
+describe('orderValidators.review', () => {
+  test('passes with valid rating', async () => {
+    expect(await run(orderV.review, { body: { rating: 5 } })).toHaveLength(0);
+  });
+
+  test('fails when rating is missing', async () => {
+    expect(await run(orderV.review, { body: {} })).toContain('rating');
+  });
+
+  test('fails when rating is 0', async () => {
+    expect(await run(orderV.review, { body: { rating: 0 } })).toContain('rating');
+  });
+
+  test('fails when rating is 6', async () => {
+    expect(await run(orderV.review, { body: { rating: 6 } })).toContain('rating');
+  });
+
+  test('fails when rating is not an integer', async () => {
+    expect(await run(orderV.review, { body: { rating: 4.5 } })).toContain('rating');
+  });
+
+  test('passes with optional comment', async () => {
+    expect(await run(orderV.review, { body: { rating: 4, comment: 'Fast delivery!' } })).toHaveLength(0);
+  });
+
+  test('fails when comment exceeds 500 characters', async () => {
+    const errors = await run(orderV.review, { body: { rating: 4, comment: 'x'.repeat(501) } });
+    expect(errors).toContain('comment');
   });
 });
