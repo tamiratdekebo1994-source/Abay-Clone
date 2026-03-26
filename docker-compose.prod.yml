@@ -1,0 +1,65 @@
+# Production overrides for docker-compose.yml
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# This file closes off direct port exposure — traffic enters only through the
+# host-level nginx reverse proxy (see deploy/nginx-vps.conf).
+
+services:
+  postgres:
+    # Never expose DB port to the public internet
+    ports: !reset []
+
+  redis:
+    # Never expose Redis port to the public internet
+    ports: !reset []
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set in production}
+      --save 60 1
+      --loglevel warning
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+
+  backend:
+    # Bind only to localhost — nginx on the host proxies to this
+    ports:
+      - '127.0.0.1:5000:5000'
+    environment:
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      SENTRY_DSN: ${SENTRY_DSN}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+      AWS_REGION: ${AWS_REGION}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL}
+      AWS_CDN_URL: ${AWS_CDN_URL}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM}
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  web:
+    # Bind only to localhost — nginx on the host serves on 80/443
+    ports:
+      - '127.0.0.1:3000:80'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  db-backup:
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"

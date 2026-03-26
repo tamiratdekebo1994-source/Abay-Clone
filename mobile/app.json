@@ -64,7 +64,11 @@
     ],
     "scheme": "abay-driver",
     "extra": {
-      "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY"
-    }
+      "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY",
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
+    },
+    "owner": "YOUR_EXPO_USERNAME"
   }
 }
