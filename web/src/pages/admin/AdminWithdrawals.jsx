@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { walletAPI } from '../../services/api';
+import { walletAPI, downloadCSV } from '../../services/api';
 
 const PAYMENT_METHOD_LABELS = {
   TELEBIRR: { label: 'Telebirr', icon: '📱' },
@@ -26,6 +26,7 @@ export default function AdminWithdrawals() {
   const [actionStatus, setActionStatus] = useState('COMPLETED');
   const [failureReason, setFailureReason] = useState('');
   const [toast, setToast] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     loadWithdrawals();
@@ -70,6 +71,14 @@ export default function AdminWithdrawals() {
     }
   };
 
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      await downloadCSV('/admin/export/withdrawals.csv', `withdrawals_${Date.now()}.csv`);
+    } catch (err) { console.error(err); }
+    finally { setIsExporting(false); }
+  };
+
   const showToast = (message, type) => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
@@ -88,9 +97,18 @@ export default function AdminWithdrawals() {
         </div>
       )}
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Wallet Withdrawals</h1>
-        <p className="text-gray-500 text-sm mt-1">Process driver withdrawal requests • የሾፌር ክፍያ ጥያቄዎች</p>
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Wallet Withdrawals</h1>
+          <p className="text-gray-500 text-sm mt-1">Process driver withdrawal requests • የሾፌር ክፍያ ጥያቄዎች</p>
+        </div>
+        <button
+          onClick={handleExport}
+          disabled={isExporting}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+        >
+          {isExporting ? '...' : '⬇ Export CSV'}
+        </button>
       </div>
 
       {/* Summary Card */}

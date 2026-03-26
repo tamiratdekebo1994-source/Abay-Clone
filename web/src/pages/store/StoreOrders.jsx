@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { orderAPI } from '../../services/api';
 
+const FRONTEND_URL = window.location.origin;
+
 const STATUS_CONFIG = {
   PENDING: { label: 'Pending', class: 'badge-gray' },
   SEARCHING_DRIVER: { label: 'Finding Driver', class: 'badge-yellow' },
@@ -20,10 +22,19 @@ export default function StoreOrders() {
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
 
   useEffect(() => {
     loadOrders();
   }, [statusFilter, page]);
+
+  const copyTrackingLink = (orderId) => {
+    const url = `${FRONTEND_URL}/track/${orderId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedId(orderId);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  };
 
   const loadOrders = async () => {
     setIsLoading(true);
@@ -123,11 +134,22 @@ export default function StoreOrders() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      {isActive && (
-                        <Link to={`/store/orders/${order.id}/track`} className="text-xs text-primary-600 hover:underline font-semibold">
-                          Track →
-                        </Link>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {isActive && (
+                          <Link to={`/store/orders/${order.id}/track`} className="text-xs text-primary-600 hover:underline font-semibold">
+                            Track →
+                          </Link>
+                        )}
+                        {(isActive || order.status === 'DELIVERED') && (
+                          <button
+                            onClick={() => copyTrackingLink(order.id)}
+                            className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
+                            title="Copy tracking link for customer"
+                          >
+                            {copiedId === order.id ? '✓ Copied' : '🔗'}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
