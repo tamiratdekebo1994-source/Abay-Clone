@@ -55,8 +55,7 @@ const createOrder = async (req, res, next) => {
       },
     });
 
-    // Notify nearby online drivers via socket
-    req.io?.emit('new_order_available', {
+    const orderPayload = {
       id: order.id,
       orderId: order.id,
       orderNumber: order.orderNumber,
@@ -69,10 +68,37 @@ const createOrder = async (req, res, next) => {
       isFragile: order.isFragile,
       requiresRefrigeration: order.requiresRefrigeration,
       store: order.store,
-    });
+    };
+
+    // Notify nearby online drivers via socket
+    req.io?.emit('new_order_available', orderPayload);
 
     // Push notification to online drivers
     pushService.notifyNearbyDrivers(order).catch(console.error);
+
+    // Auto-rebroadcast every 30 s up to 3 times; give up after 90 s with no_driver_found
+    const io = req.io;
+    const scheduleRebroadcast = (attempt) => {
+      setTimeout(async () => {
+        try {
+          const current = await prisma.order.findUnique({
+            where: { id: order.id },
+            select: { status: true },
+          });
+          if (!current || current.status !== 'SEARCHING_DRIVER') return;
+          if (attempt > 3) {
+            io?.to(`store:${order.storeId}`).emit('no_driver_found', {
+              orderId: order.id,
+              orderNumber: order.orderNumber,
+            });
+            return;
+          }
+          io?.emit('new_order_available', orderPayload);
+          scheduleRebroadcast(attempt + 1);
+        } catch (_) {}
+      }, 30_000);
+    };
+    scheduleRebroadcast(1);
 
     res.status(201).json({
       success: true,
@@ -127,12 +153,13 @@ const acceptOrder = async (req, res, next) => {
       data: { status: 'BUSY' },
     });
 
-    // Notify store via socket + push
+    // Notify store via socket + push; also broadcast to drivers room so they remove the offer
     req.io?.to(`store:${order.storeId}`).emit('driver_assigned', {
       orderId: order.id,
       orderNumber: order.orderNumber,
       driver: { id: driver.id, name: req.user.fullName },
     });
+    req.io?.to('drivers').emit('driver_assigned', { orderId: order.id });
 
     pushService.notifyDriverAssigned(
       order.store?.user?.id || (await prisma.store.findUnique({ where: { id: order.storeId }, select: { userId: true } }))?.userId,

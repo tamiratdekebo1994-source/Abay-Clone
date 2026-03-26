@@ -55,9 +55,14 @@ export default function HomeScreen({ navigation }) {
         }
       });
 
-      socket.on('driver_assigned', () => {
-        // Another driver took an order — refresh list
-        loadNearbyOrders();
+      socket.on('driver_assigned', ({ orderId }) => {
+        // Another driver took this order — remove it from the list
+        setNearbyOrders((prev) => prev.filter((o) => o.id !== orderId));
+      });
+
+      socket.on('no_driver_found', ({ orderId }) => {
+        // Order expired with no driver — remove from list
+        setNearbyOrders((prev) => prev.filter((o) => o.id !== orderId));
       });
 
       socketRef.current = socket;
@@ -268,6 +273,7 @@ export default function HomeScreen({ navigation }) {
                   key={order.id}
                   order={order}
                   onAccept={() => navigation.navigate('ActiveDelivery', { orderId: order.id, autoAccept: true })}
+                  onExpire={() => setNearbyOrders((prev) => prev.filter((o) => o.id !== order.id))}
                 />
               ))
             )}

@@ -2,14 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { COLORS } from '../utils/constants';
 
-export default function OrderOfferCard({ order, onAccept }) {
+export default function OrderOfferCard({ order, onAccept, onExpire }) {
   const [timeLeft, setTimeLeft] = useState(30);
   const progressAnim = new Animated.Value(1);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
-        if (prev <= 1) { clearInterval(interval); return 0; }
+        if (prev <= 1) {
+          clearInterval(interval);
+          onExpire?.();
+          return 0;
+        }
         return prev - 1;
       });
     }, 1000);

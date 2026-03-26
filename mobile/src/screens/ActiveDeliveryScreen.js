@@ -1,12 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  Alert, Linking, ScrollView, ActivityIndicator,
+  Alert, Linking, ScrollView, ActivityIndicator, Image,
 } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { orderAPI } from '../services/api';
-import { COLORS, ORDER_STATUS_LABELS } from '../utils/constants';
+import * as ImagePicker from 'expo-image-picker';
+import { orderAPI, uploadAPI } from '../services/api';
+import { COLORS, ORDER_STATUS_LABELS, GOOGLE_MAPS_API_KEY } from '../utils/constants';
+
+// Google encoded polyline decoder
+function decodePolyline(encoded) {
+  const points = [];
+  let index = 0, lat = 0, lng = 0;
+  while (index < encoded.length) {
+    let shift = 0, result = 0, b;
+    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lat += (result & 1) ? ~(result >> 1) : result >> 1;
+    shift = 0; result = 0;
+    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lng += (result & 1) ? ~(result >> 1) : result >> 1;
+    points.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
+  }
+  return points;
+}
 
 const STATUS_FLOW = ['DRIVER_ASSIGNED', 'DRIVER_AT_STORE', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERED'];
 
@@ -16,6 +33,10 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [driverLocation, setDriverLocation] = useState(null);
+  const [routeCoords, setRouteCoords] = useState([]);
+  const [nextStepText, setNextStepText] = useState('');
+  const [podPhotoUri, setPodPhotoUri] = useState(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -30,6 +51,7 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
     try {
       const { data } = await orderAPI.acceptOrder(orderId);
       setOrder(data.data);
+      fetchRoute(data.data);
     } catch (err) {
       Alert.alert('Error', err.response?.data?.message || 'Failed to accept order');
       navigation.goBack();
@@ -42,11 +64,65 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
     try {
       const { data } = await orderAPI.getOrder(orderId);
       setOrder(data.data);
+      fetchRoute(data.data);
     } catch (err) {
       Alert.alert('Error', 'Failed to load order');
       navigation.goBack();
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Fetch driver location and route polyline from Google Directions API
+  const fetchRoute = async (orderData) => {
+    if (!GOOGLE_MAPS_API_KEY) return;
+    try {
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const origin = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+      setDriverLocation(origin);
+
+      const isPickup = ['DRIVER_ASSIGNED', 'DRIVER_AT_STORE'].includes(orderData.status);
+      const dest = isPickup
+        ? { lat: orderData.pickupLat, lng: orderData.pickupLng }
+        : { lat: orderData.deliveryLat, lng: orderData.deliveryLng };
+
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${dest.lat},${dest.lng}&key=${GOOGLE_MAPS_API_KEY}`;
+      const res = await fetch(url);
+      const json = await res.json();
+
+      if (json.routes?.length) {
+        const points = decodePolyline(json.routes[0].overview_polyline.points);
+        setRouteCoords(points);
+        // Strip HTML tags from first step instruction
+        const rawStep = json.routes[0].legs[0]?.steps[0]?.html_instructions || '';
+        setNextStepText(rawStep.replace(/<[^>]+>/g, ''));
+      }
+    } catch (_) {}
+  };
+
+  // POD photo capture via camera
+  const handleTakePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Camera access is required for proof of delivery.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+      allowsEditing: false,
+    });
+    if (result.canceled) return;
+
+    const uri = result.assets[0].uri;
+    setIsUploadingPhoto(true);
+    try {
+      await uploadAPI.cargoPhoto(orderId, uri);
+      setPodPhotoUri(uri);
+    } catch (err) {
+      Alert.alert('Upload failed', 'Could not upload the photo. Please try again.');
+    } finally {
+      setIsUploadingPhoto(false);
     }
   };
 
@@ -62,7 +138,11 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
             try {
               setIsUpdating(true);
               const { data } = await orderAPI.updateStatus(orderId, newStatus);
-              setOrder((prev) => ({ ...prev, status: data.data.status }));
+              const updatedOrder = { ...order, status: data.data.status };
+              setOrder(updatedOrder);
+              setRouteCoords([]);
+              setNextStepText('');
+              if (newStatus !== 'DELIVERED') fetchRoute(updatedOrder);
               if (newStatus === 'DELIVERED') {
                 Alert.alert(
                   '🎉 Delivery Complete!',
@@ -134,7 +214,21 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
           title="Delivery"
           pinColor="red"
         />
+        {routeCoords.length > 1 && (
+          <Polyline
+            coordinates={routeCoords}
+            strokeColor={COLORS.primary}
+            strokeWidth={4}
+          />
+        )}
       </MapView>
+
+      {/* Next turn instruction */}
+      {nextStepText ? (
+        <View style={styles.stepBanner}>
+          <Text style={styles.stepText} numberOfLines={2}>↗ {nextStepText}</Text>
+        </View>
+      ) : null}
 
       {/* Order Info Sheet */}
       <ScrollView style={styles.sheet}>
@@ -207,12 +301,36 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
           {order.requiresRefrigeration && <Text style={styles.cargoWarning}>❄️ Requires Refrigeration!</Text>}
         </View>
 
+        {/* Proof of delivery photo — required before marking DELIVERED */}
+        {nextStatus === 'DELIVERED' && (
+          <View style={styles.podSection}>
+            <Text style={styles.podTitle}>📸 Photo Proof of Delivery</Text>
+            <Text style={styles.podSubtitle}>Required before completing the delivery</Text>
+            {podPhotoUri && (
+              <Image source={{ uri: podPhotoUri }} style={styles.podPreview} resizeMode="cover" />
+            )}
+            <TouchableOpacity
+              style={[styles.podButton, isUploadingPhoto && styles.podButtonDisabled]}
+              onPress={handleTakePhoto}
+              disabled={isUploadingPhoto}
+            >
+              {isUploadingPhoto ? (
+                <ActivityIndicator color={COLORS.white} />
+              ) : (
+                <Text style={styles.podButtonText}>
+                  {podPhotoUri ? '📷 Retake Photo' : '📷 Take Photo'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Action Button */}
         {nextStatus && (
           <TouchableOpacity
-            style={[styles.actionButton, isUpdating && styles.actionButtonDisabled]}
+            style={[styles.actionButton, (isUpdating || (nextStatus === 'DELIVERED' && !podPhotoUri)) && styles.actionButtonDisabled]}
             onPress={() => updateStatus(nextStatus)}
-            disabled={isUpdating}
+            disabled={isUpdating || (nextStatus === 'DELIVERED' && !podPhotoUri)}
           >
             {isUpdating ? (
               <ActivityIndicator color={COLORS.white} />
@@ -269,4 +387,23 @@ const styles = StyleSheet.create({
   actionButtonDisabled: { opacity: 0.7 },
   actionButtonText: { color: COLORS.white, fontSize: 18, fontWeight: '800' },
   actionButtonTextAm: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 },
+  stepBanner: {
+    position: 'absolute', top: 0, left: 0, right: 0,
+    backgroundColor: 'rgba(27,67,50,0.92)', paddingHorizontal: 16, paddingVertical: 10,
+  },
+  stepText: { color: COLORS.white, fontSize: 14, fontWeight: '600' },
+  podSection: {
+    margin: 16, padding: 16,
+    backgroundColor: COLORS.grayLighter, borderRadius: 12,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  podTitle: { fontSize: 15, fontWeight: '700', color: COLORS.text },
+  podSubtitle: { fontSize: 13, color: COLORS.gray, marginBottom: 12, marginTop: 2 },
+  podPreview: { width: '100%', height: 160, borderRadius: 8, marginBottom: 12 },
+  podButton: {
+    backgroundColor: COLORS.primaryLight, borderRadius: 8,
+    padding: 12, alignItems: 'center',
+  },
+  podButtonDisabled: { opacity: 0.6 },
+  podButtonText: { color: COLORS.white, fontWeight: '700', fontSize: 14 },
 });

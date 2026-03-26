@@ -102,6 +102,18 @@ export const notificationAPI = {
   markRead: (id) => api.patch(`/notifications/${id}/read`),
 };
 
+// Uploads
+export const uploadAPI = {
+  cargoPhoto: (orderId, uri) => {
+    const formData = new FormData();
+    formData.append('file', { uri, type: 'image/jpeg', name: 'cargo.jpg' });
+    return api.post(`/upload/order/${orderId}/cargo`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      transformRequest: (data) => data,
+    });
+  },
+};
+
 // Payments
 export const paymentAPI = {
   initiateTelebirr: (orderId) => api.post('/payments/telebirr/initiate', { orderId }),
