@@ -100,9 +100,18 @@ const uploadCargoPhoto = async (req, res, next) => {
     }
 
     const { orderId } = req.params;
-    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { store: { select: { userId: true } }, driver: { select: { userId: true } } },
+    });
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    const isStoreOwner = order.store?.userId === req.user.id;
+    const isAssignedDriver = order.driver?.userId === req.user.id;
+    if (!isStoreOwner && !isAssignedDriver) {
+      return res.status(403).json({ success: false, message: 'Forbidden' });
     }
 
     const filename = `cargo_${orderId}_${Date.now()}.webp`;

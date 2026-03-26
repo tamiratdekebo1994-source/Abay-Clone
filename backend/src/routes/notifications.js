@@ -1,12 +1,26 @@
 const express = require('express');
 const router = express.Router();
+const { query, validationResult } = require('express-validator');
 const { authenticate } = require('../middleware/auth');
 const prisma = require('../config/database');
+
+const paginationRules = [
+  query('page').optional().isInt({ min: 1 }).withMessage('page must be a positive integer').toInt(),
+  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit must be between 1 and 100').toInt(),
+];
+
+function validateQuery(req, res, next) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array().map(e => ({ field: e.path, message: e.msg })) });
+  }
+  next();
+}
 
 router.use(authenticate);
 
 // GET /api/notifications — list for current user
-router.get('/', async (req, res, next) => {
+router.get('/', paginationRules, validateQuery, async (req, res, next) => {
   try {
     const { page = 1, limit = 30, unreadOnly } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
