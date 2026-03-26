@@ -1,30 +1,30 @@
-version: '3.9'
-
 services:
-  # ─── PostgreSQL Database ──────────────────────────────────────────────────
+  # ─── PostgreSQL ────────────────────────────────────────────────────────────
   postgres:
     image: postgres:15-alpine
     container_name: abay_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: abay
-      POSTGRES_PASSWORD: abay_secret_2024
-      POSTGRES_DB: abaydriver
+      POSTGRES_USER: ${POSTGRES_USER:-abay}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_DB: ${POSTGRES_DB:-abaydriver}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - '5432:5432'
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U abay -d abaydriver']
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-abay} -d ${POSTGRES_DB:-abaydriver}']
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # ─── Redis (optional — for session caching / rate limiting) ───────────────
+  # ─── Redis ─────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     container_name: abay_redis
     restart: unless-stopped
+    volumes:
+      - redis_data:/data
     ports:
       - '6379:6379'
     healthcheck:
@@ -33,7 +33,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # ─── Backend API ──────────────────────────────────────────────────────────
+  # ─── Backend API ───────────────────────────────────────────────────────────
   backend:
     build:
       context: ./backend
@@ -48,17 +48,25 @@ services:
     environment:
       NODE_ENV: production
       PORT: 5000
-      DATABASE_URL: postgresql://abay:abay_secret_2024@postgres:5432/abaydriver
+      DATABASE_URL: postgresql://${POSTGRES_USER:-abay}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-abaydriver}
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET:-change_this_access_secret_in_prod}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change_this_refresh_secret_in_prod}
-      JWT_EXPIRES_IN: 15m
-      JWT_REFRESH_EXPIRES_IN: 7d
+      BACKEND_URL: ${BACKEND_URL:-http://localhost:5000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET must be set}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
       AT_API_KEY: ${AT_API_KEY}
       AT_USERNAME: ${AT_USERNAME}
       AT_SENDER_ID: ${AT_SENDER_ID:-AbayDriver}
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      TELEBIRR_APP_ID: ${TELEBIRR_APP_ID}
+      TELEBIRR_APP_KEY: ${TELEBIRR_APP_KEY}
+      TELEBIRR_SHORT_CODE: ${TELEBIRR_SHORT_CODE}
+      CBE_MERCHANT_ID: ${CBE_MERCHANT_ID}
+      CBE_SECRET_KEY: ${CBE_SECRET_KEY}
+      AWASH_WEBHOOK_SECRET: ${AWASH_WEBHOOK_SECRET}
+      DASHEN_WEBHOOK_SECRET: ${DASHEN_WEBHOOK_SECRET}
     ports:
       - '5000:5000'
     volumes:
@@ -70,7 +78,7 @@ services:
       retries: 3
       start_period: 40s
 
-  # ─── Web Dashboard ────────────────────────────────────────────────────────
+  # ─── Web Dashboard ─────────────────────────────────────────────────────────
   web:
     build:
       context: ./web
@@ -78,14 +86,14 @@ services:
     container_name: abay_web
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - '3000:80'
-    environment:
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:5000}
 
 volumes:
   postgres_data:
+  redis_data:
   uploads_data:
 
 networks:

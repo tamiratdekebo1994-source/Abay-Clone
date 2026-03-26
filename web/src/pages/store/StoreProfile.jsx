@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
+import { storeAPI } from '../../services/api';
 
 const STORE_TYPES = [
   { value: 'GROCERY', label: '🛒 Grocery', am: 'ምግብ ቤት' },
@@ -31,11 +32,7 @@ export default function StoreProfile() {
 
   const loadProfile = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch('/api/store/profile', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
+      const { data } = await storeAPI.getProfile();
       if (data.success) {
         setProfile(data.data);
         setForm({
@@ -59,13 +56,7 @@ export default function StoreProfile() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch('/api/store/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
+      const { data } = await storeAPI.updateProfile(form);
       if (!data.success) { showToast(data.message, 'error'); return; }
       setProfile({ ...profile, ...data.data });
       setIsEditing(false);

@@ -181,7 +181,7 @@ export default function AdminWithdrawals() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500">
-                      {new Date(w.createdAt).toLocaleDateString('en-ET', {
+                      {new Date(w.createdAt).toLocaleString('en-ET', {
                         month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
                       })}
                     </td>

@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { io } from 'socket.io-client';
-import { orderAPI } from '../../services/api';
+import { orderAPI, chatAPI } from '../../services/api';
 import { useSelector } from 'react-redux';
 
 // Fix leaflet marker icons
@@ -75,11 +75,7 @@ export default function OrderTracking() {
 
   const loadMessages = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/api/chat/order/${orderId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
+      const { data } = await chatAPI.getMessages(orderId);
       if (data.success) setMessages(data.data || []);
     } catch (err) {
       console.error(err);
@@ -92,13 +88,7 @@ export default function OrderTracking() {
     setIsSending(true);
     setChatInput('');
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/api/chat/order/${orderId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ message: text }),
-      });
-      const data = await res.json();
+      const { data } = await chatAPI.sendMessage(orderId, text);
       if (data.success) setMessages((prev) => [...prev, data.data]);
     } catch (err) {
       console.error(err);
@@ -261,7 +251,7 @@ export default function OrderTracking() {
                         }`}>
                           {!isMe && (
                             <div className="text-xs font-semibold mb-0.5 text-primary-700">
-                              {msg.sender?.fullName}
+                              {msg.sender?.fullName || 'Driver'}
                             </div>
                           )}
                           <div>{msg.message}</div>

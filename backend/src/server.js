@@ -6,6 +6,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const { getRedis } = require('./config/redis');
 
 const authRoutes = require('./routes/auth');
 const driverRoutes = require('./routes/driver');
@@ -31,14 +32,25 @@ app.use(cors({
   credentials: true,
 }));
 
-// Rate limiting
-app.use('/api/auth', rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+// Rate limiting — use Redis store when available so limits survive restarts
+// and are shared across multiple server instances
+function makeRateLimiter(options) {
+  const redis = getRedis();
+  if (redis) {
+    // eslint-disable-next-line global-require
+    const { RedisStore } = require('rate-limit-redis');
+    return rateLimit({ ...options, store: new RedisStore({ sendCommand: (...args) => redis.call(...args) }) });
+  }
+  return rateLimit(options);
+}
+
+app.use('/api/auth', makeRateLimiter({
+  windowMs: 15 * 60 * 1000,
   max: 20,
   message: { success: false, message: 'Too many requests, please try again later' },
 }));
 
-app.use(rateLimit({
+app.use(makeRateLimiter({
   windowMs: 15 * 60 * 1000,
   max: 200,
 }));

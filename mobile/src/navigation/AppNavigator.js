@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { loadUser } from '../store/authStore';
 import { COLORS } from '../utils/constants';
 import { driverAPI } from '../services/api';
@@ -53,7 +54,8 @@ async function registerPushToken() {
     }
     if (finalStatus !== 'granted') return;
 
-    const token = (await Notifications.getExpoPushTokenAsync()).data;
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+    const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
     await driverAPI.registerPushToken(token);
   } catch (err) {
     console.log('[Push] Registration failed:', err.message);

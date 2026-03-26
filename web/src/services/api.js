@@ -68,6 +68,11 @@ export const adminAPI = {
   setSurge: (city, multiplier) => api.post('/admin/surge', { city, multiplier }),
 };
 
+export const chatAPI = {
+  getMessages: (orderId) => api.get(`/chat/order/${orderId}`),
+  sendMessage: (orderId, message) => api.post(`/chat/order/${orderId}`, { message }),
+};
+
 export const walletAPI = {
   getPendingWithdrawals: (status) => api.get('/wallet/pending', { params: { status } }),
   processWithdrawal: (id, data) => api.patch(`/wallet/${id}/process`, data),
