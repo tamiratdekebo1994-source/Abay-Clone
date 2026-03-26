@@ -23,6 +23,7 @@ const chatRoutes = require('./routes/chat');
 const walletRoutes = require('./routes/wallet');
 const notificationRoutes = require('./routes/notifications');
 const paymentRoutes = require('./routes/payments');
+const trackRoutes = require('./routes/track');
 const errorHandler = require('./middleware/errorHandler');
 const { initSocket } = require('./services/socketService');
 
@@ -98,6 +99,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/track', trackRoutes);
 
 // Health check — used by Docker and load balancers
 app.get('/health', async (_req, res) => {

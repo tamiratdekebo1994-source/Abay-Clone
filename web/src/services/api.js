@@ -63,10 +63,34 @@ export const adminAPI = {
   getDrivers: (params) => api.get('/admin/drivers', { params }),
   approveDriver: (id, action) => api.patch(`/admin/drivers/${id}/status`, { action }),
   getStores: (params) => api.get('/admin/stores', { params }),
+  updateStoreStatus: (id, action) => api.patch(`/admin/stores/${id}/status`, { action }),
   getAllOrders: (params) => api.get('/admin/orders', { params }),
   getSurge: () => api.get('/admin/surge'),
   setSurge: (city, multiplier) => api.post('/admin/surge', { city, multiplier }),
 };
+
+/**
+ * Download an authenticated CSV export from the admin API.
+ * Falls back to window.open for browsers that block programmatic downloads.
+ * @param {string} path  e.g. '/admin/export/orders.csv'
+ * @param {string} filename  suggested download filename
+ */
+export async function downloadCSV(path, filename) {
+  const token = localStorage.getItem('accessToken');
+  const res = await fetch(`/api${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 export const chatAPI = {
   getMessages: (orderId) => api.get(`/chat/order/${orderId}`),

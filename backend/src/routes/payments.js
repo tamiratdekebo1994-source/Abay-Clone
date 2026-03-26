@@ -7,6 +7,7 @@ const router = express.Router();
 const { authenticate, authorize } = require('../middleware/auth');
 const prisma = require('../config/database');
 const crypto = require('crypto');
+const { initiateH5Payment } = require('../services/telebirrService');
 
 router.use(authenticate);
 
@@ -74,21 +75,29 @@ router.post('/telebirr/initiate', authorize('STORE'), async (req, res, next) => 
     const order = await getOrderForPayment(orderId, req.user.id);
     const payRef = generatePayRef('TBR');
 
-    // ── STUB: replace with real TeleBirr SDK call ──
-    const telebirrPayload = {
-      appId: process.env.TELEBIRR_APP_ID || 'DEMO_APP_ID',
-      shortCode: process.env.TELEBIRR_SHORT_CODE || '1000',
-      outTradeNo: payRef,
-      subject: `Abay Driver Delivery — ${order.orderNumber}`,
-      totalAmount: order.totalAmount.toFixed(2),
-      timeoutExpress: '30',
-      receiveName: 'Abay Driver PLC',
-      notifyUrl: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/payments/telebirr/callback`,
-      returnUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/store/orders/${orderId}/payment-result`,
-    };
-    // In production: const { toPayUrl, rawRequest } = await telebirrSDK.createH5Payment(telebirrPayload);
-    const toPayUrl = `https://checkout.ethiotelecom.et/pay?ref=${payRef}&amount=${order.totalAmount}`;
-    // ── END STUB ──
+    const appId = process.env.TELEBIRR_APP_ID;
+    const appKey = process.env.TELEBIRR_APP_KEY;
+    const shortCode = process.env.TELEBIRR_SHORT_CODE;
+
+    let toPayUrl;
+    if (appId && appKey && shortCode) {
+      // Real TeleBirr AES-128-ECB signed request
+      const result = await initiateH5Payment({
+        appId,
+        appKey,
+        shortCode,
+        outTradeNo: payRef,
+        subject: `Abay Driver Delivery — ${order.orderNumber}`,
+        totalAmount: order.totalAmount.toFixed(2),
+        receiveName: 'Abay Driver PLC',
+        notifyUrl: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/payments/telebirr/callback`,
+        returnUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/store/orders/${orderId}/payment-result`,
+      });
+      toPayUrl = result.toPayUrl;
+    } else {
+      // Dev/sandbox fallback when credentials are not configured
+      toPayUrl = `https://checkout.ethiotelecom.et/pay?ref=${payRef}&amount=${order.totalAmount}`;
+    }
 
     // Save payment ref to order
     await prisma.order.update({

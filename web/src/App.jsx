@@ -19,6 +19,7 @@ import AdminSurge from './pages/admin/AdminSurge';
 import StoreProfile from './pages/store/StoreProfile';
 import PaymentResult from './pages/store/PaymentResult';
 import Layout from './components/Layout';
+import TrackingPage from './pages/TrackingPage';
 
 function PrivateRoute({ children, roles }) {
   const { isAuthenticated, user, isLoading } = useSelector((s) => s.auth);
@@ -38,6 +39,9 @@ export default function App() {
 
   return (
     <Routes>
+      {/* Public routes — no auth required */}
+      <Route path="/track/:orderId" element={<TrackingPage />} />
+
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 

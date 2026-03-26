@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { adminAPI } from '../../services/api';
+import { adminAPI, downloadCSV } from '../../services/api';
 
 const BACKEND_URL = import.meta.env.DEV ? 'http://localhost:5000' : '';
 
@@ -23,6 +23,7 @@ export default function AdminDrivers() {
   const [actionLoading, setActionLoading] = useState(null);
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [docDriver, setDocDriver] = useState(null); // for document modal
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     loadDrivers();
@@ -41,6 +42,14 @@ export default function AdminDrivers() {
     }
   };
 
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      await downloadCSV('/admin/export/drivers.csv', `drivers_${Date.now()}.csv`);
+    } catch (err) { console.error(err); }
+    finally { setIsExporting(false); }
+  };
+
   const handleAction = async (driverId, action) => {
     setActionLoading(driverId);
     try {
@@ -55,9 +64,18 @@ export default function AdminDrivers() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-black text-gray-900">Drivers Management</h1>
-        <p className="text-gray-500 text-sm mt-1">የሾፌሮች አስተዳደር • {total} total</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-gray-900">Drivers Management</h1>
+          <p className="text-gray-500 text-sm mt-1">የሾፌሮች አስተዳደር • {total} total</p>
+        </div>
+        <button
+          onClick={handleExport}
+          disabled={isExporting}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+        >
+          {isExporting ? '...' : '⬇ Export CSV'}
+        </button>
       </div>
 
       {/* Filters */}

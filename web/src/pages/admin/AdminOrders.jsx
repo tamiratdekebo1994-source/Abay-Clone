@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { adminAPI } from '../../services/api';
+import { adminAPI, downloadCSV } from '../../services/api';
 
 const STATUS_CONFIG = {
   PENDING: { label: 'Pending', class: 'badge-gray' },
@@ -19,8 +19,17 @@ export default function AdminOrders() {
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => { loadOrders(); }, [statusFilter, page]);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      await downloadCSV('/admin/export/orders.csv', `orders_${Date.now()}.csv`);
+    } catch (err) { console.error(err); }
+    finally { setIsExporting(false); }
+  };
 
   const loadOrders = async () => {
     setIsLoading(true);
@@ -34,9 +43,18 @@ export default function AdminOrders() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-black text-gray-900">All Orders</h1>
-        <p className="text-gray-500 text-sm mt-1">ሁሉም ትዕዛዞች • {total} total</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-gray-900">All Orders</h1>
+          <p className="text-gray-500 text-sm mt-1">ሁሉም ትዕዛዞች • {total} total</p>
+        </div>
+        <button
+          onClick={handleExport}
+          disabled={isExporting}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+        >
+          {isExporting ? '...' : '⬇ Export CSV'}
+        </button>
       </div>
 
       <div className="card p-4">
