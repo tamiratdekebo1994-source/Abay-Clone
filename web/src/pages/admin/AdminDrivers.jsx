@@ -201,6 +201,35 @@ export default function AdminDrivers() {
           </table>
         )}
       </div>
+
+      {/* Pagination */}
+      {total > 15 && (
+        <div className="flex items-center justify-between px-2 py-2">
+          <p className="text-sm text-gray-500">
+            Showing {Math.min((page - 1) * 15 + 1, total)}–{Math.min(page * 15, total)} of {total} drivers
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="btn-secondary text-sm py-1.5 px-3 disabled:opacity-40"
+            >
+              ← Prev
+            </button>
+            <span className="text-sm text-gray-600 flex items-center px-3">
+              {page} / {Math.ceil(total / 15)}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(Math.ceil(total / 15), p + 1))}
+              disabled={page >= Math.ceil(total / 15)}
+              className="btn-secondary text-sm py-1.5 px-3 disabled:opacity-40"
+            >
+              Next →
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Document Viewer Modal */}
       {docDriver && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
