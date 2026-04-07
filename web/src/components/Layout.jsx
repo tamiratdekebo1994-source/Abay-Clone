@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../store/authSlice';
 import { io } from 'socket.io-client';
+import { SOCKET_URL } from '../services/api';
 
 const storeNav = [
   { to: '/store', label: 'Dashboard', icon: '📊', end: true },
@@ -32,7 +33,7 @@ export default function Layout() {
   useEffect(() => {
     if (user?.role !== 'STORE') return;
     const token = localStorage.getItem('accessToken');
-    const socket = io('/', { auth: { token } });
+    const socket = io(SOCKET_URL, { auth: { token } });
 
     socket.on('order_status_updated', (data) => {
       setOrderAlert({ ...data, ts: Date.now() });

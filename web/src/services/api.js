@@ -1,7 +1,15 @@
 import axios from 'axios';
 
+// VITE_API_BASE_URL is set to the backend origin (e.g. https://api.abaydriver.et)
+// when the web app is hosted separately (Firebase Hosting).
+// When served from the same origin as the backend (nginx/VPS), leave it unset
+// and the vite dev proxy / nginx will handle /api forwarding.
+const API_ORIGIN = import.meta.env.VITE_API_BASE_URL || '';
+
+export const SOCKET_URL = API_ORIGIN || '/';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: `${API_ORIGIN}/api`,
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 });

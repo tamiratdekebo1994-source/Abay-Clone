@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { io } from 'socket.io-client';
 import axios from 'axios';
+import { SOCKET_URL } from '../../services/api';
 
 // Fix leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -70,7 +71,7 @@ export default function TrackingPage() {
 
   const setupSocket = () => {
     // Public socket — no auth token
-    const socket = io('/');
+    const socket = io(SOCKET_URL);
     socket.emit('join_order', orderId);
     socket.on('driver_location', ({ lat, lng }) => setDriverPos([lat, lng]));
     socket.on('order_status_updated', () => loadOrder());

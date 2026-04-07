@@ -1,5 +1,41 @@
 # Mobile App Setup Guide
 
+---
+
+## Step 0 — Firebase Setup (required for Android push notifications)
+
+Android push notifications require a `google-services.json` file from your Firebase project.
+
+### Create the Android app in Firebase
+
+1. Go to [console.firebase.google.com](https://console.firebase.google.com)
+2. Open your project (or create one)
+3. Click **Add app → Android**
+4. **Android package name:** `et.abaydriver.app`
+5. App nickname: `Abay Driver` (optional)
+6. Click **Register app**
+7. **Download `google-services.json`**
+8. Place it in: `mobile/google-services.json`
+
+### Enable Cloud Messaging
+
+1. In Firebase Console → **Project Settings → Cloud Messaging**
+2. Make sure **Firebase Cloud Messaging API (V1)** is enabled
+3. Copy the **Server key** — you'll need it if you ever send notifications from outside Expo
+
+That's all — Expo's push service talks to FCM automatically using this file.
+
+### (Optional) iOS push notifications
+
+For iOS you also need:
+1. An **Apple Developer account** ($99/year)
+2. In Firebase → **Project Settings → Apple apps → Add app**
+3. iOS bundle ID: `et.abaydriver.app`
+4. Upload your **APNs Auth Key** from Apple Developer Portal
+5. Download `GoogleService-Info.plist` → place in `mobile/GoogleService-Info.plist`
+
+---
+
 Complete checklist for getting the Abay Driver mobile app built and running on real devices.
 
 ---

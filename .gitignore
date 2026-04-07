@@ -33,6 +33,13 @@ Thumbs.db
 # Uploads
 backend/uploads/
 
+# Firebase credentials — NEVER commit these
+firebase-service-account.json
+*-service-account.json
+google-services.json
+GoogleService-Info.plist
+google-play-service-account.json
+
 # Prisma — migrations must be committed; only ignore the generated client
 # (the client lives in node_modules/@prisma/client, already covered above)
 
