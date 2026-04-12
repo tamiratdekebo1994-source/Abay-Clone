@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { io } from 'socket.io-client';
 import axios from 'axios';
-import { SOCKET_URL } from '../../services/api';
+import { SOCKET_URL } from '../services/api';
 
 // Fix leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
