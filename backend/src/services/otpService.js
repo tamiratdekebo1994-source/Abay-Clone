@@ -164,22 +164,26 @@ const sendOtp = async (phone, purpose = 'LOGIN') => {
 
   // Send SMS
   const message = buildSmsMessage(code, purpose);
+  let smsFailed = false;
   if (process.env.AT_API_KEY && process.env.AT_API_KEY !== 'sandbox' && process.env.NODE_ENV !== 'test') {
     try {
       const sms = getAT().SMS;
       await sms.send({ to: [phone], message, from: process.env.AT_SENDER_ID || 'Fetno' });
     } catch (smsErr) {
+      smsFailed = true;
       console.error(`[OTP] SMS send failed: ${smsErr.message}`);
-      console.log(`\n[OTP DEV] SMS unavailable — use this code: Phone: ${phone} | Code: ${code} | Purpose: ${purpose}\n`);
+      console.log(`\n[OTP DEV] Code for ${phone}: ${code}\n`);
     }
   } else {
-    console.log(`\n[OTP DEV] Phone: ${phone} | Code: ${code} | Purpose: ${purpose}\n`);
+    smsFailed = true;
+    console.log(`\n[OTP DEV] Code for ${phone}: ${code}\n`);
   }
 
   return {
     sent: true,
     expiresIn: OTP_EXPIRY_SECONDS,
-    ...(process.env.NODE_ENV === 'development' && { devCode: code }),
+    // Return code in response when SMS is unavailable (no real SMS configured)
+    ...(smsFailed && { devCode: code }),
   };
 };
 
