@@ -169,7 +169,8 @@ const sendOtp = async (phone, purpose = 'LOGIN') => {
       const sms = getAT().SMS;
       await sms.send({ to: [phone], message, from: process.env.AT_SENDER_ID || 'AbayDrvr' });
     } catch (smsErr) {
-      console.error('[OTP] SMS send failed:', smsErr.message);
+      console.error(`[OTP] SMS send failed: ${smsErr.message}`);
+      console.log(`\n[OTP DEV] SMS unavailable — use this code: Phone: ${phone} | Code: ${code} | Purpose: ${purpose}\n`);
     }
   } else {
     console.log(`\n[OTP DEV] Phone: ${phone} | Code: ${code} | Purpose: ${purpose}\n`);

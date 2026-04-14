@@ -28,6 +28,7 @@ const errorHandler = require('./middleware/errorHandler');
 const { initSocket } = require('./services/socketService');
 
 const app = express();
+app.set('trust proxy', 1); // trust nginx reverse proxy
 initSentry(app);
 const httpServer = http.createServer(app);
 const io = initSocket(httpServer);
