@@ -167,7 +167,7 @@ const sendOtp = async (phone, purpose = 'LOGIN') => {
   if (process.env.AT_API_KEY && process.env.AT_API_KEY !== 'sandbox' && process.env.NODE_ENV !== 'test') {
     try {
       const sms = getAT().SMS;
-      await sms.send({ to: [phone], message, from: process.env.AT_SENDER_ID || 'AbayDrvr' });
+      await sms.send({ to: [phone], message, from: process.env.AT_SENDER_ID || 'Fetno' });
     } catch (smsErr) {
       console.error(`[OTP] SMS send failed: ${smsErr.message}`);
       console.log(`\n[OTP DEV] SMS unavailable — use this code: Phone: ${phone} | Code: ${code} | Purpose: ${purpose}\n`);
@@ -192,7 +192,7 @@ const verifyOtp = async (phone, code, purpose = 'LOGIN') => {
 
 const buildSmsMessage = (code, purpose) => {
   const purposeText = { REGISTER: 'registration', LOGIN: 'login', RESET: 'password reset' }[purpose] || 'verification';
-  return `Your Abay Driver ${purposeText} code is: ${code}\nValid for ${OTP_EXPIRY_SECONDS / 60} minutes.\nDo not share this code.\n\nAbay Driver Ethiopia`;
+  return `Your Fetno ${purposeText} code is: ${code}\nValid for ${OTP_EXPIRY_SECONDS / 60} minutes.\nDo not share this code.\n\nFetno Ethiopia`;
 };
 
 module.exports = { sendOtp, verifyOtp };

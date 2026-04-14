@@ -39,7 +39,7 @@ export default function Layout() {
       setOrderAlert({ ...data, ts: Date.now() });
       // Browser notification if permission granted
       if (Notification.permission === 'granted') {
-        new Notification('Abay Driver — Order Update', {
+        new Notification('Fetno — Order Update', {
           body: `Order #${data.orderNumber}: ${data.status?.replace(/_/g, ' ')}`,
           icon: '/favicon.svg',
         });
@@ -91,7 +91,7 @@ export default function Layout() {
           </div>
           {sidebarOpen && (
             <div className="ml-3">
-              <div className="font-bold text-lg leading-none">Abay Driver</div>
+              <div className="font-bold text-lg leading-none">Fetno</div>
               <div className="text-primary-300 text-xs mt-0.5">
                 {user?.role === 'ADMIN' ? 'Admin Portal' : 'Store Portal'}
               </div>

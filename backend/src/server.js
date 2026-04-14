@@ -67,7 +67,7 @@ if (process.env.NODE_ENV === 'production') {
   app.use(morgan((tokens, req, res) => JSON.stringify({
     timestamp: new Date().toISOString(),
     level: 'info',
-    service: 'abay-driver-api',
+    service: 'fetno-api',
     requestId: tokens['request-id'](req, res),
     method: tokens.method(req, res),
     url: tokens.url(req, res),
@@ -108,7 +108,7 @@ app.get('/health', async (_req, res) => {
     await prisma.$queryRaw`SELECT 1`;
     res.json({
       status: 'ok',
-      app: 'Abay Driver API',
+      app: 'Fetno API',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
       db: 'ok',
@@ -116,7 +116,7 @@ app.get('/health', async (_req, res) => {
   } catch {
     res.status(503).json({
       status: 'error',
-      app: 'Abay Driver API',
+      app: 'Fetno API',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
       db: 'unreachable',
@@ -137,7 +137,7 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {
-  logger.info('Abay Driver API started', {
+  logger.info('Fetno API started', {
     port: PORT,
     env: process.env.NODE_ENV || 'development',
     health: `http://localhost:${PORT}/health`,

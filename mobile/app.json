@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Abay Driver",
-    "slug": "abay-driver",
+    "name": "Fetno",
+    "slug": "fetno",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -19,10 +19,10 @@
         "googleMapsApiKey": "AIzaSyBT2_j5NhOa-rD-4tKX5kf1iPOuP1vtVJk"
       },
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Abay Driver needs your location to show nearby deliveries and update your position.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Abay Driver needs background location to track your delivery routes.",
-        "NSCameraUsageDescription": "Abay Driver needs camera access to upload documents.",
-        "NSPhotoLibraryUsageDescription": "Abay Driver needs photo library access to upload documents."
+        "NSLocationWhenInUseUsageDescription": "Fetno needs your location to show nearby deliveries and update your position.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Fetno needs background location to track your delivery routes.",
+        "NSCameraUsageDescription": "Fetno needs camera access to upload documents.",
+        "NSPhotoLibraryUsageDescription": "Fetno needs photo library access to upload documents."
       }
     },
     "android": {
@@ -51,7 +51,7 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow Abay Driver to use your location."
+          "locationAlwaysAndWhenInUsePermission": "Allow Fetno to use your location."
         }
       ],
       [
@@ -62,7 +62,7 @@
         }
       ]
     ],
-    "scheme": "abay-driver",
+    "scheme": "fetno",
     "extra": {
       "googleMapsApiKey": "AIzaSyBT2_j5NhOa-rD-4tKX5kf1iPOuP1vtVJk",
       "eas": {

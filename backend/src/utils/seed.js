@@ -21,9 +21,9 @@ async function main() {
     update: {},
     create: {
       phone: '+251911000000',
-      email: 'admin@abaydriver.et',
+      email: 'admin@fetno.et',
       passwordHash: adminHash,
-      fullName: 'Abay Admin',
+      fullName: 'Fetno Admin',
       role: 'ADMIN',
       isVerified: true,
     },
@@ -37,7 +37,7 @@ async function main() {
     update: {},
     create: {
       phone: '+251922000001',
-      email: 'demo.store@abaydriver.et',
+      email: 'demo.store@fetno.et',
       passwordHash: storeHash,
       fullName: 'Demo Store Owner',
       role: 'STORE',
@@ -70,7 +70,7 @@ async function main() {
     update: {},
     create: {
       phone: '+251933000002',
-      email: 'demo.driver@abaydriver.et',
+      email: 'demo.driver@fetno.et',
       passwordHash: driverHash,
       fullName: 'Abebe Girma',
       role: 'DRIVER',

@@ -78,7 +78,7 @@ function MainTabs() {
         name="Home"
         component={HomeScreen}
         options={{
-          title: 'Abay Driver | አባይ ሾፌር',
+          title: 'Fetno | ፈጠኖ',
           tabBarLabel: t('appName').split(' ')[0],
           tabBarIcon: ({ focused }) => <Text style={{ fontSize: 22 }}>{focused ? '🏠' : '🏡'}</Text>,
         }}
@@ -155,7 +155,7 @@ export default function AppNavigator() {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary }}>
         <Text style={{ color: COLORS.accent, fontSize: 40, fontWeight: '800' }}>አ</Text>
-        <Text style={{ color: COLORS.white, fontSize: 16, marginTop: 8, fontWeight: '600' }}>Abay Driver</Text>
+        <Text style={{ color: COLORS.white, fontSize: 16, marginTop: 8, fontWeight: '600' }}>Fetno</Text>
         <ActivityIndicator color={COLORS.accent} style={{ marginTop: 24 }} />
       </View>
     );

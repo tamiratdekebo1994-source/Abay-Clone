@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# Abay Driver — Quick Setup Script
+# Fetno — Quick Setup Script
 # Runs the full stack locally (backend + web dashboard) in minutes
 # ─────────────────────────────────────────────────────────────────────────────
 set -e
@@ -74,7 +74,7 @@ fi
 # ── 5. Done ──────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}  ✅  Abay Driver Setup Complete!${NC}"
+echo -e "${GREEN}  ✅  Fetno Setup Complete!${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 echo "  Start the backend:"

@@ -1,4 +1,4 @@
-// Abay Driver - Ethiopia's Spark Driver Clone
+// Fetno - Ethiopia's Spark Driver Clone
 // Prisma Schema
 
 generator client {

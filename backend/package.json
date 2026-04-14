@@ -1,7 +1,7 @@
 {
   "name": "abay-backend",
   "version": "1.0.0",
-  "description": "Abay Driver Backend API",
+  "description": "Fetno Backend API",
   "license": "MIT",
   "main": "src/server.js",
   "engines": {

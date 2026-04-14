@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ─── Abay Driver — Ubuntu 22.04 VPS Setup Script ────────────────────────────
+# ─── Fetno — Ubuntu 22.04 VPS Setup Script ────────────────────────────
 # Run as root on a fresh Ubuntu 22.04 server:
 #   wget -O setup-vps.sh https://raw.githubusercontent.com/.../setup-vps.sh
 #   bash setup-vps.sh
@@ -16,7 +16,7 @@ set -euo pipefail
 DOMAIN="${DOMAIN:-abaydriver.et}"
 DEPLOY_USER="${DEPLOY_USER:-abay}"
 REPO_URL="${REPO_URL:-https://github.com/your-org/Abay-Clone.git}"
-APP_DIR="/opt/abay-driver"
+APP_DIR="/opt/fetno"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 info()  { echo -e "${GREEN}[INFO]${NC} $*"; }
@@ -114,9 +114,9 @@ certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" --non-interactive --agree-tos \
 
 # ── 9. Systemd service for auto-start ────────────────────────────────────────
 info "Installing systemd service..."
-cat > /etc/systemd/system/abay-driver.service <<EOF
+cat > /etc/systemd/system/fetno.service <<EOF
 [Unit]
-Description=Abay Driver App
+Description=Fetno App
 Requires=docker.service
 After=docker.service network-online.target
 
@@ -133,12 +133,12 @@ TimeoutStartSec=120
 WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
-systemctl enable abay-driver.service
+systemctl enable fetno.service
 
 # ── Done ─────────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}════════════════════════════════════════════════════════${NC}"
-echo -e "${GREEN}  Abay Driver VPS setup complete!${NC}"
+echo -e "${GREEN}  Fetno VPS setup complete!${NC}"
 echo -e "${GREEN}════════════════════════════════════════════════════════${NC}"
 echo ""
 echo "Next steps:"
@@ -153,5 +153,5 @@ echo "  3. Check logs:"
 echo "       docker compose logs -f backend"
 echo ""
 echo "  4. Enable auto-start on reboot:"
-echo "       systemctl start abay-driver"
+echo "       systemctl start fetno"
 echo ""

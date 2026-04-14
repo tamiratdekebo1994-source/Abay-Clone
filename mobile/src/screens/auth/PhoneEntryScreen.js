@@ -71,7 +71,7 @@ export default function PhoneEntryScreen({ navigation, route }) {
         <View style={styles.logo}>
           <Text style={styles.logoText}>አ</Text>
         </View>
-        <Text style={styles.appName}>Abay Driver</Text>
+        <Text style={styles.appName}>Fetno</Text>
         <Text style={styles.tagline}>{t('tagline')}</Text>
       </View>
 

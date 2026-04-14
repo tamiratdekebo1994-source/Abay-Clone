@@ -1,11 +1,11 @@
 /**
- * Abay Driver - Bilingual String System (English / Amharic አማርኛ)
+ * Fetno - Bilingual String System (English / Amharic አማርኛ)
  * Usage: t('welcome') or t('welcome', 'am')
  */
 
 const strings = {
   // ─── App ─────────────────────────────────────────────────────────────────
-  appName:       { en: 'Abay Driver', am: 'አባይ ሾፌር' },
+  appName:       { en: 'Fetno', am: 'ፈጠኖ' },
   tagline:       { en: "Ethiopia's Delivery Network", am: 'የኢትዮጵያ የማድረስ አውታር' },
   madeInEthiopia:{ en: '🇪🇹 Made in Ethiopia', am: '🇪🇹 በኢትዮጵያ የተሰራ' },
 

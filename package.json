@@ -1,7 +1,7 @@
 {
-  "name": "abay-driver",
+  "name": "fetno",
   "version": "1.0.0",
-  "description": "Abay Driver - Ethiopia's Spark Driver Clone connecting stores and drivers",
+  "description": "Fetno - Ethiopia's Spark Driver Clone connecting stores and drivers",
   "license": "MIT",
   "private": true,
   "engines": {

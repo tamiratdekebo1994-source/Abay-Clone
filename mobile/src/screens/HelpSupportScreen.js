@@ -61,7 +61,7 @@ export default function HelpSupportScreen() {
         <Text style={styles.headerTitle}>Help & Support</Text>
         <Text style={styles.headerTitleAm}>እርዳታ እና ድጋፍ</Text>
         <Text style={styles.headerSubtitle}>
-          We're here to help you succeed as an Abay Driver.{'\n'}
+          We're here to help you succeed as an Fetno.{'\n'}
           ስኬታማ ሾፌር እንዲሆኑ ዝግጁ ነን።
         </Text>
       </View>
@@ -109,7 +109,7 @@ export default function HelpSupportScreen() {
 
       {/* App version */}
       <View style={styles.versionRow}>
-        <Text style={styles.versionText}>Abay Driver v1.0.0 • አባይ ሾፌር</Text>
+        <Text style={styles.versionText}>Fetno v1.0.0 • ፈጠኖ</Text>
         <Text style={styles.versionSub}>Made with ❤️ in Ethiopia</Text>
       </View>
     </ScrollView>
