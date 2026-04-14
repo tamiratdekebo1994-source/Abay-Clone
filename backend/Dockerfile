@@ -1,7 +1,7 @@
 FROM node:20-alpine
 
 # Install curl for health check, dumb-init for proper signal handling
-RUN apk add --no-cache curl dumb-init
+RUN apk add --no-cache curl dumb-init openssl openssl-dev
 
 WORKDIR /app
 
