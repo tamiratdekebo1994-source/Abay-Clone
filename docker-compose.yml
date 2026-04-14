@@ -68,7 +68,7 @@ services:
       AWASH_WEBHOOK_SECRET: ${AWASH_WEBHOOK_SECRET}
       DASHEN_WEBHOOK_SECRET: ${DASHEN_WEBHOOK_SECRET}
     ports:
-      - '5000:5000'
+      - '5001:5000'
     volumes:
       - uploads_data:/app/uploads
     healthcheck:
@@ -114,8 +114,7 @@ services:
     container_name: abay_web
     restart: unless-stopped
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     ports:
       - '3000:80'
 
