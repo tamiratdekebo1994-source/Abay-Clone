@@ -12,8 +12,7 @@ function getRedis() {
 
   client = new Redis(process.env.REDIS_URL, {
     maxRetriesPerRequest: 3,
-    lazyConnect: true,
-    enableOfflineQueue: false,
+    enableOfflineQueue: true,
   });
 
   client.on('error', (err) => {
