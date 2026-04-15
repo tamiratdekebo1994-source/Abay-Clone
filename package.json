@@ -8,7 +8,7 @@
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
   },
-  "workspaces": ["backend", "mobile", "web"],
+  "workspaces": ["backend", "web"],
   "scripts": {
     "backend": "npm run dev --workspace=backend",
     "web": "npm run dev --workspace=web",
