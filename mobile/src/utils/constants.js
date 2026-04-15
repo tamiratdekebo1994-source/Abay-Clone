@@ -5,11 +5,11 @@ const _devBase = Constants.expoConfig?.extra?.apiBaseUrl ?? 'http://192.168.1.10
 
 export const API_URL = __DEV__
   ? `${_devBase}/api`
-  : 'https://api.abaydriver.et/api';
+  : 'https://api.fetno.et/api';
 
 export const SOCKET_URL = __DEV__
   ? _devBase
-  : 'https://api.abaydriver.et';
+  : 'https://api.fetno.et';
 
 // Google Maps API key — injected at build time via app.config.js from GOOGLE_MAPS_API_KEY env var
 // See: mobile/.env.example

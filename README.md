@@ -1,4 +1,4 @@
-# 🇪🇹 Abay Driver — አባይ ሾፌር
+# 🇪🇹 Fetno — ፈጠኖ
 
 **Ethiopia's Spark Driver Clone** — A full-stack, production-ready last-mile delivery platform connecting stores, drivers, and admins across Ethiopia.
 
@@ -12,7 +12,7 @@
 
 ## Overview
 
-Abay Driver is a three-sided marketplace:
+Fetno is a three-sided marketplace:
 
 | Persona | Platform | Description |
 |---------|----------|-------------|
@@ -147,7 +147,7 @@ cd mobile && npm install && npx expo start
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DATABASE_URL` | ✅ | `postgresql://user:pass@host:5432/abaydriver` |
+| `DATABASE_URL` | ✅ | `postgresql://user:pass@host:5432/fetno` |
 | `JWT_ACCESS_SECRET` | ✅ | ≥32 char random string |
 | `JWT_REFRESH_SECRET` | ✅ | ≥32 char random string |
 | `AT_API_KEY` | ✅ | Africa's Talking key (SMS OTP) |

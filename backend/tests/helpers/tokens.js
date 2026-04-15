@@ -4,7 +4,7 @@
  */
 const jwt = require('jsonwebtoken');
 
-const SECRET = process.env.JWT_SECRET || 'abay-driver-test-secret-key-32chars';
+const SECRET = process.env.JWT_SECRET || 'fetno-test-secret-key-32chars';
 
 const makeToken = (payload, expiresIn = '15m') =>
   jwt.sign(payload, SECRET, { expiresIn });

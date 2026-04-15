@@ -13,7 +13,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
-DOMAIN="${DOMAIN:-abaydriver.et}"
+DOMAIN="${DOMAIN:-fetno.et}"
 DEPLOY_USER="${DEPLOY_USER:-abay}"
 REPO_URL="${REPO_URL:-https://github.com/your-org/Abay-Clone.git}"
 APP_DIR="/opt/fetno"
@@ -99,9 +99,9 @@ fi
 
 # ── 7. Nginx site ────────────────────────────────────────────────────────────
 info "Installing nginx site config..."
-sed "s/abaydriver.et/$DOMAIN/g" "$APP_DIR/deploy/nginx-vps.conf" \
-  > "/etc/nginx/sites-available/abaydriver"
-ln -sf /etc/nginx/sites-available/abaydriver /etc/nginx/sites-enabled/abaydriver
+sed "s/fetno.et/$DOMAIN/g" "$APP_DIR/deploy/nginx-vps.conf" \
+  > "/etc/nginx/sites-available/fetno"
+ln -sf /etc/nginx/sites-available/fetno /etc/nginx/sites-enabled/fetno
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl reload nginx

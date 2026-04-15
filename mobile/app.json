@@ -14,7 +14,7 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "et.abaydriver.app",
+      "bundleIdentifier": "et.fetno.app",
       "config": {
         "googleMapsApiKey": "AIzaSyBT2_j5NhOa-rD-4tKX5kf1iPOuP1vtVJk"
       },
@@ -30,7 +30,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1B4332"
       },
-      "package": "et.abaydriver.app",
+      "package": "et.fetno.app",
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyBT2_j5NhOa-rD-4tKX5kf1iPOuP1vtVJk"

@@ -5,8 +5,8 @@
 jest.mock('../../src/config/database', () => ({}));
 jest.mock('../../src/services/otpService');
 
-process.env.JWT_SECRET = 'abay-driver-test-secret-key-32chars';
-process.env.JWT_REFRESH_SECRET = 'abay-driver-refresh-secret-32chars';
+process.env.JWT_SECRET = 'fetno-test-secret-key-32chars';
+process.env.JWT_REFRESH_SECRET = 'fetno-refresh-secret-32chars';
 process.env.NODE_ENV = 'test';
 
 const request = require('supertest');
@@ -27,7 +27,7 @@ const ADMIN_HASH = bcrypt.hashSync('Admin@1234', 10);
 const mockAdmin = {
   id: 'admin-user-id',
   phone: '+251911000000',
-  email: 'admin@abaydriver.et',
+  email: 'admin@fetno.et',
   fullName: 'Abay Admin',
   role: 'ADMIN',
   passwordHash: ADMIN_HASH,
@@ -40,7 +40,7 @@ const mockAdmin = {
 const mockStoreUser = {
   id: 'store-user-id',
   phone: '+251922000001',
-  email: 'store@abaydriver.et',
+  email: 'store@fetno.et',
   fullName: 'Store Owner',
   role: 'STORE',
   passwordHash: '',

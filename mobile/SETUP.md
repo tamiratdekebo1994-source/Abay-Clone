@@ -11,8 +11,8 @@ Android push notifications require a `google-services.json` file from your Fireb
 1. Go to [console.firebase.google.com](https://console.firebase.google.com)
 2. Open your project (or create one)
 3. Click **Add app → Android**
-4. **Android package name:** `et.abaydriver.app`
-5. App nickname: `Abay Driver` (optional)
+4. **Android package name:** `et.fetno.app`
+5. App nickname: `Fetno` (optional)
 6. Click **Register app**
 7. **Download `google-services.json`**
 8. Place it in: `mobile/google-services.json`
@@ -30,13 +30,13 @@ That's all — Expo's push service talks to FCM automatically using this file.
 For iOS you also need:
 1. An **Apple Developer account** ($99/year)
 2. In Firebase → **Project Settings → Apple apps → Add app**
-3. iOS bundle ID: `et.abaydriver.app`
+3. iOS bundle ID: `et.fetno.app`
 4. Upload your **APNs Auth Key** from Apple Developer Portal
 5. Download `GoogleService-Info.plist` → place in `mobile/GoogleService-Info.plist`
 
 ---
 
-Complete checklist for getting the Abay Driver mobile app built and running on real devices.
+Complete checklist for getting the Fetno mobile app built and running on real devices.
 
 ---
 
@@ -62,8 +62,8 @@ The app uses Google Maps for turn-by-turn navigation and route polylines.
    - **Directions API**
 4. Go to **Credentials → Create Credentials → API Key**
 5. (Recommended) Restrict the key:
-   - Android: restrict by package name `et.abaydriver.app`
-   - iOS: restrict by bundle ID `et.abaydriver.app`
+   - Android: restrict by package name `et.fetno.app`
+   - iOS: restrict by bundle ID `et.fetno.app`
 
 ### Wire it in
 
@@ -129,7 +129,7 @@ Open `mobile/eas.json` and set your production API URL:
 "production": {
   "android": { "buildType": "app-bundle" },
   "env": {
-    "API_BASE_URL": "https://api.abaydriver.et"
+    "API_BASE_URL": "https://api.fetno.et"
   }
 }
 ```
@@ -229,7 +229,7 @@ eas update --branch production --message "Fix order status display"
 
 **Map not loading**
 - Check the API key has Maps SDK for Android/iOS enabled in Google Cloud Console
-- Confirm the package/bundle ID restriction matches `et.abaydriver.app`
+- Confirm the package/bundle ID restriction matches `et.fetno.app`
 
 **Build fails on `expo-location` background permission**
 - Ensure `ACCESS_BACKGROUND_LOCATION` is in `android.permissions` in `app.json` ✓ (already added)

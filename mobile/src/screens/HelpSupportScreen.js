@@ -21,8 +21,8 @@ const FAQ = [
   {
     q: 'My account is suspended. What do I do?',
     qAm: 'መለያዬ ታግዷል። ምን ማድረግ አለብኝ?',
-    a: 'Contact our support team at +251 11 555 0000 or email support@abaydriver.et for account review.',
-    aAm: 'ለድጋፍ ቡድናችን +251 11 555 0000 ይደውሉ ወይም support@abaydriver.et ኢሜይል ይላኩ።',
+    a: 'Contact our support team at +251 11 555 0000 or email support@fetno.et for account review.',
+    aAm: 'ለድጋፍ ቡድናችን +251 11 555 0000 ይደውሉ ወይም support@fetno.et ኢሜይል ይላኩ።',
   },
   {
     q: 'How is my fare calculated?',
@@ -47,8 +47,8 @@ const FAQ = [
 const CONTACT = [
   { icon: '📞', label: 'Call Support', subLabel: '+251 11 555 0000', onPress: () => Linking.openURL('tel:+251115550000') },
   { icon: '💬', label: 'WhatsApp', subLabel: '+251 91 555 0001', onPress: () => Linking.openURL('https://wa.me/251915550001') },
-  { icon: '📧', label: 'Email', subLabel: 'support@abaydriver.et', onPress: () => Linking.openURL('mailto:support@abaydriver.et') },
-  { icon: '🌐', label: 'Website', subLabel: 'abaydriver.et', onPress: () => Linking.openURL('https://abaydriver.et') },
+  { icon: '📧', label: 'Email', subLabel: 'support@fetno.et', onPress: () => Linking.openURL('mailto:support@fetno.et') },
+  { icon: '🌐', label: 'Website', subLabel: 'fetno.et', onPress: () => Linking.openURL('https://fetno.et') },
 ];
 
 export default function HelpSupportScreen() {

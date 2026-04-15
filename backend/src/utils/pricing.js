@@ -1,5 +1,5 @@
 /**
- * Pricing utilities for Abay Driver - Ethiopia
+ * Pricing utilities for Fetno - Ethiopia
  * All amounts in Ethiopian Birr (ETB)
  */
 
