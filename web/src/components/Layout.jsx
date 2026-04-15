@@ -87,7 +87,7 @@ export default function Layout() {
         {/* Logo */}
         <div className="flex items-center p-4 border-b border-primary-500">
           <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center flex-shrink-0">
-            <span className="text-primary-800 font-bold text-lg">አ</span>
+            <span className="text-primary-800 font-bold text-xs">Fetno</span>
           </div>
           {sidebarOpen && (
             <div className="ml-3">
