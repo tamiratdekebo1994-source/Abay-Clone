@@ -13,5 +13,8 @@
     "backend": "npm run dev --workspace=backend",
     "web": "npm run dev --workspace=web",
     "install:all": "npm install"
+  },
+  "devDependencies": {
+    "babel-preset-expo": "^10.0.0"
   }
 }
