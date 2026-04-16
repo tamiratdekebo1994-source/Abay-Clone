@@ -25,7 +25,7 @@ module.exports = ({ config }) => ({
     config: {
       googleMaps: { apiKey: googleMapsApiKey },
     },
-    googleServicesFile: process.env.GOOGLE_SERVICES_JSON || './google-services.json',
+    ...(process.env.GOOGLE_SERVICES_JSON && { googleServicesFile: process.env.GOOGLE_SERVICES_JSON }),
   },
   extra: {
     ...config.extra,
