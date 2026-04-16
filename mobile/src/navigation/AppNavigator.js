@@ -154,8 +154,7 @@ export default function AppNavigator() {
   if (isLoading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary }}>
-        <Text style={{ color: COLORS.accent, fontSize: 40, fontWeight: '800' }}>አ</Text>
-        <Text style={{ color: COLORS.white, fontSize: 16, marginTop: 8, fontWeight: '600' }}>Fetno</Text>
+        <Text style={{ color: COLORS.white, fontSize: 32, fontWeight: '900' }}>Fetno</Text>
         <ActivityIndicator color={COLORS.accent} style={{ marginTop: 24 }} />
       </View>
     );

@@ -4,18 +4,25 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform,
   ActivityIndicator, Alert,
 } from 'react-native';
+import { useDispatch } from 'react-redux';
 import { authAPI } from '../../services/api';
+import { login } from '../../store/authStore';
 import { COLORS } from '../../utils/constants';
 import { t } from '../../utils/i18n';
 
 export default function PhoneEntryScreen({ navigation, route }) {
-  const purpose = route?.params?.purpose || 'LOGIN'; // LOGIN | REGISTER
+  const purpose = route?.params?.purpose || 'LOGIN';
   const [phone, setPhone] = useState('+251');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [usePassword, setUsePassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const dispatch = useDispatch();
+  const isLogin = purpose === 'LOGIN';
+
   const formatPhone = (text) => {
-    // Keep +251 prefix
     let cleaned = text.replace(/[^\d+]/g, '');
     if (!cleaned.startsWith('+251')) cleaned = '+251';
     if (cleaned.length > 13) cleaned = cleaned.slice(0, 13);
@@ -23,15 +30,29 @@ export default function PhoneEntryScreen({ navigation, route }) {
     setError('');
   };
 
-  const handleSend = async () => {
+  const handlePasswordLogin = async () => {
+    if (phone.length < 13 || !password.trim()) {
+      setError('Please enter phone number and password');
+      return;
+    }
+    setIsLoading(true);
+    setError('');
+    try {
+      await dispatch(login({ phone, password })).unwrap();
+    } catch (err) {
+      setError(err?.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSendOtp = async () => {
     if (phone.length < 13) {
       setError('Please enter a valid Ethiopian phone number (+251XXXXXXXXX)');
       return;
     }
-
     setIsLoading(true);
     setError('');
-
     try {
       const { data } = await authAPI.requestOtp(phone, purpose);
       navigation.navigate('OtpVerification', { phone, purpose, devCode: data.data?.devCode });
@@ -50,9 +71,7 @@ export default function PhoneEntryScreen({ navigation, route }) {
         Alert.alert(
           'Already Registered',
           'This phone is already registered. Please login instead.',
-          [
-            { text: 'Login', onPress: () => navigation.replace('PhoneEntry', { purpose: 'LOGIN' }) },
-          ]
+          [{ text: 'Login', onPress: () => navigation.replace('PhoneEntry', { purpose: 'LOGIN' }) }]
         );
       } else {
         setError(msg);
@@ -62,14 +81,12 @@ export default function PhoneEntryScreen({ navigation, route }) {
     }
   };
 
-  const isLogin = purpose === 'LOGIN';
-
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.logo}>
-          <Text style={styles.logoText}>አ</Text>
+          <Text style={styles.logoText}>Fetno</Text>
         </View>
         <Text style={styles.appName}>Fetno</Text>
         <Text style={styles.tagline}>{t('tagline')}</Text>
@@ -78,9 +95,26 @@ export default function PhoneEntryScreen({ navigation, route }) {
       {/* Form */}
       <View style={styles.form}>
         <Text style={styles.title}>
-          {isLogin ? `${t('welcomeBack')} / Welcome Back!` : `${t('createAccount')} / Create Account`}
+          {isLogin ? 'Welcome Back!' : 'Create Account'}
         </Text>
-        <Text style={styles.subtitle}>{t('enterPhone')}</Text>
+
+        {/* Login mode toggle (only on LOGIN) */}
+        {isLogin && (
+          <View style={styles.modeToggle}>
+            <TouchableOpacity
+              style={[styles.modeBtn, !usePassword && styles.modeBtnActive]}
+              onPress={() => { setUsePassword(false); setError(''); }}
+            >
+              <Text style={[styles.modeBtnText, !usePassword && styles.modeBtnTextActive]}>📱 OTP</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modeBtn, usePassword && styles.modeBtnActive]}
+              onPress={() => { setUsePassword(true); setError(''); }}
+            >
+              <Text style={[styles.modeBtnText, usePassword && styles.modeBtnTextActive]}>🔐 Password</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {error ? (
           <View style={styles.errorBox}>
@@ -100,32 +134,55 @@ export default function PhoneEntryScreen({ navigation, route }) {
             maxLength={13}
             placeholder="+251912345678"
             placeholderTextColor={COLORS.gray}
-            autoFocus
           />
         </View>
 
+        {(usePassword && isLogin) && (
+          <View style={styles.passwordRow}>
+            <TextInput
+              style={styles.passwordInput}
+              value={password}
+              onChangeText={(t) => { setPassword(t); setError(''); }}
+              placeholder="Password"
+              placeholderTextColor={COLORS.gray}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+              <Text style={{ fontSize: 18 }}>{showPassword ? '🙈' : '👁️'}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <TouchableOpacity
           style={[styles.sendBtn, isLoading && styles.sendBtnDisabled]}
-          onPress={handleSend}
+          onPress={usePassword && isLogin ? handlePasswordLogin : handleSendOtp}
           disabled={isLoading}
         >
           {isLoading ? (
             <ActivityIndicator color={COLORS.white} />
           ) : (
-            <Text style={styles.sendBtnText}>{t('sendCode')} →</Text>
+            <Text style={styles.sendBtnText}>
+              {usePassword && isLogin ? 'Sign In →' : `${t('sendCode')} →`}
+            </Text>
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.switchLink}
-          onPress={() => navigation.replace('PhoneEntry', { purpose: isLogin ? 'REGISTER' : 'LOGIN' })}
-        >
-          <Text style={styles.switchText}>
-            {isLogin
-              ? `${t('noAccount')} ${t('signUp')}`
-              : `${t('haveAccount')} ${t('signIn')}`}
-          </Text>
-        </TouchableOpacity>
+        {isLogin && (
+          <TouchableOpacity
+            style={styles.switchLink}
+            onPress={() => navigation.replace('PhoneEntry', { purpose: 'REGISTER' })}
+          >
+            <Text style={styles.switchText}>{t('noAccount')} {t('signUp')}</Text>
+          </TouchableOpacity>
+        )}
+        {!isLogin && (
+          <TouchableOpacity
+            style={styles.switchLink}
+            onPress={() => navigation.replace('PhoneEntry', { purpose: 'LOGIN' })}
+          >
+            <Text style={styles.switchText}>{t('haveAccount')} {t('signIn')}</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <Text style={styles.footer}>{t('madeInEthiopia')}</Text>
@@ -142,7 +199,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     marginBottom: 12,
   },
-  logoText: { fontSize: 40, fontWeight: '800', color: COLORS.primary },
+  logoText: { fontSize: 22, fontWeight: '900', color: COLORS.primary },
   appName: { color: COLORS.white, fontSize: 28, fontWeight: '800' },
   tagline: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 4 },
   form: {
@@ -150,16 +207,22 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
     padding: 28, paddingTop: 32,
   },
-  title: { fontSize: 18, fontWeight: '700', color: COLORS.black, marginBottom: 6 },
-  subtitle: { fontSize: 14, color: COLORS.gray, marginBottom: 20 },
+  title: { fontSize: 18, fontWeight: '700', color: COLORS.black, marginBottom: 16 },
+  modeToggle: {
+    flexDirection: 'row', borderRadius: 12, overflow: 'hidden',
+    borderWidth: 1.5, borderColor: COLORS.border, marginBottom: 20,
+  },
+  modeBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: COLORS.grayLighter },
+  modeBtnActive: { backgroundColor: COLORS.primary },
+  modeBtnText: { fontSize: 14, fontWeight: '600', color: COLORS.gray },
+  modeBtnTextActive: { color: COLORS.white },
   errorBox: { backgroundColor: '#FEE2E2', borderRadius: 10, padding: 12, marginBottom: 16 },
   errorText: { color: COLORS.error, fontSize: 13 },
   phoneRow: {
     flexDirection: 'row', alignItems: 'center',
     borderWidth: 1.5, borderColor: COLORS.border,
-    borderRadius: 14, marginBottom: 20,
-    backgroundColor: COLORS.grayLighter,
-    overflow: 'hidden',
+    borderRadius: 14, marginBottom: 14,
+    backgroundColor: COLORS.grayLighter, overflow: 'hidden',
   },
   flagBadge: {
     paddingHorizontal: 14, paddingVertical: 16,
@@ -169,9 +232,18 @@ const styles = StyleSheet.create({
   flagText: { fontSize: 22 },
   phoneInput: {
     flex: 1, fontSize: 18, fontWeight: '600',
-    paddingHorizontal: 14, paddingVertical: 14,
-    color: COLORS.text,
+    paddingHorizontal: 14, paddingVertical: 14, color: COLORS.text,
   },
+  passwordRow: {
+    flexDirection: 'row', alignItems: 'center',
+    borderWidth: 1.5, borderColor: COLORS.border,
+    borderRadius: 14, marginBottom: 14,
+    backgroundColor: COLORS.grayLighter, overflow: 'hidden',
+  },
+  passwordInput: {
+    flex: 1, fontSize: 16, paddingHorizontal: 14, paddingVertical: 14, color: COLORS.text,
+  },
+  eyeBtn: { paddingHorizontal: 14 },
   sendBtn: {
     backgroundColor: COLORS.primary, borderRadius: 14,
     paddingVertical: 16, alignItems: 'center',
