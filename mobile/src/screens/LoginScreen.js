@@ -32,9 +32,9 @@ export default function LoginScreen({ navigation }) {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Text style={styles.logoText}>ፈጠኖ</Text>
-            <Text style={styles.logoSubText}>FETNO</Text>
+            <Text style={styles.logoText}>Fetno</Text>
           </View>
+          <Text style={styles.appName}>Fetno</Text>
           <Text style={styles.tagline}>Ethiopia's Delivery Network</Text>
           <Text style={styles.taglineAm}>የኢትዮጵያ የማድረስ አውታር</Text>
         </View>
@@ -124,9 +124,9 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3, shadowRadius: 8, elevation: 8,
   },
-  logoText: { color: COLORS.accent, fontSize: 28, fontWeight: 'bold' },
-  logoSubText: { color: COLORS.white, fontSize: 9, letterSpacing: 1 },
-  tagline: { fontSize: 18, fontWeight: '600', color: COLORS.black, marginTop: 8 },
+  logoText: { color: COLORS.white, fontSize: 26, fontWeight: '900', letterSpacing: 1 },
+  appName: { fontSize: 32, fontWeight: '900', color: COLORS.black, marginTop: 12 },
+  tagline: { fontSize: 16, fontWeight: '600', color: COLORS.black, marginTop: 4 },
   taglineAm: { fontSize: 14, color: COLORS.gray, marginTop: 4 },
   form: { backgroundColor: COLORS.white, borderRadius: 16, padding: 24, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
   formTitle: { fontSize: 16, fontWeight: '600', color: COLORS.black, marginBottom: 20, textAlign: 'center' },
