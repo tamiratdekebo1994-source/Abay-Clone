@@ -32,8 +32,8 @@ export default function LoginScreen({ navigation }) {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Text style={styles.logoText}>አባይ</Text>
-            <Text style={styles.logoSubText}>ABAY DRIVER</Text>
+            <Text style={styles.logoText}>ፈጠኖ</Text>
+            <Text style={styles.logoSubText}>FETNO</Text>
           </View>
           <Text style={styles.tagline}>Ethiopia's Delivery Network</Text>
           <Text style={styles.taglineAm}>የኢትዮጵያ የማድረስ አውታር</Text>
