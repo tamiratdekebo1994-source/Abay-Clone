@@ -5,11 +5,11 @@ const _devBase = Constants.expoConfig?.extra?.apiBaseUrl ?? 'http://192.168.1.10
 
 export const API_URL = __DEV__
   ? `${_devBase}/api`
-  : 'https://api.fetno.et/api';
+  : 'https://api.etsparkdriver.et/api';
 
 export const SOCKET_URL = __DEV__
   ? _devBase
-  : 'https://api.fetno.et';
+  : 'https://api.etsparkdriver.et';
 
 // Google Maps API key — injected at build time via app.config.js from GOOGLE_MAPS_API_KEY env var
 // See: mobile/.env.example

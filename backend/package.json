@@ -1,7 +1,7 @@
 {
   "name": "abay-backend",
   "version": "1.0.0",
-  "description": "Fetno Backend API",
+  ""description": "ET Spark Driver - Ethiopia's Delivery Network connecting stores and drivers",
   "license": "MIT",
   "main": "src/server.js",
   "engines": {

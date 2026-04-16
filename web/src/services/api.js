@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// VITE_API_BASE_URL is set to the backend origin (e.g. https://api.fetno.et)
+// VITE_API_BASE_URL is set to the backend origin (e.g. https://api.etsparkdriver.et)
 // when the web app is hosted separately (Firebase Hosting).
 // When served from the same origin as the backend (nginx/VPS), leave it unset
 // and the vite dev proxy / nginx will handle /api forwarding.

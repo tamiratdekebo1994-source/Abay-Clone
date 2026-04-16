@@ -110,7 +110,7 @@ export default function TrackingPage() {
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center text-white font-black text-sm">A</div>
-            <span className="font-bold text-gray-900 text-lg">Fetno</span>
+            <span className="font-bold text-gray-900 text-lg">ET Spark Driver</span>
           </div>
           <div className="text-right">
             <div className="text-xs text-gray-500">Order</div>

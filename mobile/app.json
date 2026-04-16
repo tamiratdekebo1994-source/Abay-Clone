@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Fetno",
-    "slug": "fetno",
+    "name": "ET Spark Driver",
+    "slug": "et-spark-driver",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,15 +14,15 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "et.fetno.app",
+      "bundleIdentifier": "et.sparkdriver.app",
       "config": {
         "googleMapsApiKey": "AIzaSyBT2_j5NhOa-rD-4tKX5kf1iPOuP1vtVJk"
       },
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Fetno needs your location to show nearby deliveries and update your position.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Fetno needs background location to track your delivery routes.",
-        "NSCameraUsageDescription": "Fetno needs camera access to upload documents.",
-        "NSPhotoLibraryUsageDescription": "Fetno needs photo library access to upload documents."
+        "NSLocationWhenInUseUsageDescription": "ET Spark Driver needs your location to show nearby deliveries and update your position.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "ET Spark Driver needs background location to track your delivery routes.",
+        "NSCameraUsageDescription": "ET Spark Driver needs camera access to upload documents.",
+        "NSPhotoLibraryUsageDescription": "ET Spark Driver needs photo library access to upload documents."
       }
     },
     "android": {
@@ -30,7 +30,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1B4332"
       },
-      "package": "et.fetno.app",
+      "package": "et.sparkdriver.app",
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyBT2_j5NhOa-rD-4tKX5kf1iPOuP1vtVJk"
@@ -51,7 +51,7 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow Fetno to use your location."
+          "locationAlwaysAndWhenInUsePermission": "Allow ET Spark Driver to use your location."
         }
       ],
       [
@@ -62,7 +62,7 @@
         }
       ]
     ],
-    "scheme": "fetno",
+    "scheme": "et-spark-driver",
     "extra": {
       "googleMapsApiKey": "AIzaSyBT2_j5NhOa-rD-4tKX5kf1iPOuP1vtVJk",
       "eas": {

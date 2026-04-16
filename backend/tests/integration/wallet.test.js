@@ -5,7 +5,7 @@
  */
 jest.mock('../../src/config/database', () => ({}));
 
-process.env.JWT_SECRET = 'fetno-test-secret-key-32chars';
+process.env.JWT_SECRET = 'et-spark-driver-test-secret-32c';
 process.env.NODE_ENV = 'test';
 
 const request = require('supertest');

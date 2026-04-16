@@ -3,8 +3,8 @@
  * but without starting an HTTP server or binding to a port.
  * Call createApp() once per test file after jest.mock() calls are in place.
  */
-process.env.JWT_SECRET = process.env.JWT_SECRET || 'fetno-test-secret-key-32chars';
-process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'fetno-refresh-secret-32chars';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'et-spark-driver-test-secret-32c';
+process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'et-spark-driver-refresh-32chars';
 process.env.NODE_ENV = 'test';
 
 const express = require('express');

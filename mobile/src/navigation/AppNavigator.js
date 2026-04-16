@@ -78,7 +78,7 @@ function MainTabs() {
         name="Home"
         component={HomeScreen}
         options={{
-          title: 'Fetno | ፈጠኖ',
+          title: 'ET Spark Driver | ET Spark',
           tabBarLabel: t('appName').split(' ')[0],
           tabBarIcon: ({ focused }) => <Text style={{ fontSize: 22 }}>{focused ? '🏠' : '🏡'}</Text>,
         }}
@@ -154,7 +154,7 @@ export default function AppNavigator() {
   if (isLoading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary }}>
-        <Text style={{ color: COLORS.white, fontSize: 32, fontWeight: '900' }}>Fetno</Text>
+        <Text style={{ color: COLORS.white, fontSize: 32, fontWeight: '900' }}>ET Spark Driver</Text>
         <ActivityIndicator color={COLORS.accent} style={{ marginTop: 24 }} />
       </View>
     );

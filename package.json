@@ -1,7 +1,7 @@
 {
-  "name": "fetno",
+  "name": "et-spark-driver",
   "version": "1.0.0",
-  "description": "Fetno - Ethiopia's Spark Driver Clone connecting stores and drivers",
+  ""description": "ET Spark Driver - Ethiopia's Delivery Network connecting stores and drivers",
   "license": "MIT",
   "private": true,
   "engines": {
