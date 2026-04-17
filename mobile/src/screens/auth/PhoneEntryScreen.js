@@ -86,7 +86,7 @@ export default function PhoneEntryScreen({ navigation, route }) {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.logo}>
-          <Text style={styles.logoText}>ET Spark Driver</Text>
+          <Text style={styles.logoText}>ETS</Text>
         </View>
         <Text style={styles.appName}>ET Spark Driver</Text>
         <Text style={styles.tagline}>{t('tagline')}</Text>
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     marginBottom: 12,
   },
-  logoText: { fontSize: 22, fontWeight: '900', color: COLORS.primary },
+  logoText: { fontSize: 28, fontWeight: '900', color: COLORS.primary, letterSpacing: 2 },
   appName: { color: COLORS.white, fontSize: 28, fontWeight: '800' },
   tagline: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 4 },
   form: {
