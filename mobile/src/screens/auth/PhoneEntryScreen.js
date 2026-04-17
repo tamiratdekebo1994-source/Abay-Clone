@@ -86,7 +86,7 @@ export default function PhoneEntryScreen({ navigation, route }) {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.logo}>
-          <Text style={styles.logoText}>ETS</Text>
+          <Text style={styles.logoText}>ets</Text>
         </View>
         <Text style={styles.appName}>ET Spark Driver</Text>
         <Text style={styles.tagline}>{t('tagline')}</Text>
