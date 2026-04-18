@@ -13,7 +13,7 @@ function formatMessage(level, message, meta = {}) {
       timestamp: new Date().toISOString(),
       level,
       message,
-      service: 'et-spark-driver-api',
+      service: 'fetno-api',
       version: '1.0.0',
       ...meta,
     });

@@ -1,7 +1,7 @@
 {
-  "name": "et-spark-driver",
+  "name": "fetno",
   "version": "1.0.0",
-  ""description": "ET Spark Driver - Ethiopia's Delivery Network connecting stores and drivers",
+  ""description": "Fetno - Ethiopia's Delivery Network connecting stores and drivers",
   "license": "MIT",
   "private": true,
   "engines": {

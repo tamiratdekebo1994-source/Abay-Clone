@@ -21,8 +21,8 @@ const FAQ = [
   {
     q: 'My account is suspended. What do I do?',
     qAm: 'መለያዬ ታግዷል። ምን ማድረግ አለብኝ?',
-    a: 'Contact our support team at +251 11 555 0000 or email support@etsparkdriver.et for account review.',
-    aAm: 'ለድጋፍ ቡድናችን +251 11 555 0000 ይደውሉ ወይም support@etsparkdriver.et ኢሜይል ይላኩ።',
+    a: 'Contact our support team at +251 11 555 0000 or email support@fetno.et for account review.',
+    aAm: 'ለድጋፍ ቡድናችን +251 11 555 0000 ይደውሉ ወይም support@fetno.et ኢሜይል ይላኩ።',
   },
   {
     q: 'How is my fare calculated?',
@@ -47,8 +47,8 @@ const FAQ = [
 const CONTACT = [
   { icon: '📞', label: 'Call Support', subLabel: '+251 11 555 0000', onPress: () => Linking.openURL('tel:+251115550000') },
   { icon: '💬', label: 'WhatsApp', subLabel: '+251 91 555 0001', onPress: () => Linking.openURL('https://wa.me/251915550001') },
-  { icon: '📧', label: 'Email', subLabel: 'support@etsparkdriver.et', onPress: () => Linking.openURL('mailto:support@etsparkdriver.et') },
-  { icon: '🌐', label: 'Website', subLabel: 'etsparkdriver.et', onPress: () => Linking.openURL('https://etsparkdriver.et') },
+  { icon: '📧', label: 'Email', subLabel: 'support@fetno.et', onPress: () => Linking.openURL('mailto:support@fetno.et') },
+  { icon: '🌐', label: 'Website', subLabel: 'fetno.et', onPress: () => Linking.openURL('https://fetno.et') },
 ];
 
 export default function HelpSupportScreen() {
@@ -61,7 +61,7 @@ export default function HelpSupportScreen() {
         <Text style={styles.headerTitle}>Help & Support</Text>
         <Text style={styles.headerTitleAm}>እርዳታ እና ድጋፍ</Text>
         <Text style={styles.headerSubtitle}>
-          We're here to help you succeed as an ET Spark Driver.{'\n'}
+          We're here to help you succeed as an Fetno.{'\n'}
           ስኬታማ ሾፌር እንዲሆኑ ዝግጁ ነን።
         </Text>
       </View>
@@ -109,7 +109,7 @@ export default function HelpSupportScreen() {
 
       {/* App version */}
       <View style={styles.versionRow}>
-        <Text style={styles.versionText}>ET Spark Driver v1.0.0 • ET Spark</Text>
+        <Text style={styles.versionText}>Fetno v1.0.0 • Fetno</Text>
         <Text style={styles.versionSub}>Made with ❤️ in Ethiopia</Text>
       </View>
     </ScrollView>

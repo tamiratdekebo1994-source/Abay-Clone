@@ -39,7 +39,7 @@ export default function Layout() {
       setOrderAlert({ ...data, ts: Date.now() });
       // Browser notification if permission granted
       if (Notification.permission === 'granted') {
-        new Notification('ET Spark Driver — Order Update', {
+        new Notification('Fetno — Order Update', {
           body: `Order #${data.orderNumber}: ${data.status?.replace(/_/g, ' ')}`,
           icon: '/favicon.svg',
         });
@@ -87,11 +87,11 @@ export default function Layout() {
         {/* Logo */}
         <div className="flex items-center p-4 border-b border-primary-500">
           <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center flex-shrink-0">
-            <span className="text-primary-800 font-bold text-xs">ET Spark Driver</span>
+            <span className="text-primary-800 font-bold text-xs">Fetno</span>
           </div>
           {sidebarOpen && (
             <div className="ml-3">
-              <div className="font-bold text-lg leading-none">ET Spark Driver</div>
+              <div className="font-bold text-lg leading-none">Fetno</div>
               <div className="text-primary-300 text-xs mt-0.5">
                 {user?.role === 'ADMIN' ? 'Admin Portal' : 'Store Portal'}
               </div>

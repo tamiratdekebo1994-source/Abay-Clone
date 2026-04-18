@@ -1,5 +1,5 @@
 /**
- * Background Location Service for ET Spark Driver
+ * Background Location Service for Fetno
  * Tracks driver location even when the app is backgrounded
  * Uses Expo Location's background task
  */
@@ -9,7 +9,7 @@ import * as TaskManager from 'expo-task-manager';
 import * as SecureStore from 'expo-secure-store';
 import { API_URL } from '../utils/constants';
 
-const LOCATION_TASK = 'et-spark-background-location';
+const LOCATION_TASK = 'fetno-background-location';
 const LOCATION_UPDATE_INTERVAL = 5000;   // 5 seconds
 const LOCATION_UPDATE_DISTANCE = 10;     // 10 meters
 
@@ -75,7 +75,7 @@ export const startBackgroundTracking = async (baseUrl) => {
       distanceInterval: LOCATION_UPDATE_DISTANCE,
       showsBackgroundLocationIndicator: true,
       foregroundService: {
-        notificationTitle: 'ET Spark Driver',
+        notificationTitle: 'Fetno',
         notificationBody: 'Your location is being shared for active delivery',
         notificationColor: '#1B4332',
       },

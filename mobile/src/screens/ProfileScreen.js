@@ -111,7 +111,7 @@ export default function ProfileScreen({ navigation }) {
       </TouchableOpacity>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>ET Spark Driver v1.0.0 • 🇪🇹 Made in Ethiopia</Text>
+        <Text style={styles.footerText}>Fetno v1.0.0 • 🇪🇹 Made in Ethiopia</Text>
       </View>
     </ScrollView>
   );

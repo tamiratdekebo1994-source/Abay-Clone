@@ -10,7 +10,7 @@ jest.mock('../../src/services/pushNotificationService', () => ({
   notifyOrderStatus: jest.fn().mockResolvedValue(undefined),
 }));
 
-process.env.JWT_SECRET = 'et-spark-driver-test-secret-32c';
+process.env.JWT_SECRET = 'fetno-test-secret-32c';
 process.env.NODE_ENV = 'test';
 
 const request = require('supertest');

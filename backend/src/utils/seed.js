@@ -21,9 +21,9 @@ async function main() {
     update: {},
     create: {
       phone: '+251911000000',
-      email: 'admin@etsparkdriver.et',
+      email: 'admin@fetno.et',
       passwordHash: adminHash,
-      fullName: 'ET Spark Admin',
+      fullName: 'Fetno Admin',
       role: 'ADMIN',
       isVerified: true,
     },
@@ -37,7 +37,7 @@ async function main() {
     update: {},
     create: {
       phone: '+251922000001',
-      email: 'demo.store@etsparkdriver.et',
+      email: 'demo.store@fetno.et',
       passwordHash: storeHash,
       fullName: 'Demo Store Owner',
       role: 'STORE',
@@ -70,7 +70,7 @@ async function main() {
     update: {},
     create: {
       phone: '+251933000002',
-      email: 'demo.driver@etsparkdriver.et',
+      email: 'demo.driver@fetno.et',
       passwordHash: driverHash,
       fullName: 'Abebe Girma',
       role: 'DRIVER',

@@ -82,9 +82,9 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-accent rounded-2xl mb-4 shadow-lg">
-            <span className="text-primary-800 font-black text-2xl">ET Spark Driver</span>
+            <span className="text-primary-800 font-black text-2xl">Fetno</span>
           </div>
-          <h1 className="text-3xl font-black text-white">ET Spark Driver</h1>
+          <h1 className="text-3xl font-black text-white">Fetno</h1>
           <p className="text-primary-200 mt-1">Ethiopia's Delivery Network • የኢትዮጵያ የማድረስ አውታር</p>
         </div>
 

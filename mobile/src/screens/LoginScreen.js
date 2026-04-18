@@ -32,9 +32,9 @@ export default function LoginScreen({ navigation }) {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Text style={styles.logoText}>ET Spark Driver</Text>
+            <Text style={styles.logoText}>Fetno</Text>
           </View>
-          <Text style={styles.appName}>ET Spark Driver</Text>
+          <Text style={styles.appName}>Fetno</Text>
           <Text style={styles.tagline}>Ethiopia's Delivery Network</Text>
           <Text style={styles.taglineAm}>የኢትዮጵያ የማድረስ አውታር</Text>
         </View>

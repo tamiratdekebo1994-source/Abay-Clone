@@ -5,8 +5,8 @@
 jest.mock('../../src/config/database', () => ({}));
 jest.mock('../../src/services/otpService');
 
-process.env.JWT_SECRET = 'et-spark-driver-test-secret-32c';
-process.env.JWT_REFRESH_SECRET = 'et-spark-driver-refresh-32chars';
+process.env.JWT_SECRET = 'fetno-test-secret-32c';
+process.env.JWT_REFRESH_SECRET = 'fetno-refresh-32chars';
 process.env.NODE_ENV = 'test';
 
 const request = require('supertest');
@@ -27,7 +27,7 @@ const ADMIN_HASH = bcrypt.hashSync('Admin@1234', 10);
 const mockAdmin = {
   id: 'admin-user-id',
   phone: '+251911000000',
-  email: 'admin@etsparkdriver.et',
+  email: 'admin@fetno.et',
   fullName: 'Abay Admin',
   role: 'ADMIN',
   passwordHash: ADMIN_HASH,
@@ -40,7 +40,7 @@ const mockAdmin = {
 const mockStoreUser = {
   id: 'store-user-id',
   phone: '+251922000001',
-  email: 'store@etsparkdriver.et',
+  email: 'store@fetno.et',
   fullName: 'Store Owner',
   role: 'STORE',
   passwordHash: '',

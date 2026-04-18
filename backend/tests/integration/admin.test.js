@@ -6,7 +6,7 @@
 jest.mock('../../src/config/database', () => ({}));
 jest.mock('../../src/services/surgeService');
 
-process.env.JWT_SECRET = 'et-spark-driver-test-secret-32c';
+process.env.JWT_SECRET = 'fetno-test-secret-32c';
 process.env.NODE_ENV = 'test';
 
 const request = require('supertest');

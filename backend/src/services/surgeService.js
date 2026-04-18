@@ -1,5 +1,5 @@
 /**
- * Surge Pricing Engine for ET Spark Driver
+ * Surge Pricing Engine for Fetno
  *
  * Surge is triggered by:
  * 1. Time-of-day (peak hours in Addis Ababa traffic)
