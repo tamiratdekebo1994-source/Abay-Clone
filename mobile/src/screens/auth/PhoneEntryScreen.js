@@ -214,7 +214,7 @@ export default function PhoneEntryScreen({ navigation, route }) {
             )}
           </View>
 
-          <Text style={styles.footer}>{t('madeInEthiopia')}</Text>
+          <Text style={styles.footer}>🇪🇹 Ethiopia</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
