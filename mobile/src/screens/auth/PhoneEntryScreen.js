@@ -143,7 +143,6 @@ export default function PhoneEntryScreen({ navigation, route }) {
 
             <View style={styles.phoneRow}>
               <View style={styles.flagBadge}>
-                <Text style={styles.flagText}>🇪🇹</Text>
                 <Text style={styles.countryCode}>+251</Text>
               </View>
               <TextInput
