@@ -47,6 +47,23 @@ export default function PhoneEntryScreen({ navigation, route }) {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (phone.length < 13) {
+      setError('Please enter your phone number first');
+      return;
+    }
+    setIsLoading(true);
+    setError('');
+    try {
+      const { data } = await authAPI.requestOtp(phone, 'LOGIN');
+      navigation.navigate('OtpVerification', { phone, purpose: 'LOGIN', devCode: data.data?.devCode });
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to send code. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSendOtp = async () => {
     if (phone.length < 13) {
       setError('Please enter a valid Ethiopian phone number (+251XXXXXXXXX)');
@@ -159,7 +176,7 @@ export default function PhoneEntryScreen({ navigation, route }) {
             {(usePassword && isLogin) && (
               <TouchableOpacity
                 style={styles.forgotLink}
-                onPress={() => navigation.navigate('OtpVerification', { phone, purpose: 'RESET_PASSWORD' })}
+                onPress={handleForgotPassword}
               >
                 <Text style={styles.forgotText}>Forgot password?</Text>
               </TouchableOpacity>
