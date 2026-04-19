@@ -105,7 +105,7 @@ export default function PhoneEntryScreen({ navigation, route }) {
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.logo}>
-              <Text style={styles.logoText}>ፈጠኖ</Text>
+              <Text style={styles.logoText}>Fetno</Text>
             </View>
             <Text style={styles.appName}>Fetno Driver</Text>
             <Text style={styles.tagline}>{t('tagline')}</Text>
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     marginBottom: 12,
   },
-  logoText: { fontSize: 28, fontWeight: '900', color: COLORS.primary, letterSpacing: 2 },
+  logoText: { fontSize: 18, fontWeight: '900', color: COLORS.primary, letterSpacing: 1 },
   appName: { color: COLORS.white, fontSize: 28, fontWeight: '800' },
   tagline: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 4 },
   form: {
