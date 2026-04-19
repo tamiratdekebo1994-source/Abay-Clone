@@ -13,7 +13,7 @@ import { t } from '../../utils/i18n';
 
 export default function PhoneEntryScreen({ navigation, route }) {
   const purpose = route?.params?.purpose || 'LOGIN';
-  const [phone, setPhone] = useState('+251');
+  const [localNumber, setLocalNumber] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [usePassword, setUsePassword] = useState(false);
@@ -22,17 +22,16 @@ export default function PhoneEntryScreen({ navigation, route }) {
 
   const dispatch = useDispatch();
   const isLogin = purpose === 'LOGIN';
+  const phone = '+251' + localNumber;
 
   const formatPhone = (text) => {
-    let cleaned = text.replace(/[^\d+]/g, '');
-    if (!cleaned.startsWith('+251')) cleaned = '+251';
-    if (cleaned.length > 13) cleaned = cleaned.slice(0, 13);
-    setPhone(cleaned);
+    const digits = text.replace(/\D/g, '').slice(0, 9);
+    setLocalNumber(digits);
     setError('');
   };
 
   const handlePasswordLogin = async () => {
-    if (phone.length < 13 || !password.trim()) {
+    if (localNumber.length < 9 || !password.trim()) {
       setError('Please enter phone number and password');
       return;
     }
@@ -48,7 +47,7 @@ export default function PhoneEntryScreen({ navigation, route }) {
   };
 
   const handleForgotPassword = async () => {
-    if (phone.length < 13) {
+    if (localNumber.length < 9) {
       setError('Please enter your phone number first');
       return;
     }
@@ -65,7 +64,7 @@ export default function PhoneEntryScreen({ navigation, route }) {
   };
 
   const handleSendOtp = async () => {
-    if (phone.length < 13) {
+    if (localNumber.length < 9) {
       setError('Please enter a valid Ethiopian phone number (+251XXXXXXXXX)');
       return;
     }
@@ -145,14 +144,15 @@ export default function PhoneEntryScreen({ navigation, route }) {
             <View style={styles.phoneRow}>
               <View style={styles.flagBadge}>
                 <Text style={styles.flagText}>🇪🇹</Text>
+                <Text style={styles.countryCode}>+251</Text>
               </View>
               <TextInput
                 style={styles.phoneInput}
-                value={phone}
+                value={localNumber}
                 onChangeText={formatPhone}
                 keyboardType="phone-pad"
-                maxLength={13}
-                placeholder="+251912345678"
+                maxLength={9}
+                placeholder="9XXXXXXXX"
                 placeholderTextColor={COLORS.gray}
               />
             </View>
@@ -258,11 +258,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.grayLighter, overflow: 'hidden',
   },
   flagBadge: {
-    paddingHorizontal: 14, paddingVertical: 16,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 12, paddingVertical: 16,
     backgroundColor: 'rgba(0,0,0,0.04)',
     borderRightWidth: 1, borderRightColor: COLORS.border,
+    gap: 6,
   },
   flagText: { fontSize: 22 },
+  countryCode: { fontSize: 16, fontWeight: '700', color: COLORS.text },
   phoneInput: {
     flex: 1, fontSize: 18, fontWeight: '600',
     paddingHorizontal: 14, paddingVertical: 14, color: COLORS.text,
