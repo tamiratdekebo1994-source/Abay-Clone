@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
-  ActivityIndicator, Alert,
+  ActivityIndicator, Alert, ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import { authAPI } from '../../services/api';
 import { login } from '../../store/authStore';
@@ -82,117 +83,132 @@ export default function PhoneEntryScreen({ navigation, route }) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.logo}>
-          <Text style={styles.logoText}>ፈጠኖ</Text>
-        </View>
-        <Text style={styles.appName}>Fetno</Text>
-        <Text style={styles.tagline}>{t('tagline')}</Text>
-      </View>
-
-      {/* Form */}
-      <View style={styles.form}>
-        <Text style={styles.title}>
-          {isLogin ? 'Welcome Back!' : 'Create Account'}
-        </Text>
-
-        {/* Login mode toggle (only on LOGIN) */}
-        {isLogin && (
-          <View style={styles.modeToggle}>
-            <TouchableOpacity
-              style={[styles.modeBtn, !usePassword && styles.modeBtnActive]}
-              onPress={() => { setUsePassword(false); setError(''); }}
-            >
-              <Text style={[styles.modeBtnText, !usePassword && styles.modeBtnTextActive]}>📱 OTP</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modeBtn, usePassword && styles.modeBtnActive]}
-              onPress={() => { setUsePassword(true); setError(''); }}
-            >
-              <Text style={[styles.modeBtnText, usePassword && styles.modeBtnTextActive]}>🔐 Password</Text>
-            </TouchableOpacity>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.logo}>
+              <Text style={styles.logoText}>ፈጠኖ</Text>
+            </View>
+            <Text style={styles.appName}>Fetno</Text>
+            <Text style={styles.tagline}>{t('tagline')}</Text>
           </View>
-        )}
 
-        {error ? (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
-
-        <View style={styles.phoneRow}>
-          <View style={styles.flagBadge}>
-            <Text style={styles.flagText}>🇪🇹</Text>
-          </View>
-          <TextInput
-            style={styles.phoneInput}
-            value={phone}
-            onChangeText={formatPhone}
-            keyboardType="phone-pad"
-            maxLength={13}
-            placeholder="+251912345678"
-            placeholderTextColor={COLORS.gray}
-          />
-        </View>
-
-        {(usePassword && isLogin) && (
-          <View style={styles.passwordRow}>
-            <TextInput
-              style={styles.passwordInput}
-              value={password}
-              onChangeText={(t) => { setPassword(t); setError(''); }}
-              placeholder="Password"
-              placeholderTextColor={COLORS.gray}
-              secureTextEntry={!showPassword}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-              <Text style={{ fontSize: 18 }}>{showPassword ? '🙈' : '👁️'}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <TouchableOpacity
-          style={[styles.sendBtn, isLoading && styles.sendBtnDisabled]}
-          onPress={usePassword && isLogin ? handlePasswordLogin : handleSendOtp}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color={COLORS.white} />
-          ) : (
-            <Text style={styles.sendBtnText}>
-              {usePassword && isLogin ? 'Sign In →' : `${t('sendCode')} →`}
+          {/* Form */}
+          <View style={styles.form}>
+            <Text style={styles.title}>
+              {isLogin ? 'Welcome Back!' : 'Create Account'}
             </Text>
-          )}
-        </TouchableOpacity>
 
-        {isLogin && (
-          <TouchableOpacity
-            style={styles.switchLink}
-            onPress={() => navigation.replace('PhoneEntry', { purpose: 'REGISTER' })}
-          >
-            <Text style={styles.switchText}>{t('noAccount')} {t('signUp')}</Text>
-          </TouchableOpacity>
-        )}
-        {!isLogin && (
-          <TouchableOpacity
-            style={styles.switchLink}
-            onPress={() => navigation.replace('PhoneEntry', { purpose: 'LOGIN' })}
-          >
-            <Text style={styles.switchText}>{t('haveAccount')} {t('signIn')}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+            {/* Login mode toggle (only on LOGIN) */}
+            {isLogin && (
+              <View style={styles.modeToggle}>
+                <TouchableOpacity
+                  style={[styles.modeBtn, !usePassword && styles.modeBtnActive]}
+                  onPress={() => { setUsePassword(false); setError(''); }}
+                >
+                  <Text style={[styles.modeBtnText, !usePassword && styles.modeBtnTextActive]}>📱 OTP</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modeBtn, usePassword && styles.modeBtnActive]}
+                  onPress={() => { setUsePassword(true); setError(''); }}
+                >
+                  <Text style={[styles.modeBtnText, usePassword && styles.modeBtnTextActive]}>🔐 Password</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
-      <Text style={styles.footer}>{t('madeInEthiopia')}</Text>
-    </KeyboardAvoidingView>
+            {error ? (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
+
+            <View style={styles.phoneRow}>
+              <View style={styles.flagBadge}>
+                <Text style={styles.flagText}>🇪🇹</Text>
+              </View>
+              <TextInput
+                style={styles.phoneInput}
+                value={phone}
+                onChangeText={formatPhone}
+                keyboardType="phone-pad"
+                maxLength={13}
+                placeholder="+251912345678"
+                placeholderTextColor={COLORS.gray}
+              />
+            </View>
+
+            {(usePassword && isLogin) && (
+              <View style={styles.passwordRow}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={password}
+                  onChangeText={(v) => { setPassword(v); setError(''); }}
+                  placeholder="Password"
+                  placeholderTextColor={COLORS.gray}
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+                  <Text style={{ fontSize: 18 }}>{showPassword ? '🙈' : '👁️'}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {(usePassword && isLogin) && (
+              <TouchableOpacity
+                style={styles.forgotLink}
+                onPress={() => navigation.navigate('OtpVerification', { phone, purpose: 'RESET_PASSWORD' })}
+              >
+                <Text style={styles.forgotText}>Forgot password?</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={[styles.sendBtn, isLoading && styles.sendBtnDisabled]}
+              onPress={usePassword && isLogin ? handlePasswordLogin : handleSendOtp}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color={COLORS.white} />
+              ) : (
+                <Text style={styles.sendBtnText}>
+                  {usePassword && isLogin ? 'Sign In →' : `${t('sendCode')} →`}
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            {isLogin && (
+              <TouchableOpacity
+                style={styles.switchLink}
+                onPress={() => navigation.replace('PhoneEntry', { purpose: 'REGISTER' })}
+              >
+                <Text style={styles.switchText}>{t('noAccount')} {t('signUp')}</Text>
+              </TouchableOpacity>
+            )}
+            {!isLogin && (
+              <TouchableOpacity
+                style={styles.switchLink}
+                onPress={() => navigation.replace('PhoneEntry', { purpose: 'LOGIN' })}
+              >
+                <Text style={styles.switchText}>{t('haveAccount')} {t('signIn')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <Text style={styles.footer}>{t('madeInEthiopia')}</Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.primary, justifyContent: 'space-between' },
-  header: { alignItems: 'center', paddingTop: 80, paddingBottom: 40 },
+  safeArea: { flex: 1, backgroundColor: COLORS.primary },
+  container: { flex: 1 },
+  scroll: { flexGrow: 1, justifyContent: 'space-between' },
+  header: { alignItems: 'center', paddingTop: 40, paddingBottom: 40 },
   logo: {
     width: 80, height: 80, borderRadius: 20,
     backgroundColor: COLORS.accent,
@@ -244,6 +260,8 @@ const styles = StyleSheet.create({
     flex: 1, fontSize: 16, paddingHorizontal: 14, paddingVertical: 14, color: COLORS.text,
   },
   eyeBtn: { paddingHorizontal: 14 },
+  forgotLink: { alignSelf: 'flex-end', marginBottom: 14 },
+  forgotText: { color: COLORS.primaryLight, fontSize: 13 },
   sendBtn: {
     backgroundColor: COLORS.primary, borderRadius: 14,
     paddingVertical: 16, alignItems: 'center',
