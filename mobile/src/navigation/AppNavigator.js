@@ -139,7 +139,7 @@ function AuthStack() {
 
 export default function AppNavigator() {
   const dispatch = useDispatch();
-  const { isAuthenticated, isLoading, driver } = useSelector((state) => state.auth);
+  const { isAuthenticated, isLoading, driver, user } = useSelector((state) => state.auth);
 
   useEffect(() => {
     dispatch(loadUser());
@@ -164,8 +164,8 @@ export default function AppNavigator() {
     <NavigationContainer>
       {isAuthenticated ? (
         <Stack.Navigator>
-          {/* If driver hasn't registered yet, show registration */}
-          {driver === null && (
+          {/* If driver role but hasn't registered yet, show registration */}
+          {user?.role === 'DRIVER' && driver === null && (
             <Stack.Screen
               name="DriverRegistration"
               component={DriverRegistrationScreen}
