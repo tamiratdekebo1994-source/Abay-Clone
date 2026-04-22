@@ -162,7 +162,21 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer>
-      {isAuthenticated ? (
+      {isAuthenticated && user?.role !== 'DRIVER' ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary, padding: 32 }}>
+          <Text style={{ fontSize: 48, marginBottom: 16 }}>🚗</Text>
+          <Text style={{ color: COLORS.white, fontSize: 22, fontWeight: '800', textAlign: 'center' }}>Drivers Only</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, textAlign: 'center', marginTop: 8 }}>
+            This app is for Fetno drivers.{'\n'}Use the web dashboard for admin & store access.
+          </Text>
+          <TouchableOpacity
+            style={{ marginTop: 32, backgroundColor: COLORS.accent, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 32 }}
+            onPress={() => dispatch(require('../store/authStore').logout())}
+          >
+            <Text style={{ color: COLORS.primary, fontWeight: '700', fontSize: 16 }}>Sign Out</Text>
+          </TouchableOpacity>
+        </View>
+      ) : isAuthenticated ? (
         <Stack.Navigator>
           {/* If driver role but hasn't registered yet, show registration */}
           {user?.role === 'DRIVER' && driver === null && (
@@ -213,5 +227,6 @@ export default function AppNavigator() {
         <AuthStack />
       )}
     </NavigationContainer>
+
   );
 }
