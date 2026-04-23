@@ -5,12 +5,16 @@ import {
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../store/authStore';
+import { toggleTheme } from '../store/settingsStore';
 import { COLORS, VEHICLE_TYPES } from '../utils/constants';
+import { getColors } from '../utils/theme';
 import { t, setLanguage, getLanguage } from '../utils/i18n';
 
 export default function ProfileScreen({ navigation }) {
   const dispatch = useDispatch();
   const { user, driver } = useSelector((state) => state.auth);
+  const theme = useSelector((state) => state.settings.theme);
+  const C = getColors(theme);
   const [lang, setLang] = useState(getLanguage());
   const [vehicleExpanded, setVehicleExpanded] = useState(false);
 
@@ -35,117 +39,135 @@ export default function ProfileScreen({ navigation }) {
     return colors[status] || COLORS.gray;
   };
 
+  const S = getStyles(C, theme);
+
   return (
-    <View style={styles.container}>
-    <ScrollView contentContainerStyle={styles.contentContainer}>
-      {/* Profile Header */}
-      <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user?.fullName?.charAt(0) || 'A'}</Text>
-        </View>
-        <Text style={styles.name}>{user?.fullName}</Text>
-        <Text style={styles.phone}>{user?.phone}</Text>
-        {driver && (
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(driver.status) }]}>
-            <Text style={styles.statusBadgeText}>{driver.status}</Text>
-          </View>
-        )}
-      </View>
+    <View style={S.container}>
+      <ScrollView contentContainerStyle={S.contentContainer}>
 
-      {/* Stats */}
-      {driver && (
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{driver.totalDeliveries}</Text>
-            <Text style={styles.statLabel}>Deliveries</Text>
+        {/* Profile Header */}
+        <View style={S.header}>
+          <View style={S.avatar}>
+            <Text style={S.avatarText}>{user?.fullName?.charAt(0) || 'A'}</Text>
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>⭐ {driver.rating?.toFixed(1)}</Text>
-            <Text style={styles.statLabel}>Rating</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>ETB {driver.totalEarnings?.toFixed(0)}</Text>
-            <Text style={styles.statLabel}>Total Earned</Text>
-          </View>
-        </View>
-      )}
-
-      {/* Vehicle Info */}
-      {driver && (
-        <View style={styles.menu}>
-          <TouchableOpacity style={styles.menuItem} onPress={() => setVehicleExpanded(!vehicleExpanded)}>
-            <Text style={styles.menuIcon}>🚗</Text>
-            <Text style={[styles.menuLabel, { flex: 1 }]}>Vehicle Information</Text>
-            <Text style={styles.menuArrow}>{vehicleExpanded ? '⌄' : '›'}</Text>
-          </TouchableOpacity>
-          {vehicleExpanded && (
-            <View style={styles.vehicleDetails}>
-              <InfoRow label="Type" value={VEHICLE_TYPES.find((v) => v.value === driver.vehicleType)?.label || driver.vehicleType} />
-              <InfoRow label="Plate" value={driver.vehiclePlate} />
-              <InfoRow label="Model" value={driver.vehicleModel} />
-              <InfoRow label="Color" value={driver.vehicleColor} />
-              <InfoRow label="Year" value={String(driver.vehicleYear)} />
-              <InfoRow label="License" value={driver.licenseNumber} />
+          <Text style={S.name}>{user?.fullName}</Text>
+          <Text style={S.phone}>{user?.phone}</Text>
+          {driver && (
+            <View style={[S.statusBadge, { backgroundColor: getStatusColor(driver.status) }]}>
+              <Text style={S.statusBadgeText}>{driver.status}</Text>
             </View>
           )}
         </View>
-      )}
 
-      {/* Menu Items */}
-      <View style={styles.menu}>
-        <MenuButton icon="📜" label={`${t('deliveryHistory', lang)} / Delivery History`} onPress={() => navigation.navigate('Orders')} />
-        <MenuButton icon="💰" label={`${t('earnings', lang)}`} onPress={() => navigation.navigate('Earnings')} />
-        <MenuButton icon="🔔" label={`${t('notifications', lang)}`} onPress={() => navigation.navigate('Notifications')} />
-        <MenuButton icon="❓" label={`${t('helpSupport', lang)}`} onPress={() => navigation.navigate('HelpSupport')} />
+        {/* Stats */}
+        {driver && (
+          <View style={S.statsRow}>
+            <View style={S.statItem}>
+              <Text style={S.statValue}>{driver.totalDeliveries}</Text>
+              <Text style={S.statLabel}>Deliveries</Text>
+            </View>
+            <View style={S.statDivider} />
+            <View style={S.statItem}>
+              <Text style={S.statValue}>⭐ {driver.rating?.toFixed(1)}</Text>
+              <Text style={S.statLabel}>Rating</Text>
+            </View>
+            <View style={S.statDivider} />
+            <View style={S.statItem}>
+              <Text style={S.statValue}>ETB {driver.totalEarnings?.toFixed(0)}</Text>
+              <Text style={S.statLabel}>Total Earned</Text>
+            </View>
+          </View>
+        )}
 
-        {/* Language Toggle */}
-        <TouchableOpacity style={styles.menuItem} onPress={toggleLanguage}>
-          <Text style={styles.menuIcon}>🌐</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.menuLabel}>{t('language', lang)}</Text>
-            <Text style={styles.menuSub}>{lang === 'am' ? 'አማርኛ (ቀይ ወደ English)' : 'English (switch to አማርኛ)'}</Text>
+        {/* Vehicle Info — collapsible */}
+        {driver && (
+          <View style={S.menu}>
+            <TouchableOpacity style={S.menuItem} onPress={() => setVehicleExpanded(!vehicleExpanded)}>
+              <Text style={S.menuIcon}>🚗</Text>
+              <Text style={[S.menuLabel, { flex: 1 }]}>Vehicle Information</Text>
+              <Text style={S.menuArrow}>{vehicleExpanded ? '⌄' : '›'}</Text>
+            </TouchableOpacity>
+            {vehicleExpanded && (
+              <View style={S.vehicleDetails}>
+                <InfoRow label="Type" value={VEHICLE_TYPES.find((v) => v.value === driver.vehicleType)?.label || driver.vehicleType} C={C} />
+                <InfoRow label="Plate" value={driver.vehiclePlate} C={C} />
+                <InfoRow label="Model" value={driver.vehicleModel} C={C} />
+                <InfoRow label="Color" value={driver.vehicleColor} C={C} />
+                <InfoRow label="Year" value={String(driver.vehicleYear)} C={C} />
+                <InfoRow label="License" value={driver.licenseNumber} C={C} />
+              </View>
+            )}
           </View>
-          <View style={[styles.langBadge, { backgroundColor: lang === 'am' ? COLORS.primary : COLORS.accent }]}>
-            <Text style={[styles.langBadgeText, { color: lang === 'am' ? COLORS.white : COLORS.primary }]}>
-              {lang === 'am' ? 'አማ' : 'EN'}
-            </Text>
-          </View>
+        )}
+
+        {/* Menu Items */}
+        <View style={S.menu}>
+          <MenuButton icon="📜" label={`${t('deliveryHistory', lang)} / Delivery History`} onPress={() => navigation.navigate('Orders')} C={C} />
+          <MenuButton icon="💰" label={t('earnings', lang)} onPress={() => navigation.navigate('Earnings')} C={C} />
+          <MenuButton icon="🔔" label={t('notifications', lang)} onPress={() => navigation.navigate('Notifications')} C={C} />
+          <MenuButton icon="❓" label={t('helpSupport', lang)} onPress={() => navigation.navigate('HelpSupport')} C={C} />
+
+          {/* Theme Toggle */}
+          <TouchableOpacity style={S.menuItem} onPress={() => dispatch(toggleTheme())}>
+            <Text style={S.menuIcon}>{theme === 'dark' ? '🌙' : '☀️'}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={S.menuLabel}>Theme / ገጽታ</Text>
+              <Text style={S.menuSub}>{theme === 'dark' ? 'Dark Mode — tap for Light' : 'Light Mode — tap for Dark'}</Text>
+            </View>
+            <View style={[S.badge, { backgroundColor: theme === 'dark' ? '#333' : COLORS.primary }]}>
+              <Text style={[S.badgeText, { color: COLORS.white }]}>
+                {theme === 'dark' ? '🌙' : '☀️'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Language Toggle */}
+          <TouchableOpacity style={S.menuItem} onPress={toggleLanguage}>
+            <Text style={S.menuIcon}>🌐</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={S.menuLabel}>{t('language', lang)}</Text>
+              <Text style={S.menuSub}>{lang === 'am' ? 'አማርኛ (ቀይ ወደ English)' : 'English (switch to አማርኛ)'}</Text>
+            </View>
+            <View style={[S.badge, { backgroundColor: lang === 'am' ? COLORS.primary : COLORS.accent }]}>
+              <Text style={[S.badgeText, { color: lang === 'am' ? COLORS.white : COLORS.primary }]}>
+                {lang === 'am' ? 'አማ' : 'EN'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Logout */}
+        <TouchableOpacity style={S.logoutBtn} onPress={handleLogout}>
+          <Text style={S.logoutText}>🚪 {t('logout', lang)}</Text>
         </TouchableOpacity>
-      </View>
 
-      {/* Logout */}
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-        <Text style={styles.logoutText}>🚪 {t('logout', lang)}</Text>
-      </TouchableOpacity>
+        <View style={S.footer}>
+          <Text style={S.footerText}>Fetno v1.0.0 • 🇪🇹 Made in Ethiopia</Text>
+        </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Fetno v1.0.0 • 🇪🇹 Made in Ethiopia</Text>
-      </View>
-    </ScrollView>
+      </ScrollView>
     </View>
   );
 }
 
-const InfoRow = ({ label, value }) => (
-  <View style={styles.infoRow}>
-    <Text style={styles.infoLabel}>{label}</Text>
-    <Text style={styles.infoValue}>{value}</Text>
+const InfoRow = ({ label, value, C }) => (
+  <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.grayLight }}>
+    <Text style={{ fontSize: 14, color: C.gray }}>{label}</Text>
+    <Text style={{ fontSize: 14, fontWeight: '600', color: C.text }}>{value}</Text>
   </View>
 );
 
-const MenuButton = ({ icon, label, onPress }) => (
-  <TouchableOpacity style={styles.menuItem} onPress={onPress}>
-    <Text style={styles.menuIcon}>{icon}</Text>
-    <Text style={styles.menuLabel}>{label}</Text>
-    <Text style={styles.menuArrow}>›</Text>
+const MenuButton = ({ icon, label, onPress, C }) => (
+  <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: C.grayLight }} onPress={onPress}>
+    <Text style={{ fontSize: 20, marginRight: 12 }}>{icon}</Text>
+    <Text style={{ fontSize: 15, color: C.text, flex: 1 }}>{label}</Text>
+    <Text style={{ fontSize: 20, color: C.gray }}>›</Text>
   </TouchableOpacity>
 );
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  contentContainer: { paddingBottom: 100, flexGrow: 1 },
+const getStyles = (C, theme) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.background },
+  contentContainer: { paddingBottom: 100 },
   header: {
     backgroundColor: COLORS.primary, alignItems: 'center',
     paddingVertical: 40, paddingHorizontal: 24,
@@ -161,37 +183,32 @@ const styles = StyleSheet.create({
   statusBadge: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 4, borderRadius: 20 },
   statusBadgeText: { color: COLORS.white, fontSize: 13, fontWeight: '700' },
   statsRow: {
-    flexDirection: 'row', backgroundColor: COLORS.white,
+    flexDirection: 'row', backgroundColor: C.white,
     margin: 16, borderRadius: 12, padding: 16,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
   },
   statItem: { flex: 1, alignItems: 'center' },
   statValue: { fontSize: 16, fontWeight: '800', color: COLORS.primary },
-  statLabel: { fontSize: 12, color: COLORS.gray, marginTop: 2 },
-  statDivider: { width: 1, backgroundColor: COLORS.border },
-  card: {
-    backgroundColor: COLORS.white, margin: 16, marginTop: 0,
-    borderRadius: 12, padding: 16,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
+  statLabel: { fontSize: 12, color: C.gray, marginTop: 2 },
+  statDivider: { width: 1, backgroundColor: C.border },
+  menu: {
+    backgroundColor: C.white, margin: 16, marginTop: 0,
+    borderRadius: 12, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3, elevation: 1,
   },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: COLORS.text, marginBottom: 12 },
-  vehicleDetails: { paddingHorizontal: 16, paddingBottom: 8 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.grayLight },
-  infoLabel: { fontSize: 14, color: COLORS.gray },
-  infoValue: { fontSize: 14, fontWeight: '600', color: COLORS.text },
-  menu: { backgroundColor: COLORS.white, margin: 16, marginTop: 0, borderRadius: 12, overflow: 'hidden' },
-  menuItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: COLORS.grayLight },
+  menuItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: C.grayLight },
   menuIcon: { fontSize: 20, marginRight: 12 },
-  menuLabel: { fontSize: 15, color: COLORS.text },
-  menuSub: { fontSize: 11, color: COLORS.gray, marginTop: 1 },
-  menuArrow: { fontSize: 20, color: COLORS.gray },
-  langBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  langBadgeText: { fontSize: 12, fontWeight: '700' },
+  menuLabel: { fontSize: 15, color: C.text },
+  menuSub: { fontSize: 11, color: C.gray, marginTop: 1 },
+  menuArrow: { fontSize: 20, color: C.gray },
+  vehicleDetails: { paddingHorizontal: 16, paddingBottom: 8 },
+  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  badgeText: { fontSize: 12, fontWeight: '700' },
   logoutBtn: {
-    margin: 16, backgroundColor: '#FEE2E2',
+    margin: 16, backgroundColor: theme === 'dark' ? '#2A1A1A' : '#FEE2E2',
     borderRadius: 12, padding: 16, alignItems: 'center',
   },
   logoutText: { color: COLORS.error, fontSize: 16, fontWeight: '700' },
   footer: { alignItems: 'center', paddingVertical: 24 },
-  footerText: { color: COLORS.gray, fontSize: 12 },
+  footerText: { color: C.gray, fontSize: 12 },
 });
