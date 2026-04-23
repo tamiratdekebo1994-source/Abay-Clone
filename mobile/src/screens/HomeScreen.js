@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  Switch, Alert, RefreshControl, ActivityIndicator,
+  Switch, Alert, RefreshControl, ActivityIndicator, Platform,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { io } from 'socket.io-client';
@@ -157,7 +157,7 @@ export default function HomeScreen({ navigation }) {
         <MapView
           ref={mapRef}
           style={styles.map}
-          provider={PROVIDER_GOOGLE}
+          provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
           showsUserLocation
           showsMyLocationButton
           initialRegion={{
