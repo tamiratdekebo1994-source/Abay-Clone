@@ -35,7 +35,8 @@ export default function ProfileScreen({ navigation }) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.contentContainer}>
       {/* Profile Header */}
       <View style={styles.header}>
         <View style={styles.avatar}>
@@ -114,6 +115,7 @@ export default function ProfileScreen({ navigation }) {
         <Text style={styles.footerText}>Fetno v1.0.0 • 🇪🇹 Made in Ethiopia</Text>
       </View>
     </ScrollView>
+    </View>
   );
 }
 
@@ -134,7 +136,7 @@ const MenuButton = ({ icon, label, onPress }) => (
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  contentContainer: { paddingBottom: 80 },
+  contentContainer: { paddingBottom: 100, flexGrow: 1 },
   header: {
     backgroundColor: COLORS.primary, alignItems: 'center',
     paddingVertical: 40, paddingHorizontal: 24,
