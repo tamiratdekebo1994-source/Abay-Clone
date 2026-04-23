@@ -70,8 +70,9 @@ function MainTabs() {
         headerTintColor: COLORS.white,
         tabBarActiveTintColor: COLORS.accent,
         tabBarInactiveTintColor: 'rgba(255,255,255,0.5)',
-        tabBarStyle: { backgroundColor: COLORS.primary, paddingBottom: 4, height: 60, borderTopWidth: 0 },
+        tabBarStyle: { backgroundColor: COLORS.primary, paddingTop: 8, paddingBottom: 8, borderTopWidth: 0 },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarIconStyle: { marginBottom: 2 },
       }}
     >
       <Tab.Screen
