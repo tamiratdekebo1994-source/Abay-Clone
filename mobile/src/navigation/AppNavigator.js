@@ -68,9 +68,9 @@ function MainTabs() {
       screenOptions={{
         headerStyle: { backgroundColor: COLORS.primary },
         headerTintColor: COLORS.white,
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.gray,
-        tabBarStyle: { paddingBottom: 4, height: 60 },
+        tabBarActiveTintColor: COLORS.accent,
+        tabBarInactiveTintColor: 'rgba(255,255,255,0.5)',
+        tabBarStyle: { backgroundColor: COLORS.primary, paddingBottom: 4, height: 60, borderTopWidth: 0 },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       }}
     >
