@@ -169,7 +169,7 @@ const getStyles = (C, theme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.background },
   contentContainer: { paddingBottom: 100 },
   header: {
-    backgroundColor: COLORS.primary, alignItems: 'center',
+    backgroundColor: C.white, alignItems: 'center',
     paddingVertical: 40, paddingHorizontal: 24,
   },
   avatar: {
@@ -178,8 +178,8 @@ const getStyles = (C, theme) => StyleSheet.create({
     marginBottom: 12,
   },
   avatarText: { fontSize: 32, fontWeight: '800', color: COLORS.primary },
-  name: { color: COLORS.white, fontSize: 22, fontWeight: '700' },
-  phone: { color: 'rgba(255,255,255,0.8)', fontSize: 15, marginTop: 4 },
+  name: { color: C.text, fontSize: 22, fontWeight: '700' },
+  phone: { color: C.gray, fontSize: 15, marginTop: 4 },
   statusBadge: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 4, borderRadius: 20 },
   statusBadgeText: { color: COLORS.white, fontSize: 13, fontWeight: '700' },
   statsRow: {
