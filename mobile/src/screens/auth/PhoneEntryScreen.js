@@ -19,6 +19,8 @@ export default function PhoneEntryScreen({ navigation, route }) {
   const [usePassword, setUsePassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [phoneFocused, setPhoneFocused] = useState(false);
+  const [passFocused, setPassFocused] = useState(false);
 
   const dispatch = useDispatch();
   const isLogin = purpose === 'LOGIN';
@@ -32,7 +34,7 @@ export default function PhoneEntryScreen({ navigation, route }) {
 
   const handlePasswordLogin = async () => {
     if (localNumber.length < 9 || !password.trim()) {
-      setError('Please enter phone number and password');
+      setError('Please enter your phone number and password.');
       return;
     }
     setIsLoading(true);
@@ -44,7 +46,7 @@ export default function PhoneEntryScreen({ navigation, route }) {
         setUsePassword(false);
         Alert.alert('Use OTP Login', 'Your account uses OTP (one-time code) login.\nPlease use the OTP tab to sign in.');
       } else {
-        setError(err?.message || 'Invalid credentials. Please check your phone number and password.');
+        setError(err?.message || 'Invalid credentials. Please check your details.');
       }
     } finally {
       setIsLoading(false);
@@ -53,7 +55,7 @@ export default function PhoneEntryScreen({ navigation, route }) {
 
   const handleForgotPassword = async () => {
     if (localNumber.length < 9) {
-      setError('Please enter your phone number first');
+      setError('Please enter your phone number first.');
       return;
     }
     setIsLoading(true);
@@ -70,7 +72,7 @@ export default function PhoneEntryScreen({ navigation, route }) {
 
   const handleSendOtp = async () => {
     if (localNumber.length < 9) {
-      setError('Please enter a valid Ethiopian phone number (+251XXXXXXXXX)');
+      setError('Please enter a valid 9-digit phone number.');
       return;
     }
     setIsLoading(true);
@@ -92,8 +94,8 @@ export default function PhoneEntryScreen({ navigation, route }) {
       } else if (err.response?.status === 409 && purpose === 'REGISTER') {
         Alert.alert(
           'Already Registered',
-          'This phone is already registered. Please login instead.',
-          [{ text: 'Login', onPress: () => navigation.replace('PhoneEntry', { purpose: 'LOGIN' }) }]
+          'This phone number is already registered. Please sign in instead.',
+          [{ text: 'Sign In', onPress: () => navigation.replace('PhoneEntry', { purpose: 'LOGIN' }) }]
         );
       } else {
         setError(msg);
@@ -105,120 +107,155 @@ export default function PhoneEntryScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.logo}>
-              <Text style={styles.logoText}>Fetno</Text>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ── Hero Section ── */}
+          <View style={styles.hero}>
+            <View style={styles.logoRing}>
+              <View style={styles.logoInner}>
+                <Text style={styles.logoIcon}>🚚</Text>
+              </View>
             </View>
-            <Text style={styles.appName}>Fetno Driver</Text>
-            <Text style={styles.tagline}>{t('tagline')}</Text>
+            <Text style={styles.brandName}>Fetno</Text>
+            <Text style={styles.brandSub}>Driver Partner App</Text>
+            <View style={styles.heroDivider} />
+            <Text style={styles.heroTag}>🇪🇹  Delivering across Ethiopia</Text>
           </View>
 
-          {/* Form */}
-          <View style={styles.form}>
-            <Text style={styles.title}>
-              {isLogin ? 'Welcome Back!' : 'Create Account'}
+          {/* ── Card ── */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>
+              {isLogin ? 'Welcome back' : 'Create your account'}
+            </Text>
+            <Text style={styles.cardSubtitle}>
+              {isLogin
+                ? 'Sign in to start accepting deliveries'
+                : 'Join thousands of Fetno drivers'}
             </Text>
 
-            {/* Login mode toggle (only on LOGIN) */}
+            {/* Mode Toggle — only on login */}
             {isLogin && (
-              <View style={styles.modeToggle}>
+              <View style={styles.tabRow}>
                 <TouchableOpacity
-                  style={[styles.modeBtn, !usePassword && styles.modeBtnActive]}
+                  style={[styles.tab, !usePassword && styles.tabActive]}
                   onPress={() => { setUsePassword(false); setError(''); }}
                 >
-                  <Text style={[styles.modeBtnText, !usePassword && styles.modeBtnTextActive]}>📱 OTP</Text>
+                  <Text style={[styles.tabText, !usePassword && styles.tabTextActive]}>
+                    One-Time Code
+                  </Text>
+                  {!usePassword && <View style={styles.tabUnderline} />}
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.modeBtn, usePassword && styles.modeBtnActive]}
+                  style={[styles.tab, usePassword && styles.tabActive]}
                   onPress={() => { setUsePassword(true); setError(''); }}
                 >
-                  <Text style={[styles.modeBtnText, usePassword && styles.modeBtnTextActive]}>🔐 Password</Text>
+                  <Text style={[styles.tabText, usePassword && styles.tabTextActive]}>
+                    Password
+                  </Text>
+                  {usePassword && <View style={styles.tabUnderline} />}
                 </TouchableOpacity>
               </View>
             )}
 
-            {error ? (
-              <View style={styles.errorBox}>
-                <Text style={styles.errorText}>{error}</Text>
+            {/* Error Banner */}
+            {!!error && (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorIcon}>!</Text>
+                <Text style={styles.errorMsg}>{error}</Text>
               </View>
-            ) : null}
+            )}
 
-            <View style={styles.phoneRow}>
-              <View style={styles.flagBadge}>
-                <Text style={styles.countryCode}>+251</Text>
+            {/* Phone Field */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Phone Number</Text>
+              <View style={[styles.phoneRow, phoneFocused && styles.inputFocused]}>
+                <View style={styles.countryBadge}>
+                  <Text style={styles.countryFlag}>🇪🇹</Text>
+                  <Text style={styles.countryCode}>+251</Text>
+                </View>
+                <View style={styles.dividerV} />
+                <TextInput
+                  style={styles.phoneInput}
+                  value={localNumber}
+                  onChangeText={formatPhone}
+                  keyboardType="phone-pad"
+                  maxLength={9}
+                  placeholder="9XXXXXXXX"
+                  placeholderTextColor={COLORS.gray}
+                  onFocus={() => setPhoneFocused(true)}
+                  onBlur={() => setPhoneFocused(false)}
+                />
               </View>
-              <TextInput
-                style={styles.phoneInput}
-                value={localNumber}
-                onChangeText={formatPhone}
-                keyboardType="phone-pad"
-                maxLength={9}
-                placeholder="9XXXXXXXX"
-                placeholderTextColor={COLORS.gray}
-              />
             </View>
 
-            {(usePassword && isLogin) && (
-              <View style={styles.passwordRow}>
-                <TextInput
-                  style={styles.passwordInput}
-                  value={password}
-                  onChangeText={(v) => { setPassword(v); setError(''); }}
-                  placeholder="Password"
-                  placeholderTextColor={COLORS.gray}
-                  secureTextEntry={!showPassword}
-                />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-                  <Text style={{ fontSize: 18 }}>{showPassword ? '🙈' : '👁️'}</Text>
+            {/* Password Field */}
+            {usePassword && isLogin && (
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Password</Text>
+                <View style={[styles.passwordRow, passFocused && styles.inputFocused]}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    value={password}
+                    onChangeText={(v) => { setPassword(v); setError(''); }}
+                    placeholder="Enter your password"
+                    placeholderTextColor={COLORS.gray}
+                    secureTextEntry={!showPassword}
+                    onFocus={() => setPassFocused(true)}
+                    onBlur={() => setPassFocused(false)}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeBtn}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁'}</Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotLink}>
+                  <Text style={styles.forgotText}>Forgot password?</Text>
                 </TouchableOpacity>
               </View>
             )}
 
-            {(usePassword && isLogin) && (
-              <TouchableOpacity
-                style={styles.forgotLink}
-                onPress={handleForgotPassword}
-              >
-                <Text style={styles.forgotText}>Forgot password?</Text>
-              </TouchableOpacity>
-            )}
-
+            {/* Primary Button */}
             <TouchableOpacity
-              style={[styles.sendBtn, isLoading && styles.sendBtnDisabled]}
+              style={[styles.primaryBtn, isLoading && styles.primaryBtnDisabled]}
               onPress={usePassword && isLogin ? handlePasswordLogin : handleSendOtp}
               disabled={isLoading}
+              activeOpacity={0.85}
             >
               {isLoading ? (
-                <ActivityIndicator color={COLORS.white} />
+                <ActivityIndicator color={COLORS.white} size="small" />
               ) : (
-                <Text style={styles.sendBtnText}>
-                  {usePassword && isLogin ? 'Sign In →' : `${t('sendCode')} →`}
+                <Text style={styles.primaryBtnText}>
+                  {usePassword && isLogin ? 'Sign In' : isLogin ? 'Send Code' : 'Continue'}
                 </Text>
               )}
             </TouchableOpacity>
 
-            {isLogin && (
+            {/* Switch Link */}
+            <View style={styles.switchRow}>
+              <Text style={styles.switchPrompt}>
+                {isLogin ? "Don't have an account? " : 'Already have an account? '}
+              </Text>
               <TouchableOpacity
-                style={styles.switchLink}
-                onPress={() => navigation.replace('PhoneEntry', { purpose: 'REGISTER' })}
+                onPress={() =>
+                  navigation.replace('PhoneEntry', { purpose: isLogin ? 'REGISTER' : 'LOGIN' })
+                }
               >
-                <Text style={styles.switchText}>{t('noAccount')} {t('signUp')}</Text>
+                <Text style={styles.switchAction}>
+                  {isLogin ? 'Sign Up' : 'Sign In'}
+                </Text>
               </TouchableOpacity>
-            )}
-            {!isLogin && (
-              <TouchableOpacity
-                style={styles.switchLink}
-                onPress={() => navigation.replace('PhoneEntry', { purpose: 'LOGIN' })}
-              >
-                <Text style={styles.switchText}>{t('haveAccount')} {t('signIn')}</Text>
-              </TouchableOpacity>
-            )}
+            </View>
           </View>
 
-          <Text style={styles.footer}>🇪🇹 Ethiopia</Text>
+          {/* Footer */}
+          <Text style={styles.footer}>Fetno © 2025 · Made in Ethiopia</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -227,72 +264,139 @@ export default function PhoneEntryScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.primary },
-  container: { flex: 1 },
-  scroll: { flexGrow: 1, justifyContent: 'space-between' },
-  header: { alignItems: 'center', paddingTop: 40, paddingBottom: 40 },
-  logo: {
-    width: 80, height: 80, borderRadius: 20,
+  flex: { flex: 1 },
+  scroll: { flexGrow: 1 },
+
+  /* Hero */
+  hero: { alignItems: 'center', paddingTop: 36, paddingBottom: 32, paddingHorizontal: 24 },
+  logoRing: {
+    width: 96, height: 96, borderRadius: 48,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 16,
+  },
+  logoInner: {
+    width: 76, height: 76, borderRadius: 38,
     backgroundColor: COLORS.accent,
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: 12,
   },
-  logoText: { fontSize: 18, fontWeight: '900', color: COLORS.primary, letterSpacing: 1 },
-  appName: { color: COLORS.white, fontSize: 28, fontWeight: '800' },
-  tagline: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 4 },
-  form: {
+  logoIcon: { fontSize: 34 },
+  brandName: {
+    color: COLORS.white, fontSize: 32, fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  brandSub: { color: 'rgba(255,255,255,0.65)', fontSize: 14, marginTop: 4 },
+  heroDivider: {
+    width: 40, height: 2, borderRadius: 1,
+    backgroundColor: COLORS.accent, marginVertical: 16,
+  },
+  heroTag: { color: 'rgba(255,255,255,0.55)', fontSize: 13 },
+
+  /* Card */
+  card: {
+    flex: 1,
     backgroundColor: COLORS.white,
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    padding: 28, paddingTop: 32,
+    borderTopLeftRadius: 32, borderTopRightRadius: 32,
+    paddingHorizontal: 28, paddingTop: 32, paddingBottom: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  title: { fontSize: 18, fontWeight: '700', color: COLORS.black, marginBottom: 16 },
-  modeToggle: {
-    flexDirection: 'row', borderRadius: 12, overflow: 'hidden',
-    borderWidth: 1.5, borderColor: COLORS.border, marginBottom: 20,
+  cardTitle: { fontSize: 24, fontWeight: '800', color: COLORS.black, marginBottom: 6 },
+  cardSubtitle: { fontSize: 14, color: COLORS.gray, marginBottom: 28 },
+
+  /* Tab Toggle */
+  tabRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1.5,
+    borderBottomColor: COLORS.grayLight,
+    marginBottom: 24,
   },
-  modeBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: COLORS.grayLighter },
-  modeBtnActive: { backgroundColor: COLORS.primary },
-  modeBtnText: { fontSize: 14, fontWeight: '600', color: COLORS.gray },
-  modeBtnTextActive: { color: COLORS.white },
-  errorBox: { backgroundColor: '#FEE2E2', borderRadius: 10, padding: 12, marginBottom: 16 },
-  errorText: { color: COLORS.error, fontSize: 13 },
+  tab: { flex: 1, alignItems: 'center', paddingBottom: 12, position: 'relative' },
+  tabActive: {},
+  tabText: { fontSize: 14, fontWeight: '600', color: COLORS.gray },
+  tabTextActive: { color: COLORS.primary },
+  tabUnderline: {
+    position: 'absolute', bottom: -1.5, left: '15%', right: '15%',
+    height: 2.5, borderRadius: 2, backgroundColor: COLORS.primary,
+  },
+
+  /* Error */
+  errorBanner: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#FEF2F2', borderRadius: 12,
+    padding: 14, marginBottom: 20, gap: 10,
+    borderLeftWidth: 3, borderLeftColor: COLORS.error,
+  },
+  errorIcon: {
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: COLORS.error,
+    color: COLORS.white, fontSize: 13, fontWeight: '800',
+    textAlign: 'center', lineHeight: 22,
+  },
+  errorMsg: { flex: 1, color: '#991B1B', fontSize: 13, lineHeight: 18 },
+
+  /* Fields */
+  fieldGroup: { marginBottom: 18 },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: COLORS.text, marginBottom: 8, letterSpacing: 0.2 },
   phoneRow: {
     flexDirection: 'row', alignItems: 'center',
     borderWidth: 1.5, borderColor: COLORS.border,
-    borderRadius: 14, marginBottom: 14,
-    backgroundColor: COLORS.grayLighter, overflow: 'hidden',
+    borderRadius: 14, backgroundColor: '#FAFAFA', overflow: 'hidden',
   },
-  flagBadge: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 12, paddingVertical: 16,
-    backgroundColor: 'rgba(0,0,0,0.04)',
-    borderRightWidth: 1, borderRightColor: COLORS.border,
-    gap: 6,
+  inputFocused: { borderColor: COLORS.primary, backgroundColor: COLORS.white },
+  countryBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 14, paddingVertical: 15,
   },
-  flagText: { fontSize: 22 },
-  countryCode: { fontSize: 16, fontWeight: '700', color: COLORS.text },
+  countryFlag: { fontSize: 20 },
+  countryCode: { fontSize: 15, fontWeight: '700', color: COLORS.text },
+  dividerV: { width: 1, height: 28, backgroundColor: COLORS.border },
   phoneInput: {
-    flex: 1, fontSize: 18, fontWeight: '600',
-    paddingHorizontal: 14, paddingVertical: 14, color: COLORS.text,
+    flex: 1, fontSize: 16, fontWeight: '600',
+    paddingHorizontal: 14, paddingVertical: 15,
+    color: COLORS.text,
   },
   passwordRow: {
     flexDirection: 'row', alignItems: 'center',
     borderWidth: 1.5, borderColor: COLORS.border,
-    borderRadius: 14, marginBottom: 14,
-    backgroundColor: COLORS.grayLighter, overflow: 'hidden',
+    borderRadius: 14, backgroundColor: '#FAFAFA', overflow: 'hidden',
   },
   passwordInput: {
-    flex: 1, fontSize: 16, paddingHorizontal: 14, paddingVertical: 14, color: COLORS.text,
+    flex: 1, fontSize: 15, paddingHorizontal: 16, paddingVertical: 15, color: COLORS.text,
   },
   eyeBtn: { paddingHorizontal: 14 },
-  forgotLink: { alignSelf: 'flex-end', marginBottom: 14 },
-  forgotText: { color: COLORS.primaryLight, fontSize: 13 },
-  sendBtn: {
-    backgroundColor: COLORS.primary, borderRadius: 14,
-    paddingVertical: 16, alignItems: 'center',
+  eyeIcon: { fontSize: 18 },
+  forgotLink: { alignSelf: 'flex-end', marginTop: 10 },
+  forgotText: { fontSize: 13, color: COLORS.primaryLight, fontWeight: '500' },
+
+  /* Button */
+  primaryBtn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 14, paddingVertical: 17,
+    alignItems: 'center', marginTop: 8,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  sendBtnDisabled: { opacity: 0.6 },
-  sendBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '700' },
-  switchLink: { alignItems: 'center', marginTop: 16 },
-  switchText: { color: COLORS.primaryLight, fontSize: 14 },
-  footer: { color: 'rgba(255,255,255,0.5)', textAlign: 'center', paddingBottom: 24, fontSize: 12 },
+  primaryBtnDisabled: { opacity: 0.6, shadowOpacity: 0 },
+  primaryBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
+
+  /* Switch row */
+  switchRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 22 },
+  switchPrompt: { fontSize: 14, color: COLORS.gray },
+  switchAction: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
+
+  /* Footer */
+  footer: {
+    color: 'rgba(255,255,255,0.35)',
+    textAlign: 'center',
+    fontSize: 12,
+    paddingVertical: 20,
+    backgroundColor: COLORS.white,
+  },
 });
