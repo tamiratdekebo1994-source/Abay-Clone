@@ -12,6 +12,7 @@ export default function ProfileScreen({ navigation }) {
   const dispatch = useDispatch();
   const { user, driver } = useSelector((state) => state.auth);
   const [lang, setLang] = useState(getLanguage());
+  const [vehicleExpanded, setVehicleExpanded] = useState(false);
 
   const handleLogout = () => {
     Alert.alert(t('logout'), t('confirm') + '?', [
@@ -73,14 +74,22 @@ export default function ProfileScreen({ navigation }) {
 
       {/* Vehicle Info */}
       {driver && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>🚗 Vehicle Information</Text>
-          <InfoRow label="Type" value={VEHICLE_TYPES.find((v) => v.value === driver.vehicleType)?.label || driver.vehicleType} />
-          <InfoRow label="Plate" value={driver.vehiclePlate} />
-          <InfoRow label="Model" value={driver.vehicleModel} />
-          <InfoRow label="Color" value={driver.vehicleColor} />
-          <InfoRow label="Year" value={String(driver.vehicleYear)} />
-          <InfoRow label="License" value={driver.licenseNumber} />
+        <View style={styles.menu}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => setVehicleExpanded(!vehicleExpanded)}>
+            <Text style={styles.menuIcon}>🚗</Text>
+            <Text style={[styles.menuLabel, { flex: 1 }]}>Vehicle Information</Text>
+            <Text style={styles.menuArrow}>{vehicleExpanded ? '⌄' : '›'}</Text>
+          </TouchableOpacity>
+          {vehicleExpanded && (
+            <View style={styles.vehicleDetails}>
+              <InfoRow label="Type" value={VEHICLE_TYPES.find((v) => v.value === driver.vehicleType)?.label || driver.vehicleType} />
+              <InfoRow label="Plate" value={driver.vehiclePlate} />
+              <InfoRow label="Model" value={driver.vehicleModel} />
+              <InfoRow label="Color" value={driver.vehicleColor} />
+              <InfoRow label="Year" value={String(driver.vehicleYear)} />
+              <InfoRow label="License" value={driver.licenseNumber} />
+            </View>
+          )}
         </View>
       )}
 
@@ -166,6 +175,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
   },
   cardTitle: { fontSize: 15, fontWeight: '700', color: COLORS.text, marginBottom: 12 },
+  vehicleDetails: { paddingHorizontal: 16, paddingBottom: 8 },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.grayLight },
   infoLabel: { fontSize: 14, color: COLORS.gray },
   infoValue: { fontSize: 14, fontWeight: '600', color: COLORS.text },
