@@ -8,6 +8,7 @@ import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { loadUser } from '../store/authStore';
 import { COLORS } from '../utils/constants';
+import { getColors } from '../utils/theme';
 import { driverAPI } from '../services/api';
 import { t } from '../utils/i18n';
 
@@ -63,6 +64,8 @@ async function registerPushToken() {
 }
 
 function MainTabs() {
+  const theme = useSelector((state) => state.settings.theme);
+  const C = getColors(theme);
   return (
     <Tab.Navigator
       screenOptions={{
@@ -73,6 +76,7 @@ function MainTabs() {
         tabBarStyle: { backgroundColor: COLORS.primary, paddingTop: 8, paddingBottom: 8, borderTopWidth: 0 },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
         tabBarIconStyle: { marginBottom: 2 },
+        sceneStyle: { backgroundColor: C.background },
       }}
     >
       <Tab.Screen

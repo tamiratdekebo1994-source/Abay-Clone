@@ -10,6 +10,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { driverAPI, orderAPI } from '../services/api';
 import { updateDriver } from '../store/authStore';
 import { COLORS, ORDER_STATUS_LABELS, SOCKET_URL } from '../utils/constants';
+import { getColors } from '../utils/theme';
 import { t } from '../utils/i18n';
 import OrderOfferCard from '../components/OrderOfferCard';
 import EarningsSummary from '../components/EarningsSummary';
@@ -18,6 +19,8 @@ import { startBackgroundTracking, stopBackgroundTracking, getCurrentLocation } f
 export default function HomeScreen({ navigation }) {
   const dispatch = useDispatch();
   const { user, driver } = useSelector((state) => state.auth);
+  const theme = useSelector((state) => state.settings.theme);
+  const C = getColors(theme);
   const [location, setLocation] = useState(null);
   const [isOnline, setIsOnline] = useState(driver?.status === 'ONLINE');
   const [nearbyOrders, setNearbyOrders] = useState([]);
@@ -149,6 +152,8 @@ export default function HomeScreen({ navigation }) {
     await loadNearbyOrders();
     setRefreshing(false);
   };
+
+  const styles = getStyles(C);
 
   return (
     <View style={styles.container}>
@@ -284,8 +289,8 @@ export default function HomeScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+const getStyles = (C) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.background },
   mapContainer: { height: '45%', position: 'relative' },
   map: { flex: 1 },
   statusBadge: {
@@ -299,14 +304,14 @@ const styles = StyleSheet.create({
   offlineBadge: { backgroundColor: '#F5F5F5' },
   statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
   statusText: { fontSize: 12, fontWeight: '700' },
-  bottomSheet: { flex: 1, backgroundColor: COLORS.white, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+  bottomSheet: { flex: 1, backgroundColor: C.white, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
   onlineToggle: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: 20, borderBottomWidth: 1, borderBottomColor: COLORS.grayLight,
+    padding: 20, borderBottomWidth: 1, borderBottomColor: C.grayLight,
   },
   onlineToggleLeft: { flex: 1 },
-  onlineTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text },
-  onlineSubtitle: { fontSize: 13, color: COLORS.gray, marginTop: 2 },
+  onlineTitle: { fontSize: 16, fontWeight: '700', color: C.text },
+  onlineSubtitle: { fontSize: 13, color: C.gray, marginTop: 2 },
   warningBox: { margin: 16, backgroundColor: '#FEF3C7', borderRadius: 10, padding: 14 },
   warningText: { color: '#92400E', fontSize: 14, fontWeight: '500' },
   warningTextAm: { color: '#92400E', fontSize: 12, marginTop: 4 },
@@ -320,10 +325,10 @@ const styles = StyleSheet.create({
   surgeTitle: { fontSize: 14, fontWeight: '700', color: '#92400E' },
   surgeReason: { fontSize: 12, color: '#B45309', marginTop: 2 },
   section: { padding: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: C.text, marginBottom: 12 },
   emptyState: { alignItems: 'center', padding: 32 },
-  emptyStateText: { fontSize: 16, color: COLORS.gray },
-  emptyStateTextAm: { fontSize: 14, color: COLORS.gray, marginTop: 4 },
+  emptyStateText: { fontSize: 16, color: C.gray },
+  emptyStateTextAm: { fontSize: 14, color: C.gray, marginTop: 4 },
   activeOrderCard: {
     margin: 16, backgroundColor: COLORS.primary,
     borderRadius: 12, padding: 16,
