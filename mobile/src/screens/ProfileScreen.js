@@ -35,7 +35,7 @@ export default function ProfileScreen({ navigation }) {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       {/* Profile Header */}
       <View style={styles.header}>
         <View style={styles.avatar}>
@@ -134,6 +134,7 @@ const MenuButton = ({ icon, label, onPress }) => (
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+  contentContainer: { paddingBottom: 80 },
   header: {
     backgroundColor: COLORS.primary, alignItems: 'center',
     paddingVertical: 40, paddingHorizontal: 24,
