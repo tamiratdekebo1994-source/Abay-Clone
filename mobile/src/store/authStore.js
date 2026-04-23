@@ -9,7 +9,7 @@ export const login = createAsyncThunk('auth/login', async ({ phone, password }, 
     await SecureStore.setItemAsync('refreshToken', data.data.refreshToken);
     return data.data;
   } catch (err) {
-    return rejectWithValue(err.response?.data?.message || 'Login failed');
+    return rejectWithValue(err.response?.data || { message: 'Login failed' });
   }
 });
 
@@ -55,7 +55,7 @@ const authSlice = createSlice({
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload;
+        state.error = action.payload?.message || action.payload || 'Login failed';
       })
       .addCase(loadUser.pending, (state) => { state.isLoading = true; })
       .addCase(loadUser.fulfilled, (state, action) => {

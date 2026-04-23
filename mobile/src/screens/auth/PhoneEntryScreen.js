@@ -40,7 +40,12 @@ export default function PhoneEntryScreen({ navigation, route }) {
     try {
       await dispatch(login({ phone, password })).unwrap();
     } catch (err) {
-      setError(err?.message || 'Login failed. Please check your credentials.');
+      if (err?.useOtp) {
+        setUsePassword(false);
+        Alert.alert('Use OTP Login', 'Your account uses OTP (one-time code) login.\nPlease use the OTP tab to sign in.');
+      } else {
+        setError(err?.message || 'Invalid credentials. Please check your phone number and password.');
+      }
     } finally {
       setIsLoading(false);
     }
