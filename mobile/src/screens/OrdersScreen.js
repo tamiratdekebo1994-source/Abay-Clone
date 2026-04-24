@@ -3,8 +3,10 @@ import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, ActivityIndicator, RefreshControl,
 } from 'react-native';
+import { useSelector } from 'react-redux';
 import { orderAPI } from '../services/api';
 import { COLORS, ORDER_STATUS_LABELS } from '../utils/constants';
+import { getColors } from '../utils/theme';
 import { t } from '../utils/i18n';
 
 const FILTERS = [
@@ -15,6 +17,8 @@ const FILTERS = [
 ];
 
 export default function OrdersScreen({ navigation }) {
+  const theme = useSelector((s) => s.settings.theme);
+  const C = getColors(theme);
   const [orders, setOrders] = useState([]);
   const [filter, setFilter] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -50,10 +54,7 @@ export default function OrdersScreen({ navigation }) {
     load(true);
   }, [filter]);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    load(true);
-  };
+  const styles = getStyles(C);
 
   const renderItem = ({ item }) => {
     const statusInfo = ORDER_STATUS_LABELS[item.status] || { en: item.status, color: COLORS.gray };
@@ -69,7 +70,6 @@ export default function OrdersScreen({ navigation }) {
         }
         activeOpacity={0.7}
       >
-        {/* Header */}
         <View style={styles.cardHeader}>
           <Text style={styles.orderNum}>Order #{item.orderNumber}</Text>
           <View style={[styles.statusBadge, { backgroundColor: statusInfo.color + '20' }]}>
@@ -77,20 +77,18 @@ export default function OrdersScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Route */}
         <View style={styles.route}>
           <View style={styles.routeRow}>
             <View style={[styles.routeDot, { backgroundColor: COLORS.primary }]} />
             <Text style={styles.routeText} numberOfLines={1}>{item.pickupAddress}</Text>
           </View>
-          <View style={[styles.routeLine, { backgroundColor: COLORS.border }]} />
+          <View style={[styles.routeLine, { backgroundColor: C.border }]} />
           <View style={styles.routeRow}>
             <View style={[styles.routeDot, { backgroundColor: COLORS.error }]} />
             <Text style={styles.routeText} numberOfLines={1}>{item.deliveryAddress}</Text>
           </View>
         </View>
 
-        {/* Footer */}
         <View style={styles.cardFooter}>
           <Text style={styles.footerFee}>ETB {item.driverFee?.toFixed(2)}</Text>
           <Text style={styles.footerDist}>{item.distanceKm?.toFixed(1)} km</Text>
@@ -118,7 +116,6 @@ export default function OrdersScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Filter tabs */}
       <View style={styles.filters}>
         {FILTERS.map((f) => (
           <TouchableOpacity
@@ -142,7 +139,7 @@ export default function OrdersScreen({ navigation }) {
           data={orders}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} colors={[COLORS.primary]} />}
           onEndReached={() => { if (orders.length < total) load(); }}
           onEndReachedThreshold={0.3}
           ListEmptyComponent={
@@ -159,58 +156,38 @@ export default function OrdersScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+const getStyles = (C) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   filters: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.white,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.grayLight,
+    flexDirection: 'row', backgroundColor: C.white,
+    paddingHorizontal: 12, paddingVertical: 10, gap: 8,
+    borderBottomWidth: 1, borderBottomColor: C.grayLight,
   },
-  filterBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: COLORS.grayLighter,
-  },
+  filterBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: C.grayLighter },
   filterBtnActive: { backgroundColor: COLORS.primary },
-  filterText: { fontSize: 13, fontWeight: '600', color: COLORS.gray },
+  filterText: { fontSize: 13, fontWeight: '600', color: C.gray },
   filterTextActive: { color: COLORS.white },
   card: {
-    backgroundColor: COLORS.white,
-    marginHorizontal: 16,
-    marginTop: 12,
-    borderRadius: 14,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    elevation: 2,
+    backgroundColor: C.white, marginHorizontal: 16, marginTop: 12,
+    borderRadius: 14, padding: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07, shadowRadius: 6, elevation: 2,
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  orderNum: { fontSize: 13, fontWeight: '700', color: COLORS.text },
+  orderNum: { fontSize: 13, fontWeight: '700', color: C.text },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
   statusText: { fontSize: 11, fontWeight: '700' },
   route: { marginBottom: 12 },
   routeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   routeDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-  routeText: { flex: 1, fontSize: 13, color: COLORS.text },
+  routeText: { flex: 1, fontSize: 13, color: C.text },
   routeLine: { width: 2, height: 10, marginLeft: 3, marginVertical: 2 },
   cardFooter: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   footerFee: { fontSize: 15, fontWeight: '800', color: COLORS.primary },
-  footerDist: { fontSize: 13, color: COLORS.gray },
-  footerDate: { fontSize: 12, color: COLORS.textLight, flex: 1 },
-  reviewBtn: {
-    backgroundColor: COLORS.accent,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 10,
-  },
+  footerDist: { fontSize: 13, color: C.gray },
+  footerDate: { fontSize: 12, color: C.gray, flex: 1 },
+  reviewBtn: { backgroundColor: COLORS.accent, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10 },
   reviewBtnText: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
   activePill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#DCFCE7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   activeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.online },
@@ -218,6 +195,6 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', paddingTop: 80 },
   emptyContainer: { flex: 1 },
   emptyEmoji: { fontSize: 48, marginBottom: 16 },
-  emptyText: { fontSize: 16, fontWeight: '700', color: COLORS.text },
-  emptySubtext: { fontSize: 14, color: COLORS.gray, marginTop: 4 },
+  emptyText: { fontSize: 16, fontWeight: '700', color: C.text },
+  emptySubtext: { fontSize: 14, color: C.gray, marginTop: 4 },
 });

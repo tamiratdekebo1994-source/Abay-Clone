@@ -8,11 +8,14 @@ import * as SecureStore from 'expo-secure-store';
 import api from '../services/api';
 import { useSelector } from 'react-redux';
 import { COLORS, SOCKET_URL } from '../utils/constants';
+import { getColors } from '../utils/theme';
 import { t } from '../utils/i18n';
 
 export default function ChatScreen({ route }) {
   const { orderId, orderNumber } = route.params;
   const { user } = useSelector((s) => s.auth);
+  const theme = useSelector((s) => s.settings.theme);
+  const C = getColors(theme);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -54,20 +57,20 @@ export default function ChatScreen({ route }) {
   const sendMessage = async () => {
     const text = input.trim();
     if (!text || isSending) return;
-
     setIsSending(true);
     setInput('');
-
     try {
       const { data } = await api.post(`/chat/order/${orderId}`, { message: text });
       setMessages((prev) => [...prev, data.data]);
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
     } catch {
-      setInput(text); // restore on failure
+      setInput(text);
     } finally {
       setIsSending(false);
     }
   };
+
+  const styles = getStyles(C);
 
   const renderMessage = ({ item }) => {
     const isMe = item.senderId === user.id;
@@ -90,11 +93,7 @@ export default function ChatScreen({ route }) {
   };
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <View style={styles.loadingContainer}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
   }
 
   return (
@@ -103,7 +102,6 @@ export default function ChatScreen({ route }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={90}
     >
-      {/* Order badge */}
       <View style={styles.orderBadge}>
         <Text style={styles.orderBadgeText}>Order #{orderNumber}</Text>
       </View>
@@ -123,14 +121,13 @@ export default function ChatScreen({ route }) {
         }
       />
 
-      {/* Input bar */}
       <View style={styles.inputBar}>
         <TextInput
           style={styles.textInput}
           value={input}
           onChangeText={setInput}
           placeholder={t('typeMessage')}
-          placeholderTextColor={COLORS.gray}
+          placeholderTextColor={C.gray}
           multiline
           maxLength={500}
           onSubmitEditing={sendMessage}
@@ -149,25 +146,21 @@ export default function ChatScreen({ route }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F0F4F8' },
-  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  orderBadge: {
-    backgroundColor: COLORS.primary, paddingHorizontal: 16, paddingVertical: 8,
-    alignItems: 'center',
-  },
+const getStyles = (C) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.background },
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.background },
+  orderBadge: { backgroundColor: COLORS.primary, paddingHorizontal: 16, paddingVertical: 8, alignItems: 'center' },
   orderBadgeText: { color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '600' },
   messageList: { padding: 16, paddingBottom: 8 },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
   emptyEmoji: { fontSize: 48 },
-  emptyText: { color: COLORS.gray, marginTop: 12, fontSize: 15 },
+  emptyText: { color: C.gray, marginTop: 12, fontSize: 15 },
   msgRow: { flexDirection: 'row', marginBottom: 12, alignItems: 'flex-end' },
   msgRowMe: { justifyContent: 'flex-end' },
   msgRowThem: { justifyContent: 'flex-start' },
   avatar: {
     width: 32, height: 32, borderRadius: 16,
-    backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center',
-    marginRight: 8,
+    backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center', marginRight: 8,
   },
   avatarText: { color: COLORS.white, fontWeight: '700', fontSize: 13 },
   bubble: {
@@ -175,23 +168,22 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 2, elevation: 1,
   },
   bubbleMe: { backgroundColor: COLORS.primary, borderBottomRightRadius: 4 },
-  bubbleThem: { backgroundColor: COLORS.white, borderBottomLeftRadius: 4 },
+  bubbleThem: { backgroundColor: C.white, borderBottomLeftRadius: 4 },
   senderName: { fontSize: 11, fontWeight: '700', color: COLORS.primaryLight, marginBottom: 2 },
-  msgText: { fontSize: 15, color: COLORS.text, lineHeight: 21 },
+  msgText: { fontSize: 15, color: C.text, lineHeight: 21 },
   msgTextMe: { color: COLORS.white },
-  msgTime: { fontSize: 11, color: COLORS.gray, marginTop: 4, alignSelf: 'flex-end' },
+  msgTime: { fontSize: 11, color: C.gray, marginTop: 4, alignSelf: 'flex-end' },
   msgTimeMe: { color: 'rgba(255,255,255,0.65)' },
   inputBar: {
     flexDirection: 'row', alignItems: 'flex-end',
-    padding: 12, backgroundColor: COLORS.white,
-    borderTopWidth: 1, borderTopColor: COLORS.grayLight,
-    gap: 8,
+    padding: 12, backgroundColor: C.white,
+    borderTopWidth: 1, borderTopColor: C.grayLight, gap: 8,
   },
   textInput: {
-    flex: 1, backgroundColor: COLORS.grayLighter,
+    flex: 1, backgroundColor: C.grayLighter,
     borderRadius: 22, paddingHorizontal: 16, paddingVertical: 10,
-    fontSize: 15, color: COLORS.text, maxHeight: 100,
-    borderWidth: 1, borderColor: COLORS.border,
+    fontSize: 15, color: C.text, maxHeight: 100,
+    borderWidth: 1, borderColor: C.border,
   },
   sendBtn: {
     width: 44, height: 44, borderRadius: 22,

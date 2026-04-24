@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, Linking, Alert,
+  TouchableOpacity, Linking,
 } from 'react-native';
+import { useSelector } from 'react-redux';
 import { COLORS } from '../utils/constants';
+import { getColors } from '../utils/theme';
 
 const FAQ = [
   {
@@ -45,14 +47,17 @@ const FAQ = [
 ];
 
 const CONTACT = [
-  { icon: '📞', label: 'Call Support', subLabel: '+251 11 555 0000', onPress: () => Linking.openURL('tel:+251115550000') },
-  { icon: '💬', label: 'WhatsApp', subLabel: '+251 91 555 0001', onPress: () => Linking.openURL('https://wa.me/251915550001') },
-  { icon: '📧', label: 'Email', subLabel: 'support@fetno.et', onPress: () => Linking.openURL('mailto:support@fetno.et') },
-  { icon: '🌐', label: 'Website', subLabel: 'fetno.et', onPress: () => Linking.openURL('https://fetno.et') },
+  { icon: '📞', label: 'Call Support', subLabel: '+251 11 555 0000', action: 'tel:+251115550000' },
+  { icon: '💬', label: 'WhatsApp', subLabel: '+251 91 555 0001', action: 'https://wa.me/251915550001' },
+  { icon: '📧', label: 'Email', subLabel: 'support@fetno.et', action: 'mailto:support@fetno.et' },
+  { icon: '🌐', label: 'Website', subLabel: 'fetno.et', action: 'https://fetno.et' },
 ];
 
 export default function HelpSupportScreen() {
+  const theme = useSelector((s) => s.settings.theme);
+  const C = getColors(theme);
   const [expanded, setExpanded] = useState(null);
+  const styles = getStyles(C);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 32 }}>
@@ -61,7 +66,7 @@ export default function HelpSupportScreen() {
         <Text style={styles.headerTitle}>Help & Support</Text>
         <Text style={styles.headerTitleAm}>እርዳታ እና ድጋፍ</Text>
         <Text style={styles.headerSubtitle}>
-          We're here to help you succeed as an Fetno.{'\n'}
+          We're here to help you succeed as a Fetno driver.{'\n'}
           ስኬታማ ሾፌር እንዲሆኑ ዝግጁ ነን።
         </Text>
       </View>
@@ -71,7 +76,12 @@ export default function HelpSupportScreen() {
         <Text style={styles.sectionTitle}>Contact Us / ያናጋሩን</Text>
         <View style={styles.contactGrid}>
           {CONTACT.map((item) => (
-            <TouchableOpacity key={item.label} style={styles.contactCard} onPress={item.onPress} activeOpacity={0.7}>
+            <TouchableOpacity
+              key={item.label}
+              style={styles.contactCard}
+              onPress={() => Linking.openURL(item.action)}
+              activeOpacity={0.7}
+            >
               <Text style={styles.contactIcon}>{item.icon}</Text>
               <Text style={styles.contactLabel}>{item.label}</Text>
               <Text style={styles.contactSub}>{item.subLabel}</Text>
@@ -109,67 +119,49 @@ export default function HelpSupportScreen() {
 
       {/* App version */}
       <View style={styles.versionRow}>
-        <Text style={styles.versionText}>Fetno v1.0.0 • Fetno</Text>
+        <Text style={styles.versionText}>Fetno v1.0.0</Text>
         <Text style={styles.versionSub}>Made with ❤️ in Ethiopia</Text>
       </View>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    backgroundColor: COLORS.primary,
-    padding: 24,
-    paddingTop: 32,
-  },
+const getStyles = (C) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.background },
+  header: { backgroundColor: COLORS.primary, padding: 24, paddingTop: 32 },
   headerTitle: { color: COLORS.white, fontSize: 24, fontWeight: '800' },
   headerTitleAm: { color: COLORS.accent, fontSize: 18, fontWeight: '700', marginTop: 2 },
   headerSubtitle: { color: 'rgba(255,255,255,0.75)', fontSize: 13, marginTop: 10, lineHeight: 20 },
   section: { padding: 16, paddingBottom: 0 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text, marginBottom: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: C.text, marginBottom: 12 },
   contactGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   contactCard: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: COLORS.white,
-    borderRadius: 14,
-    padding: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
+    flex: 1, minWidth: '45%',
+    backgroundColor: C.white, borderRadius: 14, padding: 16, alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06, shadowRadius: 4, elevation: 1,
   },
   contactIcon: { fontSize: 28, marginBottom: 8 },
-  contactLabel: { fontSize: 13, fontWeight: '700', color: COLORS.text },
-  contactSub: { fontSize: 11, color: COLORS.gray, marginTop: 3, textAlign: 'center' },
+  contactLabel: { fontSize: 13, fontWeight: '700', color: C.text },
+  contactSub: { fontSize: 11, color: C.gray, marginTop: 3, textAlign: 'center' },
   faqItem: {
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
-    marginBottom: 8,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+    backgroundColor: C.white, borderRadius: 12, marginBottom: 8, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05, shadowRadius: 3, elevation: 1,
   },
   faqHeader: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 8 },
   faqQuestion: { flex: 1 },
-  faqQ: { fontSize: 14, fontWeight: '600', color: COLORS.text },
-  faqQAm: { fontSize: 12, color: COLORS.gray, marginTop: 2 },
-  faqChevron: { fontSize: 22, color: COLORS.gray, fontWeight: '300', transform: [{ rotate: '0deg' }] },
+  faqQ: { fontSize: 14, fontWeight: '600', color: C.text },
+  faqQAm: { fontSize: 12, color: C.gray, marginTop: 2 },
+  faqChevron: { fontSize: 22, color: C.gray, fontWeight: '300' },
   faqChevronOpen: { transform: [{ rotate: '90deg' }] },
   faqAnswer: {
     paddingHorizontal: 14, paddingBottom: 14,
-    borderTopWidth: 1, borderTopColor: COLORS.grayLight,
-    paddingTop: 12,
+    borderTopWidth: 1, borderTopColor: C.grayLight, paddingTop: 12,
   },
-  faqA: { fontSize: 13, color: COLORS.text, lineHeight: 20 },
-  faqAAm: { fontSize: 12, color: COLORS.gray, marginTop: 6, lineHeight: 18 },
+  faqA: { fontSize: 13, color: C.text, lineHeight: 20 },
+  faqAAm: { fontSize: 12, color: C.gray, marginTop: 6, lineHeight: 18 },
   versionRow: { alignItems: 'center', paddingTop: 24, paddingBottom: 8 },
-  versionText: { fontSize: 12, color: COLORS.gray },
-  versionSub: { fontSize: 12, color: COLORS.textLight, marginTop: 4 },
+  versionText: { fontSize: 12, color: C.gray },
+  versionSub: { fontSize: 12, color: C.gray, marginTop: 4 },
 });

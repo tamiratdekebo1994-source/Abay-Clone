@@ -3,20 +3,16 @@ import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, ActivityIndicator, RefreshControl,
 } from 'react-native';
+import { useSelector } from 'react-redux';
 import { notificationAPI } from '../services/api';
 import { COLORS } from '../utils/constants';
+import { getColors } from '../utils/theme';
 import { t } from '../utils/i18n';
 
 const TYPE_ICONS = {
-  ORDER_NEW:       '🆕',
-  ORDER_ACCEPTED:  '✅',
-  ORDER_STATUS:    '📦',
-  ORDER_DELIVERED: '🎉',
-  ORDER_CANCELLED: '❌',
-  DRIVER_STATUS:   '🚗',
-  WALLET:          '💰',
-  CHAT:            '💬',
-  SYSTEM:          '📢',
+  ORDER_NEW: '🆕', ORDER_ACCEPTED: '✅', ORDER_STATUS: '📦',
+  ORDER_DELIVERED: '🎉', ORDER_CANCELLED: '❌',
+  DRIVER_STATUS: '🚗', WALLET: '💰', CHAT: '💬', SYSTEM: '📢',
 };
 
 function getTimeAgo(dateStr) {
@@ -30,6 +26,8 @@ function getTimeAgo(dateStr) {
 }
 
 export default function NotificationsScreen() {
+  const theme = useSelector((s) => s.settings.theme);
+  const C = getColors(theme);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,12 +60,12 @@ export default function NotificationsScreen() {
   const handleTap = async (item) => {
     if (!item.isRead) {
       await notificationAPI.markRead(item.id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === item.id ? { ...n, isRead: true } : n))
-      );
+      setNotifications((prev) => prev.map((n) => (n.id === item.id ? { ...n, isRead: true } : n)));
       setUnreadCount((prev) => Math.max(0, prev - 1));
     }
   };
+
+  const styles = getStyles(C, theme);
 
   const renderItem = ({ item }) => {
     const icon = TYPE_ICONS[item.type] || '🔔';
@@ -93,11 +91,7 @@ export default function NotificationsScreen() {
   };
 
   if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
   }
 
   return (
@@ -127,9 +121,9 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+const getStyles = (C, theme) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.background },
   markAllBtn: {
     backgroundColor: COLORS.primary,
     marginHorizontal: 16, marginTop: 12,
@@ -139,23 +133,23 @@ const styles = StyleSheet.create({
   item: {
     flexDirection: 'row', alignItems: 'flex-start',
     paddingHorizontal: 16, paddingVertical: 14,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1, borderBottomColor: COLORS.grayLight,
+    backgroundColor: C.white,
+    borderBottomWidth: 1, borderBottomColor: C.grayLight,
   },
-  itemUnread: { backgroundColor: '#F0FDF4' },
+  itemUnread: { backgroundColor: theme === 'dark' ? '#0F2419' : '#F0FDF4' },
   iconBadge: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: COLORS.grayLighter,
+    backgroundColor: C.grayLighter,
     alignItems: 'center', justifyContent: 'center',
     marginRight: 12, flexShrink: 0,
   },
   iconBadgeUnread: { backgroundColor: '#DCFCE7' },
   icon: { fontSize: 20 },
   content: { flex: 1 },
-  title: { fontSize: 14, color: COLORS.text, marginBottom: 3 },
+  title: { fontSize: 14, color: C.text, marginBottom: 3 },
   titleUnread: { fontWeight: '700', color: COLORS.primary },
-  body: { fontSize: 13, color: COLORS.gray, lineHeight: 18 },
-  time: { fontSize: 11, color: COLORS.textLight, marginTop: 4 },
+  body: { fontSize: 13, color: C.gray, lineHeight: 18 },
+  time: { fontSize: 11, color: C.gray, marginTop: 4 },
   unreadDot: {
     width: 8, height: 8, borderRadius: 4,
     backgroundColor: COLORS.primary, marginTop: 6, marginLeft: 8,
@@ -163,6 +157,6 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', paddingTop: 80 },
   emptyContainer: { flex: 1 },
   emptyEmoji: { fontSize: 48, marginBottom: 16 },
-  emptyText: { fontSize: 16, fontWeight: '700', color: COLORS.text },
-  emptySubtext: { fontSize: 14, color: COLORS.gray, marginTop: 4 },
+  emptyText: { fontSize: 16, fontWeight: '700', color: C.text },
+  emptySubtext: { fontSize: 14, color: C.gray, marginTop: 4 },
 });
