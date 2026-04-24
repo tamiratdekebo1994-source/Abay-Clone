@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ActivityIndicator,
+  StyleSheet, ActivityIndicator, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
@@ -9,10 +9,18 @@ import { authAPI } from '../../services/api';
 import * as SecureStore from 'expo-secure-store';
 import { loadUser } from '../../store/authStore';
 import { COLORS } from '../../utils/constants';
-import { t } from '../../utils/i18n';
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 60;
+const { width: SW } = Dimensions.get('window');
+
+// Masks the middle digits: +251 9XX XXX X89
+function maskPhone(phone) {
+  if (!phone || phone.length < 8) return phone;
+  const last2 = phone.slice(-2);
+  const prefix = phone.slice(0, 6);
+  return `${prefix} ••• ••• ${last2}`;
+}
 
 export default function OtpVerificationScreen({ navigation, route }) {
   const { phone, purpose, devCode } = route.params;
@@ -25,11 +33,8 @@ export default function OtpVerificationScreen({ navigation, route }) {
   const inputRef = useRef(null);
 
   useEffect(() => {
-    inputRef.current?.focus();
-
-    if (devCode) {
-      setOtp(devCode);
-    }
+    setTimeout(() => inputRef.current?.focus(), 300);
+    if (devCode) setOtp(devCode);
 
     const timer = setInterval(() => {
       setCountdown((c) => {
@@ -40,21 +45,28 @@ export default function OtpVerificationScreen({ navigation, route }) {
     return () => clearInterval(timer);
   }, []);
 
-  const handleVerify = async () => {
-    if (otp.length !== OTP_LENGTH) {
-      setError(`Enter the ${OTP_LENGTH}-digit code sent to ${phone}`);
+  // Auto-submit when all digits are filled
+  useEffect(() => {
+    if (otp.length === OTP_LENGTH && !isLoading) {
+      handleVerify(otp);
+    }
+  }, [otp]);
+
+  const handleVerify = async (code = otp) => {
+    if (code.length !== OTP_LENGTH) {
+      setError(`Enter the ${OTP_LENGTH}-digit code sent to your phone`);
       return;
     }
     setIsLoading(true);
     setError('');
     try {
       if (purpose === 'LOGIN') {
-        const { data } = await authAPI.verifyOtpLogin(phone, otp);
+        const { data } = await authAPI.verifyOtpLogin(phone, code);
         await SecureStore.setItemAsync('accessToken', data.data.accessToken);
         await SecureStore.setItemAsync('refreshToken', data.data.refreshToken);
         dispatch(loadUser());
       } else {
-        const { data } = await authAPI.verifyOtpRegister(phone, otp);
+        const { data } = await authAPI.verifyOtpRegister(phone, code);
         navigation.navigate('CompleteProfile', {
           phone,
           verificationToken: data.data.verificationToken,
@@ -62,7 +74,6 @@ export default function OtpVerificationScreen({ navigation, route }) {
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Incorrect code. Please try again.');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -80,164 +91,258 @@ export default function OtpVerificationScreen({ navigation, route }) {
     }
   };
 
+  const handleOtpChange = (val) => {
+    setOtp(val.replace(/\D/g, '').slice(0, OTP_LENGTH));
+    setError('');
+  };
+
   const boxes = Array.from({ length: OTP_LENGTH }, (_, i) => otp[i] || '');
-  const canVerify = otp.length === OTP_LENGTH && !isLoading;
 
   return (
-    <SafeAreaView style={styles.safe}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={S.root}>
 
-      <View style={styles.body}>
-        {/* Icon */}
-        <View style={styles.iconWrap}>
-          <Text style={styles.icon}>📲</Text>
+      {/* ── Green header panel ──────────────────────────── */}
+      <SafeAreaView style={S.header} edges={['top']}>
+        <View style={S.headerContent}>
+          <TouchableOpacity style={S.backBtn} onPress={() => navigation.goBack()}>
+            <Text style={S.backArrow}>←</Text>
+          </TouchableOpacity>
+
+          <View style={S.headerCenter}>
+            <View style={S.iconCircle}>
+              <Text style={S.iconEmoji}>📲</Text>
+            </View>
+            <Text style={S.headerTitle}>Verify your number</Text>
+            <Text style={S.headerSub}>Code sent to</Text>
+            <View style={S.phonePill}>
+              <Text style={S.phonePillText}>{maskPhone(phone)}</Text>
+            </View>
+          </View>
         </View>
 
-        {/* Title */}
-        <Text style={styles.title}>Verify your number</Text>
-        <Text style={styles.subtitle}>
-          We sent a {OTP_LENGTH}-digit code to
-        </Text>
-        <Text style={styles.phone}>{phone}</Text>
+        {/* Wavy bottom edge effect */}
+        <View style={S.headerWave} />
+      </SafeAreaView>
+
+      {/* ── Body ────────────────────────────────────────── */}
+      <View style={S.body}>
 
         {/* Error */}
         {!!error && (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorMsg}>{error}</Text>
+          <View style={S.errorBox}>
+            <Text style={S.errorText}>⚠  {error}</Text>
           </View>
         )}
 
-        {/* Hidden input */}
+        {/* Instruction */}
+        <Text style={S.instruction}>
+          Enter the {OTP_LENGTH}-digit code below
+        </Text>
+
+        {/* Hidden real input */}
         <TextInput
           ref={inputRef}
-          style={styles.hiddenInput}
+          style={S.hiddenInput}
           value={otp}
-          onChangeText={(v) => { setOtp(v.replace(/\D/g, '').slice(0, OTP_LENGTH)); setError(''); }}
+          onChangeText={handleOtpChange}
           keyboardType="number-pad"
           maxLength={OTP_LENGTH}
         />
 
-        {/* OTP Boxes */}
-        <TouchableOpacity style={styles.boxRow} onPress={() => inputRef.current?.focus()} activeOpacity={1}>
+        {/* OTP box display */}
+        <TouchableOpacity
+          style={S.boxRow}
+          onPress={() => inputRef.current?.focus()}
+          activeOpacity={1}
+        >
           {boxes.map((digit, i) => {
-            const isCursor = i === otp.length;
+            const isCursor = i === otp.length && !isLoading;
             const isFilled = !!digit;
+            const isPast = i < otp.length;
             return (
               <View
                 key={i}
                 style={[
-                  styles.box,
-                  isCursor && styles.boxCursor,
-                  isFilled && styles.boxFilled,
+                  S.box,
+                  isPast && S.boxPast,
+                  isCursor && S.boxCursor,
                 ]}
               >
-                <Text style={[styles.boxText, isFilled && styles.boxTextFilled]}>
-                  {digit || (isCursor ? '|' : '')}
-                </Text>
+                {isLoading && isFilled ? (
+                  <View style={S.boxDot} />
+                ) : (
+                  <Text style={[S.boxDigit, isFilled && S.boxDigitFilled]}>
+                    {digit || (isCursor ? '|' : '')}
+                  </Text>
+                )}
               </View>
             );
           })}
         </TouchableOpacity>
 
-        {/* Verify Button */}
-        <TouchableOpacity
-          style={[styles.verifyBtn, !canVerify && styles.verifyBtnDisabled]}
-          onPress={handleVerify}
-          disabled={!canVerify}
-          activeOpacity={0.85}
-        >
-          {isLoading ? (
-            <ActivityIndicator color={COLORS.white} size="small" />
-          ) : (
-            <Text style={styles.verifyBtnText}>Verify & Continue</Text>
-          )}
-        </TouchableOpacity>
+        {/* Progress dots when loading */}
+        {isLoading && (
+          <View style={S.loadingRow}>
+            <ActivityIndicator color={COLORS.primary} size="small" />
+            <Text style={S.loadingText}>Verifying...</Text>
+          </View>
+        )}
+
+        {/* Manual verify button (shown when not auto-submitted) */}
+        {!isLoading && otp.length === OTP_LENGTH && (
+          <TouchableOpacity style={S.verifyBtn} onPress={() => handleVerify()} activeOpacity={0.88}>
+            <Text style={S.verifyBtnText}>Verify & Continue →</Text>
+          </TouchableOpacity>
+        )}
+
+        {otp.length < OTP_LENGTH && !isLoading && (
+          <View style={[S.verifyBtn, S.verifyBtnGhost]}>
+            <Text style={S.verifyBtnGhostText}>
+              {OTP_LENGTH - otp.length} digit{OTP_LENGTH - otp.length !== 1 ? 's' : ''} remaining
+            </Text>
+          </View>
+        )}
 
         {/* Resend */}
-        <View style={styles.resendRow}>
-          <Text style={styles.resendPrompt}>Didn't receive the code? </Text>
+        <View style={S.resendRow}>
+          <Text style={S.resendPrompt}>Didn't receive it? </Text>
           <TouchableOpacity onPress={handleResend} disabled={countdown > 0}>
-            <Text style={[styles.resendLink, countdown > 0 && styles.resendLinkDisabled]}>
-              {countdown > 0 ? `Resend in ${countdown}s` : 'Resend'}
-            </Text>
+            {countdown > 0 ? (
+              <View style={S.countdownBadge}>
+                <Text style={S.countdownText}>{countdown}s</Text>
+              </View>
+            ) : (
+              <Text style={S.resendLink}>Resend Code</Text>
+            )}
           </TouchableOpacity>
         </View>
+
+        <Text style={S.hint}>
+          ℹ  Check your SMS inbox. The code expires in 5 minutes.
+        </Text>
       </View>
-    </SafeAreaView>
+
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.white },
+const S = StyleSheet.create({
+  root: { flex: 1, backgroundColor: COLORS.white },
 
-  header: {
-    paddingHorizontal: 8, paddingTop: 8,
-  },
+  /* ── Header ── */
+  header: { backgroundColor: COLORS.primary },
+  headerContent: { paddingHorizontal: 16, paddingBottom: 28 },
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: COLORS.grayLighter,
+    backgroundColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center', justifyContent: 'center',
-    marginLeft: 8,
+    marginBottom: 20,
   },
-  backIcon: { fontSize: 20, color: COLORS.text, lineHeight: 24 },
-
-  body: {
-    flex: 1, alignItems: 'center',
-    paddingHorizontal: 32, paddingTop: 24,
-  },
-
-  iconWrap: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: '#E8F5E9',
+  backArrow: { color: COLORS.white, fontSize: 22, lineHeight: 26 },
+  headerCenter: { alignItems: 'center' },
+  iconCircle: {
+    width: 72, height: 72, borderRadius: 36,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
-  icon: { fontSize: 36 },
+  iconEmoji: { fontSize: 32 },
+  headerTitle: {
+    color: COLORS.white, fontSize: 24, fontWeight: '800',
+    marginBottom: 6, letterSpacing: 0.2,
+  },
+  headerSub: { color: 'rgba(255,255,255,0.65)', fontSize: 14, marginBottom: 10 },
+  phonePill: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 20, paddingHorizontal: 18, paddingVertical: 8,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
+  },
+  phonePillText: { color: COLORS.white, fontSize: 15, fontWeight: '700', letterSpacing: 1 },
+  headerWave: {
+    height: 28,
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    marginTop: -1,
+  },
 
-  title: { fontSize: 26, fontWeight: '800', color: COLORS.black, textAlign: 'center', marginBottom: 10 },
-  subtitle: { fontSize: 15, color: COLORS.gray, textAlign: 'center' },
-  phone: { fontSize: 17, fontWeight: '700', color: COLORS.primary, marginTop: 4, marginBottom: 28 },
+  /* ── Body ── */
+  body: { flex: 1, paddingHorizontal: 28, paddingTop: 8 },
 
-  errorBanner: {
-    width: '100%', backgroundColor: '#FEF2F2',
-    borderRadius: 12, padding: 14, marginBottom: 16,
+  errorBox: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: 12, padding: 14, marginBottom: 20,
     borderLeftWidth: 3, borderLeftColor: COLORS.error,
   },
-  errorMsg: { color: '#991B1B', fontSize: 13 },
+  errorText: { color: '#991B1B', fontSize: 13, lineHeight: 18 },
+
+  instruction: {
+    fontSize: 15, color: COLORS.gray, textAlign: 'center', marginBottom: 28,
+  },
 
   hiddenInput: { position: 'absolute', opacity: 0, width: 1, height: 1 },
 
-  boxRow: { flexDirection: 'row', gap: 10, marginBottom: 36 },
+  /* ── OTP Boxes ── */
+  boxRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 32 },
   box: {
-    width: 46, height: 56, borderRadius: 14,
-    borderWidth: 1.5, borderColor: COLORS.border,
+    width: (SW - 56 - 50) / OTP_LENGTH,
+    height: 64, borderRadius: 16,
+    borderWidth: 2, borderColor: COLORS.border,
+    backgroundColor: COLORS.grayLighter,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#FAFAFA',
   },
-  boxCursor: { borderColor: COLORS.primary, backgroundColor: '#E8F5E9' },
-  boxFilled: { borderColor: COLORS.primaryLight, backgroundColor: COLORS.white },
-  boxText: { fontSize: 22, color: COLORS.gray },
-  boxTextFilled: { fontWeight: '800', color: COLORS.primary },
-
-  verifyBtn: {
-    width: '100%', backgroundColor: COLORS.primary,
-    borderRadius: 14, paddingVertical: 17, alignItems: 'center',
+  boxPast: {
+    borderColor: COLORS.primaryLighter,
+    backgroundColor: '#E8F5E9',
+  },
+  boxCursor: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.white,
     shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  verifyBtnDisabled: { opacity: 0.45, shadowOpacity: 0 },
-  verifyBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
+  boxDigit: { fontSize: 24, color: COLORS.gray, fontWeight: '400' },
+  boxDigitFilled: { color: COLORS.primary, fontWeight: '800' },
+  boxDot: {
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: COLORS.primaryLighter,
+  },
 
-  resendRow: { flexDirection: 'row', marginTop: 24, alignItems: 'center' },
+  /* ── Loading ── */
+  loadingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 20 },
+  loadingText: { color: COLORS.gray, fontSize: 14 },
+
+  /* ── Verify button ── */
+  verifyBtn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 14, paddingVertical: 18, alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35, shadowRadius: 12, elevation: 8,
+  },
+  verifyBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '800', letterSpacing: 0.4 },
+  verifyBtnGhost: {
+    backgroundColor: COLORS.grayLighter,
+    shadowOpacity: 0, elevation: 0,
+  },
+  verifyBtnGhostText: { color: COLORS.gray, fontSize: 14, fontWeight: '600' },
+
+  /* ── Resend ── */
+  resendRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   resendPrompt: { fontSize: 14, color: COLORS.gray },
-  resendLink: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
-  resendLinkDisabled: { color: COLORS.gray, fontWeight: '500' },
+  resendLink: { fontSize: 14, fontWeight: '800', color: COLORS.primary },
+  countdownBadge: {
+    backgroundColor: COLORS.grayLighter, borderRadius: 12,
+    paddingHorizontal: 10, paddingVertical: 4,
+  },
+  countdownText: { fontSize: 13, fontWeight: '700', color: COLORS.gray },
+
+  hint: {
+    fontSize: 12, color: COLORS.gray, textAlign: 'center',
+    lineHeight: 18, paddingHorizontal: 20,
+  },
 });

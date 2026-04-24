@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
-  ActivityIndicator, Alert, ScrollView,
+  ActivityIndicator, Alert, ScrollView, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import { authAPI } from '../../services/api';
 import { login } from '../../store/authStore';
 import { COLORS } from '../../utils/constants';
-import { t } from '../../utils/i18n';
+
+const { width: SW } = Dimensions.get('window');
 
 export default function PhoneEntryScreen({ navigation, route }) {
   const purpose = route?.params?.purpose || 'LOGIN';
@@ -27,8 +28,7 @@ export default function PhoneEntryScreen({ navigation, route }) {
   const phone = '+251' + localNumber;
 
   const formatPhone = (text) => {
-    const digits = text.replace(/\D/g, '').slice(0, 9);
-    setLocalNumber(digits);
+    setLocalNumber(text.replace(/\D/g, '').slice(0, 9));
     setError('');
   };
 
@@ -44,9 +44,9 @@ export default function PhoneEntryScreen({ navigation, route }) {
     } catch (err) {
       if (err?.useOtp) {
         setUsePassword(false);
-        Alert.alert('Use OTP Login', 'Your account uses OTP (one-time code) login.\nPlease use the OTP tab to sign in.');
+        Alert.alert('Use OTP Login', 'Your account uses OTP (one-time code) login. Please use the One-Time Code tab.');
       } else {
-        setError(err?.message || 'Invalid credentials. Please check your details.');
+        setError(err?.message || 'Invalid credentials. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -54,10 +54,7 @@ export default function PhoneEntryScreen({ navigation, route }) {
   };
 
   const handleForgotPassword = async () => {
-    if (localNumber.length < 9) {
-      setError('Please enter your phone number first.');
-      return;
-    }
+    if (localNumber.length < 9) { setError('Enter your phone number first.'); return; }
     setIsLoading(true);
     setError('');
     try {
@@ -71,10 +68,7 @@ export default function PhoneEntryScreen({ navigation, route }) {
   };
 
   const handleSendOtp = async () => {
-    if (localNumber.length < 9) {
-      setError('Please enter a valid 9-digit phone number.');
-      return;
-    }
+    if (localNumber.length < 9) { setError('Please enter a valid 9-digit phone number.'); return; }
     setIsLoading(true);
     setError('');
     try {
@@ -83,20 +77,14 @@ export default function PhoneEntryScreen({ navigation, route }) {
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to send code. Please try again.';
       if (err.response?.status === 404 && purpose === 'LOGIN') {
-        Alert.alert(
-          'Phone Not Registered',
-          'This number is not registered. Would you like to sign up?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Sign Up', onPress: () => navigation.replace('PhoneEntry', { purpose: 'REGISTER' }) },
-          ]
-        );
+        Alert.alert('Not Registered', 'This number is not registered. Sign up?', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign Up', onPress: () => navigation.replace('PhoneEntry', { purpose: 'REGISTER' }) },
+        ]);
       } else if (err.response?.status === 409 && purpose === 'REGISTER') {
-        Alert.alert(
-          'Already Registered',
-          'This phone number is already registered. Please sign in instead.',
-          [{ text: 'Sign In', onPress: () => navigation.replace('PhoneEntry', { purpose: 'LOGIN' }) }]
-        );
+        Alert.alert('Already Registered', 'This phone is already registered.', [
+          { text: 'Sign In', onPress: () => navigation.replace('PhoneEntry', { purpose: 'LOGIN' }) },
+        ]);
       } else {
         setError(msg);
       }
@@ -106,99 +94,109 @@ export default function PhoneEntryScreen({ navigation, route }) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <SafeAreaView style={S.safe} edges={['top']}>
+      <KeyboardAvoidingView style={S.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
-          contentContainerStyle={styles.scroll}
+          contentContainerStyle={S.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* ── Hero Section ── */}
-          <View style={styles.hero}>
-            <View style={styles.logoRing}>
-              <View style={styles.logoInner}>
-                <Text style={styles.logoIcon}>🚚</Text>
+
+          {/* ── Hero ─────────────────────────────────────────── */}
+          <View style={S.hero}>
+            <View style={S.heroBubble1} />
+            <View style={S.heroBubble2} />
+
+            <View style={S.logoShell}>
+              <View style={S.logoRing}>
+                <Text style={S.logoEmoji}>🚚</Text>
+              </View>
+              <View style={S.logoBadge}>
+                <Text style={S.logoBadgeText}>ET</Text>
               </View>
             </View>
-            <Text style={styles.brandName}>Fetno</Text>
-            <Text style={styles.brandSub}>Driver Partner App</Text>
-            <View style={styles.heroDivider} />
-            <Text style={styles.heroTag}>🇪🇹  Delivering across Ethiopia</Text>
+
+            <Text style={S.brand}>Fetno</Text>
+            <Text style={S.brandSub}>Driver Partner · ሾፌር ሽርክና</Text>
+
+            <View style={S.heroPills}>
+              <View style={S.heroPill}><Text style={S.heroPillText}>🇪🇹 Ethiopia</Text></View>
+              <View style={S.heroPill}><Text style={S.heroPillText}>⚡ Fast Delivery</Text></View>
+            </View>
           </View>
 
-          {/* ── Card ── */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>
-              {isLogin ? 'Welcome back' : 'Create your account'}
+          {/* ── Card ─────────────────────────────────────────── */}
+          <View style={S.card}>
+            <View style={S.cardHandle} />
+
+            <Text style={S.cardTitle}>
+              {isLogin ? 'Welcome back' : 'Join Fetno'}
             </Text>
-            <Text style={styles.cardSubtitle}>
+            <Text style={S.cardSub}>
               {isLogin
                 ? 'Sign in to start accepting deliveries'
-                : 'Join thousands of Fetno drivers'}
+                : 'Create your driver or store account'}
             </Text>
 
-            {/* Mode Toggle — only on login */}
+            {/* Segmented control — only visible on login */}
             {isLogin && (
-              <View style={styles.tabRow}>
-                <TouchableOpacity
-                  style={[styles.tab, !usePassword && styles.tabActive]}
-                  onPress={() => { setUsePassword(false); setError(''); }}
-                >
-                  <Text style={[styles.tabText, !usePassword && styles.tabTextActive]}>
-                    One-Time Code
-                  </Text>
-                  {!usePassword && <View style={styles.tabUnderline} />}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.tab, usePassword && styles.tabActive]}
-                  onPress={() => { setUsePassword(true); setError(''); }}
-                >
-                  <Text style={[styles.tabText, usePassword && styles.tabTextActive]}>
-                    Password
-                  </Text>
-                  {usePassword && <View style={styles.tabUnderline} />}
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* Error Banner */}
-            {!!error && (
-              <View style={styles.errorBanner}>
-                <Text style={styles.errorIcon}>!</Text>
-                <Text style={styles.errorMsg}>{error}</Text>
-              </View>
-            )}
-
-            {/* Phone Field */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Phone Number</Text>
-              <View style={[styles.phoneRow, phoneFocused && styles.inputFocused]}>
-                <View style={styles.countryBadge}>
-                  <Text style={styles.countryFlag}>🇪🇹</Text>
-                  <Text style={styles.countryCode}>+251</Text>
+              <View style={S.segWrap}>
+                <View style={S.segTrack}>
+                  <View style={[S.segThumb, usePassword && S.segThumbRight]} />
+                  <TouchableOpacity
+                    style={S.segBtn}
+                    onPress={() => { setUsePassword(false); setError(''); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[S.segLabel, !usePassword && S.segLabelActive]}>One-Time Code</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={S.segBtn}
+                    onPress={() => { setUsePassword(true); setError(''); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[S.segLabel, usePassword && S.segLabelActive]}>Password</Text>
+                  </TouchableOpacity>
                 </View>
-                <View style={styles.dividerV} />
-                <TextInput
-                  style={styles.phoneInput}
-                  value={localNumber}
-                  onChangeText={formatPhone}
-                  keyboardType="phone-pad"
-                  maxLength={9}
-                  placeholder="9XXXXXXXX"
-                  placeholderTextColor={COLORS.gray}
-                  onFocus={() => setPhoneFocused(true)}
-                  onBlur={() => setPhoneFocused(false)}
-                />
               </View>
+            )}
+
+            {/* Error */}
+            {!!error && (
+              <View style={S.errorBox}>
+                <View style={S.errorIcon}><Text style={S.errorIconText}>!</Text></View>
+                <Text style={S.errorMsg}>{error}</Text>
+              </View>
+            )}
+
+            {/* Phone field */}
+            <Text style={S.fieldLabel}>Phone Number / ስልክ ቁጥር</Text>
+            <View style={[S.phoneField, phoneFocused && S.fieldFocused]}>
+              <View style={S.countryChip}>
+                <Text style={S.countryFlag}>🇪🇹</Text>
+                <Text style={S.countryCode}>+251</Text>
+              </View>
+              <View style={S.fieldDivider} />
+              <TextInput
+                style={S.phoneInput}
+                value={localNumber}
+                onChangeText={formatPhone}
+                keyboardType="phone-pad"
+                maxLength={9}
+                placeholder="9XXXXXXXX"
+                placeholderTextColor={COLORS.gray}
+                onFocus={() => setPhoneFocused(true)}
+                onBlur={() => setPhoneFocused(false)}
+              />
             </View>
 
-            {/* Password Field */}
+            {/* Password field */}
             {usePassword && isLogin && (
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Password</Text>
-                <View style={[styles.passwordRow, passFocused && styles.inputFocused]}>
+              <>
+                <Text style={[S.fieldLabel, { marginTop: 18 }]}>Password / የይለፍ ቃል</Text>
+                <View style={[S.passField, passFocused && S.fieldFocused]}>
                   <TextInput
-                    style={styles.passwordInput}
+                    style={S.passInput}
                     value={password}
                     onChangeText={(v) => { setPassword(v); setError(''); }}
                     placeholder="Enter your password"
@@ -209,194 +207,234 @@ export default function PhoneEntryScreen({ navigation, route }) {
                   />
                   <TouchableOpacity
                     onPress={() => setShowPassword(!showPassword)}
-                    style={styles.eyeBtn}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    style={S.eyeBtn}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                   >
-                    <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁'}</Text>
+                    <Text style={S.eyeIcon}>{showPassword ? '🙈' : '👁'}</Text>
                   </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotLink}>
-                  <Text style={styles.forgotText}>Forgot password?</Text>
+                <TouchableOpacity onPress={handleForgotPassword} style={S.forgotRow}>
+                  <Text style={S.forgotText}>Forgot password?</Text>
                 </TouchableOpacity>
-              </View>
+              </>
             )}
 
-            {/* Primary Button */}
+            {/* CTA */}
             <TouchableOpacity
-              style={[styles.primaryBtn, isLoading && styles.primaryBtnDisabled]}
+              style={[S.cta, isLoading && S.ctaOff]}
               onPress={usePassword && isLogin ? handlePasswordLogin : handleSendOtp}
               disabled={isLoading}
-              activeOpacity={0.85}
+              activeOpacity={0.88}
             >
               {isLoading ? (
                 <ActivityIndicator color={COLORS.white} size="small" />
               ) : (
-                <Text style={styles.primaryBtnText}>
-                  {usePassword && isLogin ? 'Sign In' : isLogin ? 'Send Code' : 'Continue'}
+                <Text style={S.ctaText}>
+                  {usePassword && isLogin ? 'Sign In' : isLogin ? 'Continue →' : 'Create Account →'}
                 </Text>
               )}
             </TouchableOpacity>
 
-            {/* Switch Link */}
-            <View style={styles.switchRow}>
-              <Text style={styles.switchPrompt}>
-                {isLogin ? "Don't have an account? " : 'Already have an account? '}
+            {/* Switch */}
+            <View style={S.switchRow}>
+              <Text style={S.switchPrompt}>
+                {isLogin ? "New to Fetno?  " : 'Already have an account?  '}
               </Text>
               <TouchableOpacity
-                onPress={() =>
-                  navigation.replace('PhoneEntry', { purpose: isLogin ? 'REGISTER' : 'LOGIN' })
-                }
+                onPress={() => navigation.replace('PhoneEntry', { purpose: isLogin ? 'REGISTER' : 'LOGIN' })}
               >
-                <Text style={styles.switchAction}>
-                  {isLogin ? 'Sign Up' : 'Sign In'}
-                </Text>
+                <Text style={S.switchLink}>{isLogin ? 'Sign Up' : 'Sign In'}</Text>
               </TouchableOpacity>
+            </View>
+
+            {/* Divider + trust signals */}
+            <View style={S.trustRow}>
+              <View style={S.trustLine} />
+              <Text style={S.trustText}>Secure · Encrypted · Trusted</Text>
+              <View style={S.trustLine} />
             </View>
           </View>
 
           {/* Footer */}
-          <Text style={styles.footer}>Fetno © 2025 · Made in Ethiopia</Text>
+          <View style={S.footer}>
+            <Text style={S.footerText}>Fetno © 2025 · Made with ❤ in Ethiopia</Text>
+          </View>
+
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: COLORS.primary },
+const S = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: COLORS.primary },
   flex: { flex: 1 },
   scroll: { flexGrow: 1 },
 
-  /* Hero */
-  hero: { alignItems: 'center', paddingTop: 36, paddingBottom: 32, paddingHorizontal: 24 },
+  /* ── Hero ── */
+  hero: {
+    alignItems: 'center',
+    paddingTop: 32, paddingBottom: 40, paddingHorizontal: 24,
+    overflow: 'hidden',
+  },
+  heroBubble1: {
+    position: 'absolute', width: 220, height: 220, borderRadius: 110,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    top: -60, right: -50,
+  },
+  heroBubble2: {
+    position: 'absolute', width: 160, height: 160, borderRadius: 80,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    bottom: 20, left: -40,
+  },
+  logoShell: { position: 'relative', marginBottom: 20 },
   logoRing: {
-    width: 96, height: 96, borderRadius: 48,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 16,
-  },
-  logoInner: {
-    width: 76, height: 76, borderRadius: 38,
-    backgroundColor: COLORS.accent,
+    width: 88, height: 88, borderRadius: 44,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center', justifyContent: 'center',
   },
-  logoIcon: { fontSize: 34 },
-  brandName: {
-    color: COLORS.white, fontSize: 32, fontWeight: '800',
-    letterSpacing: 0.5,
+  logoEmoji: { fontSize: 38 },
+  logoBadge: {
+    position: 'absolute', bottom: 0, right: -4,
+    backgroundColor: COLORS.accent, borderRadius: 10,
+    paddingHorizontal: 6, paddingVertical: 2,
+    borderWidth: 2, borderColor: COLORS.primary,
   },
-  brandSub: { color: 'rgba(255,255,255,0.65)', fontSize: 14, marginTop: 4 },
-  heroDivider: {
-    width: 40, height: 2, borderRadius: 1,
-    backgroundColor: COLORS.accent, marginVertical: 16,
+  logoBadgeText: { fontSize: 10, fontWeight: '900', color: COLORS.primary, letterSpacing: 0.5 },
+  brand: { color: COLORS.white, fontSize: 34, fontWeight: '900', letterSpacing: 1, marginBottom: 4 },
+  brandSub: { color: 'rgba(255,255,255,0.6)', fontSize: 13, marginBottom: 20 },
+  heroPills: { flexDirection: 'row', gap: 10 },
+  heroPill: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
   },
-  heroTag: { color: 'rgba(255,255,255,0.55)', fontSize: 13 },
+  heroPillText: { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '500' },
 
-  /* Card */
+  /* ── Card ── */
   card: {
-    flex: 1,
     backgroundColor: COLORS.white,
     borderTopLeftRadius: 32, borderTopRightRadius: 32,
-    paddingHorizontal: 28, paddingTop: 32, paddingBottom: 40,
+    paddingHorizontal: 26, paddingTop: 14, paddingBottom: 36,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
   },
-  cardTitle: { fontSize: 24, fontWeight: '800', color: COLORS.black, marginBottom: 6 },
-  cardSubtitle: { fontSize: 14, color: COLORS.gray, marginBottom: 28 },
+  cardHandle: {
+    alignSelf: 'center',
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: COLORS.grayLight,
+    marginBottom: 26,
+  },
+  cardTitle: { fontSize: 26, fontWeight: '800', color: COLORS.black, marginBottom: 5 },
+  cardSub: { fontSize: 14, color: COLORS.gray, marginBottom: 28, lineHeight: 20 },
 
-  /* Tab Toggle */
-  tabRow: {
+  /* ── Segmented control ── */
+  segWrap: { marginBottom: 28 },
+  segTrack: {
     flexDirection: 'row',
-    borderBottomWidth: 1.5,
-    borderBottomColor: COLORS.grayLight,
-    marginBottom: 24,
+    backgroundColor: COLORS.grayLighter,
+    borderRadius: 14, padding: 4,
+    position: 'relative', height: 46,
   },
-  tab: { flex: 1, alignItems: 'center', paddingBottom: 12, position: 'relative' },
-  tabActive: {},
-  tabText: { fontSize: 14, fontWeight: '600', color: COLORS.gray },
-  tabTextActive: { color: COLORS.primary },
-  tabUnderline: {
-    position: 'absolute', bottom: -1.5, left: '15%', right: '15%',
-    height: 2.5, borderRadius: 2, backgroundColor: COLORS.primary,
+  segThumb: {
+    position: 'absolute',
+    top: 4, left: 4,
+    width: '50%', height: 38,
+    backgroundColor: COLORS.white,
+    borderRadius: 11,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
+  segThumbRight: { left: '50%', marginLeft: -4 },
+  segBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
+  segLabel: { fontSize: 14, fontWeight: '600', color: COLORS.gray },
+  segLabelActive: { color: COLORS.primary },
 
-  /* Error */
-  errorBanner: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#FEF2F2', borderRadius: 12,
-    padding: 14, marginBottom: 20, gap: 10,
+  /* ── Error ── */
+  errorBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 12, padding: 14, marginBottom: 22,
     borderLeftWidth: 3, borderLeftColor: COLORS.error,
   },
   errorIcon: {
     width: 22, height: 22, borderRadius: 11,
     backgroundColor: COLORS.error,
-    color: COLORS.white, fontSize: 13, fontWeight: '800',
-    textAlign: 'center', lineHeight: 22,
+    alignItems: 'center', justifyContent: 'center',
   },
+  errorIconText: { color: COLORS.white, fontSize: 13, fontWeight: '900' },
   errorMsg: { flex: 1, color: '#991B1B', fontSize: 13, lineHeight: 18 },
 
-  /* Fields */
-  fieldGroup: { marginBottom: 18 },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: COLORS.text, marginBottom: 8, letterSpacing: 0.2 },
-  phoneRow: {
+  /* ── Fields ── */
+  fieldLabel: {
+    fontSize: 12, fontWeight: '700', color: COLORS.text,
+    marginBottom: 8, letterSpacing: 0.4, textTransform: 'uppercase',
+  },
+  phoneField: {
     flexDirection: 'row', alignItems: 'center',
     borderWidth: 1.5, borderColor: COLORS.border,
-    borderRadius: 14, backgroundColor: '#FAFAFA', overflow: 'hidden',
+    borderRadius: 14, backgroundColor: '#FAFAFA',
+    overflow: 'hidden', marginBottom: 4,
   },
-  inputFocused: { borderColor: COLORS.primary, backgroundColor: COLORS.white },
-  countryBadge: {
+  passField: {
+    flexDirection: 'row', alignItems: 'center',
+    borderWidth: 1.5, borderColor: COLORS.border,
+    borderRadius: 14, backgroundColor: '#FAFAFA',
+    overflow: 'hidden',
+  },
+  fieldFocused: { borderColor: COLORS.primary, backgroundColor: COLORS.white },
+  countryChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 15,
+    paddingHorizontal: 14, paddingVertical: 16,
   },
   countryFlag: { fontSize: 20 },
   countryCode: { fontSize: 15, fontWeight: '700', color: COLORS.text },
-  dividerV: { width: 1, height: 28, backgroundColor: COLORS.border },
+  fieldDivider: { width: 1, height: 26, backgroundColor: COLORS.border },
   phoneInput: {
-    flex: 1, fontSize: 16, fontWeight: '600',
-    paddingHorizontal: 14, paddingVertical: 15,
-    color: COLORS.text,
+    flex: 1, fontSize: 16, fontWeight: '600', color: COLORS.text,
+    paddingHorizontal: 14, paddingVertical: 16,
   },
-  passwordRow: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: COLORS.border,
-    borderRadius: 14, backgroundColor: '#FAFAFA', overflow: 'hidden',
-  },
-  passwordInput: {
-    flex: 1, fontSize: 15, paddingHorizontal: 16, paddingVertical: 15, color: COLORS.text,
+  passInput: {
+    flex: 1, fontSize: 15, color: COLORS.text,
+    paddingHorizontal: 16, paddingVertical: 16,
   },
   eyeBtn: { paddingHorizontal: 14 },
-  eyeIcon: { fontSize: 18 },
-  forgotLink: { alignSelf: 'flex-end', marginTop: 10 },
-  forgotText: { fontSize: 13, color: COLORS.primaryLight, fontWeight: '500' },
+  eyeIcon: { fontSize: 19 },
+  forgotRow: { alignSelf: 'flex-end', marginTop: 10, marginBottom: 4 },
+  forgotText: { fontSize: 13, color: COLORS.primaryLight, fontWeight: '600' },
 
-  /* Button */
-  primaryBtn: {
+  /* ── CTA ── */
+  cta: {
     backgroundColor: COLORS.primary,
-    borderRadius: 14, paddingVertical: 17,
-    alignItems: 'center', marginTop: 8,
+    borderRadius: 14, paddingVertical: 18,
+    alignItems: 'center', marginTop: 24,
     shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  primaryBtnDisabled: { opacity: 0.6, shadowOpacity: 0 },
-  primaryBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
+  ctaOff: { opacity: 0.55, shadowOpacity: 0 },
+  ctaText: { color: COLORS.white, fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
 
-  /* Switch row */
+  /* ── Switch row ── */
   switchRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 22 },
   switchPrompt: { fontSize: 14, color: COLORS.gray },
-  switchAction: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
+  switchLink: { fontSize: 14, fontWeight: '800', color: COLORS.primary },
 
-  /* Footer */
-  footer: {
-    color: COLORS.gray,
-    textAlign: 'center',
-    fontSize: 12,
-    paddingVertical: 20,
-    backgroundColor: COLORS.white,
-  },
+  /* ── Trust ── */
+  trustRow: { flexDirection: 'row', alignItems: 'center', marginTop: 28, gap: 10 },
+  trustLine: { flex: 1, height: 1, backgroundColor: COLORS.grayLight },
+  trustText: { fontSize: 11, color: COLORS.gray, fontWeight: '500' },
+
+  /* ── Footer ── */
+  footer: { backgroundColor: COLORS.white, paddingVertical: 18, alignItems: 'center' },
+  footerText: { fontSize: 12, color: COLORS.gray },
 });
