@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
@@ -167,12 +167,12 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer>
-      {isAuthenticated && user?.role !== 'DRIVER' ? (
+      {isAuthenticated && user?.role === 'STORE' ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary, padding: 32 }}>
-          <Text style={{ fontSize: 48, marginBottom: 16 }}>🚗</Text>
-          <Text style={{ color: COLORS.white, fontSize: 22, fontWeight: '800', textAlign: 'center' }}>Drivers Only</Text>
+          <Text style={{ fontSize: 48, marginBottom: 16 }}>🏪</Text>
+          <Text style={{ color: COLORS.white, fontSize: 22, fontWeight: '800', textAlign: 'center' }}>Store Account</Text>
           <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, textAlign: 'center', marginTop: 8 }}>
-            This app is for Fetno drivers.{'\n'}Use the web dashboard for admin & store access.
+            This app is for Fetno drivers.{'\n'}Use the web dashboard for store access.
           </Text>
           <TouchableOpacity
             style={{ marginTop: 32, backgroundColor: COLORS.accent, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 32 }}
@@ -183,8 +183,8 @@ export default function AppNavigator() {
         </View>
       ) : isAuthenticated ? (
         <Stack.Navigator>
-          {/* If driver role but hasn't registered yet, show registration */}
-          {user?.role === 'DRIVER' && driver === null && (
+          {/* DRIVER who hasn't completed registration yet → force registration first */}
+          {user?.role === 'DRIVER' && !driver && (
             <Stack.Screen
               name="DriverRegistration"
               component={DriverRegistrationScreen}
