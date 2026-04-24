@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
 
   /* Footer */
   footer: {
-    color: 'rgba(255,255,255,0.35)',
+    color: COLORS.gray,
     textAlign: 'center',
     fontSize: 12,
     paddingVertical: 20,

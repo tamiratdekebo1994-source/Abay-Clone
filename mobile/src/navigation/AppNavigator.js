@@ -126,7 +126,7 @@ function AuthStack() {
       <Stack.Screen
         name="OtpVerification"
         component={OtpVerificationScreen}
-        options={{ headerShown: true, title: t('verify'), headerStyle: { backgroundColor: COLORS.white }, headerTintColor: COLORS.primary }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="CompleteProfile"

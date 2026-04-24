@@ -1,7 +1,31 @@
 import Constants from 'expo-constants';
 
-// Dev server base URL — set API_BASE_URL in your .env file (see .env.example)
-const _devBase = Constants.expoConfig?.extra?.apiBaseUrl ?? 'http://192.168.1.100:5000';
+// Auto-detect the dev server host from Expo's own connection info.
+// When running in Expo Go, Constants.expoConfig.hostUri contains the bundler
+// address (e.g. "192.168.1.50:8081"). We strip the port and use that IP so
+// the app always reaches the backend on the same machine — no .env required.
+const _getDevBase = () => {
+  // 1. Explicit override in .env takes priority
+  const envUrl = Constants.expoConfig?.extra?.apiBaseUrl;
+  if (envUrl && !envUrl.includes('192.168.1.100')) return envUrl;
+
+  // 2. Derive from Expo bundler host (works in Expo Go on a real device)
+  const hostUri =
+    Constants.expoConfig?.hostUri ||
+    Constants.manifest2?.launchAsset?.url?.match(/^https?:\/\/([^/]+)/)?.[1] ||
+    Constants.manifest?.debuggerHost;
+  if (hostUri) {
+    const ip = hostUri.split(':')[0];
+    if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
+      return `http://${ip}:5000`;
+    }
+  }
+
+  // 3. Last resort — localhost (works on Android emulator / iOS simulator)
+  return 'http://localhost:5000';
+};
+
+const _devBase = _getDevBase();
 
 export const API_URL = __DEV__
   ? `${_devBase}/api`
