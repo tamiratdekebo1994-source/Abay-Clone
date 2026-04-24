@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import { authAPI } from '../../services/api';
 import { login } from '../../store/authStore';
-import { COLORS } from '../../utils/constants';
+import { COLORS, DEV_API_BASE } from '../../utils/constants';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -45,6 +45,9 @@ export default function PhoneEntryScreen({ navigation, route }) {
       if (err?.useOtp) {
         setUsePassword(false);
         Alert.alert('Use OTP Login', 'Your account uses OTP (one-time code) login. Please use the One-Time Code tab.');
+      } else if (!err?.message || err?.message === 'Login failed') {
+        // Network error — backend unreachable
+        setError(`Cannot reach server at ${DEV_API_BASE}\n\nMake sure the backend is running:\ncd ~/Abay-Clone/backend\nnode src/server.js`);
       } else {
         setError(err?.message || 'Invalid credentials. Please try again.');
       }
@@ -258,6 +261,9 @@ export default function PhoneEntryScreen({ navigation, route }) {
           {/* Footer */}
           <View style={S.footer}>
             <Text style={S.footerText}>Fetno © 2025 · Made with ❤ in Ethiopia</Text>
+            {__DEV__ && (
+              <Text style={S.devUrl} numberOfLines={1}>🔌 {DEV_API_BASE}</Text>
+            )}
           </View>
 
         </ScrollView>
@@ -437,4 +443,5 @@ const S = StyleSheet.create({
   /* ── Footer ── */
   footer: { backgroundColor: COLORS.white, paddingVertical: 18, alignItems: 'center' },
   footerText: { fontSize: 12, color: COLORS.gray },
+  devUrl: { fontSize: 10, color: COLORS.gray, marginTop: 4, opacity: 0.6 },
 });

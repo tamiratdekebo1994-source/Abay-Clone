@@ -1,19 +1,20 @@
 import Constants from 'expo-constants';
 
 // Auto-detect the dev server host from Expo's own connection info.
-// When running in Expo Go, Constants.expoConfig.hostUri contains the bundler
-// address (e.g. "192.168.1.50:8081"). We strip the port and use that IP so
-// the app always reaches the backend on the same machine — no .env required.
+// Priority: explicit API_BASE_URL env var → Expo bundler host → localhost fallback.
 const _getDevBase = () => {
-  // 1. Explicit override in .env takes priority
+  // 1. Explicit override from mobile/.env via app.config.js extra.apiBaseUrl
   const envUrl = Constants.expoConfig?.extra?.apiBaseUrl;
   if (envUrl && !envUrl.includes('192.168.1.100')) return envUrl;
 
-  // 2. Derive from Expo bundler host (works in Expo Go on a real device)
+  // 2. Derive IP from the Expo bundler connection — try every SDK variant
   const hostUri =
-    Constants.expoConfig?.hostUri ||
-    Constants.manifest2?.launchAsset?.url?.match(/^https?:\/\/([^/]+)/)?.[1] ||
-    Constants.manifest?.debuggerHost;
+    Constants.expoGoConfig?.debuggerHost ||          // SDK 50+ in Expo Go
+    Constants.expoConfig?.hostUri ||                  // SDK 46–49
+    Constants.manifest2?.launchAsset?.url             // SDK 46 EAS Update URL
+      ?.match(/^https?:\/\/([^/:]+)/)?.[1] ||
+    Constants.manifest?.debuggerHost;                 // SDK < 46
+
   if (hostUri) {
     const ip = hostUri.split(':')[0];
     if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
@@ -21,18 +22,18 @@ const _getDevBase = () => {
     }
   }
 
-  // 3. Last resort — localhost (works on Android emulator / iOS simulator)
+  // 3. Localhost fallback (works in iOS Simulator / Android Emulator)
   return 'http://localhost:5000';
 };
 
-const _devBase = _getDevBase();
+export const DEV_API_BASE = _getDevBase();
 
 export const API_URL = __DEV__
-  ? `${_devBase}/api`
+  ? `${DEV_API_BASE}/api`
   : 'https://api.fetno.et/api';
 
 export const SOCKET_URL = __DEV__
-  ? _devBase
+  ? DEV_API_BASE
   : 'https://api.fetno.et';
 
 // Google Maps API key — injected at build time via app.config.js from GOOGLE_MAPS_API_KEY env var
