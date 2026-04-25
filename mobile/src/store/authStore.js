@@ -1,11 +1,9 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { signOut } from 'firebase/auth';
-import { auth } from '../services/firebase';
+import * as SecureStore from 'expo-secure-store';
 import api from '../services/api';
 
 export const loadUser = createAsyncThunk('auth/loadUser', async (_, { rejectWithValue }) => {
   try {
-    if (!auth.currentUser) return null;
     const { data } = await api.get('/auth/me');
     return data.data;
   } catch {
@@ -14,7 +12,12 @@ export const loadUser = createAsyncThunk('auth/loadUser', async (_, { rejectWith
 });
 
 export const logout = createAsyncThunk('auth/logout', async () => {
-  try { await signOut(auth); } catch {}
+  try {
+    await SecureStore.deleteItemAsync('firebaseIdToken');
+    await SecureStore.deleteItemAsync('firebaseRefreshToken');
+    await SecureStore.deleteItemAsync('accessToken');
+    await SecureStore.deleteItemAsync('refreshToken');
+  } catch {}
 });
 
 const authSlice = createSlice({
@@ -46,7 +49,7 @@ const authSlice = createSlice({
         if (action.payload) {
           state.isAuthenticated = true;
           state.user = action.payload;
-          state.driver = action.payload.driver;
+          state.driver = action.payload.driver ?? null;
         } else {
           state.isAuthenticated = false;
         }
