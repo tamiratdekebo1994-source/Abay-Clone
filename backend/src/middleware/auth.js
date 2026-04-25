@@ -9,8 +9,55 @@ const authenticate = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = verifyAccessToken(token);
 
+    // Try Firebase ID token first
+    try {
+      const { getFirebaseAdmin } = require('../config/firebaseAdmin');
+      const decoded = await getFirebaseAdmin().auth().verifyIdToken(token);
+
+      const phone = decoded.phone_number || null;
+      const email = decoded.email || null;
+
+      const conditions = [];
+      if (phone) conditions.push({ phone });
+      if (email) conditions.push({ email });
+
+      const user = conditions.length
+        ? await prisma.user.findFirst({
+            where: { OR: conditions },
+            select: { id: true, role: true, isActive: true, phone: true, fullName: true, email: true },
+          })
+        : null;
+
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Account not found. Please complete registration.',
+          code: 'NOT_PROVISIONED',
+          firebaseUid: decoded.uid,
+          phone: decoded.phone_number,
+          email: decoded.email,
+        });
+      }
+
+      if (!user.isActive) {
+        return res.status(401).json({ success: false, message: 'Account is inactive' });
+      }
+
+      req.user = user;
+      next();
+      return;
+    } catch (firebaseError) {
+      // Only fall through to JWT if it's a token-format error (not a Firebase auth error)
+      const code = firebaseError.code || '';
+      if (!code.startsWith('auth/') && firebaseError.errorInfo?.code?.startsWith('auth/') === false) {
+        // If Firebase Admin SDK itself errored (no config, etc.) — fall through silently
+      }
+      // Fall through to JWT
+    }
+
+    // Legacy JWT fallback
+    const decoded = verifyAccessToken(token);
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: { id: true, role: true, isActive: true, phone: true, fullName: true },

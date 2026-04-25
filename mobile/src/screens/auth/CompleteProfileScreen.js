@@ -4,9 +4,8 @@ import {
   StyleSheet, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as SecureStore from 'expo-secure-store';
 import { useDispatch } from 'react-redux';
-import { authAPI } from '../../services/api';
+import api from '../../services/api';
 import { loadUser } from '../../store/authStore';
 import { COLORS } from '../../utils/constants';
 
@@ -15,7 +14,7 @@ const TOTAL_STEPS = STEPS.length;
 const CURRENT_STEP = 1; // 0-indexed
 
 export default function CompleteProfileScreen({ navigation, route }) {
-  const { phone, verificationToken } = route.params;
+  const { phone } = route.params;
   const dispatch = useDispatch();
 
   const [fullName, setFullName] = useState('');
@@ -33,14 +32,11 @@ export default function CompleteProfileScreen({ navigation, route }) {
     setIsLoading(true);
     setError('');
     try {
-      const { data } = await authAPI.completeRegistration({
-        verificationToken,
+      await api.post('/auth/firebase/provision', {
         fullName: fullName.trim(),
         role,
         email: email.trim() || undefined,
       });
-      await SecureStore.setItemAsync('accessToken', data.data.accessToken);
-      await SecureStore.setItemAsync('refreshToken', data.data.refreshToken);
       if (role === 'DRIVER') {
         navigation.replace('DriverRegistration');
       } else {

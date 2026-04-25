@@ -333,6 +333,75 @@ const updateProfile = async (req, res, next) => {
   }
 };
 
+// ─── FIREBASE PROVISIONING ────────────────────────────────────────────────────
+
+/**
+ * Called after a new user signs in with Firebase (phone or email/password) for
+ * the first time.  Creates the DB record and returns the user profile.
+ */
+const provisionFirebaseUser = async (req, res, next) => {
+  try {
+    const { fullName, role, email: bodyEmail } = req.body;
+    const { firebaseUid, phone, email: fbEmail } = req.body._firebase || {};
+
+    // Re-verify the Firebase token to get the source-of-truth identity
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'No token provided' });
+    }
+    const token = authHeader.split(' ')[1];
+
+    const { getFirebaseAdmin } = require('../config/firebaseAdmin');
+    let decoded;
+    try {
+      decoded = await getFirebaseAdmin().auth().verifyIdToken(token);
+    } catch {
+      return res.status(401).json({ success: false, message: 'Invalid Firebase token' });
+    }
+
+    const resolvedPhone = decoded.phone_number || null;
+    const resolvedEmail = decoded.email || bodyEmail || null;
+
+    if (!resolvedPhone && !resolvedEmail) {
+      return res.status(400).json({ success: false, message: 'Cannot determine identity from Firebase token' });
+    }
+
+    if (!fullName?.trim()) {
+      return res.status(400).json({ success: false, message: 'Full name is required' });
+    }
+
+    if (!['DRIVER', 'STORE'].includes(role)) {
+      return res.status(400).json({ success: false, message: 'Role must be DRIVER or STORE' });
+    }
+
+    // Check for existing user (race condition guard)
+    const conditions = [];
+    if (resolvedPhone) conditions.push({ phone: resolvedPhone });
+    if (resolvedEmail) conditions.push({ email: resolvedEmail });
+
+    const existing = await prisma.user.findFirst({ where: { OR: conditions } });
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'Account already exists' });
+    }
+
+    const user = await prisma.user.create({
+      data: {
+        phone: resolvedPhone || `firebase_${decoded.uid}`,
+        email: resolvedEmail,
+        passwordHash: '',
+        fullName: fullName.trim(),
+        role,
+        isVerified: true,
+      },
+      select: { id: true, phone: true, email: true, fullName: true, role: true, createdAt: true },
+    });
+
+    res.status(201).json({ success: true, message: 'Account created successfully', data: { user } });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   requestOtp,
   loginWithOtp,
@@ -343,4 +412,5 @@ module.exports = {
   logout,
   getMe,
   updateProfile,
+  provisionFirebaseUser,
 };

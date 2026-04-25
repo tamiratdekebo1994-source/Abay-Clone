@@ -1,34 +1,20 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import * as SecureStore from 'expo-secure-store';
-import { authAPI, driverAPI } from '../services/api';
-
-export const login = createAsyncThunk('auth/login', async ({ phone, password }, { rejectWithValue }) => {
-  try {
-    const { data } = await authAPI.login({ phone, password });
-    await SecureStore.setItemAsync('accessToken', data.data.accessToken);
-    await SecureStore.setItemAsync('refreshToken', data.data.refreshToken);
-    return data.data;
-  } catch (err) {
-    return rejectWithValue(err.response?.data || { message: 'Login failed' });
-  }
-});
+import { signOut } from 'firebase/auth';
+import { auth } from '../services/firebase';
+import api from '../services/api';
 
 export const loadUser = createAsyncThunk('auth/loadUser', async (_, { rejectWithValue }) => {
   try {
-    const token = await SecureStore.getItemAsync('accessToken');
-    if (!token) return null;
-    const { data } = await authAPI.getMe();
+    if (!auth.currentUser) return null;
+    const { data } = await api.get('/auth/me');
     return data.data;
-  } catch (err) {
+  } catch {
     return rejectWithValue(null);
   }
 });
 
 export const logout = createAsyncThunk('auth/logout', async () => {
-  const refreshToken = await SecureStore.getItemAsync('refreshToken');
-  await SecureStore.deleteItemAsync('accessToken');
-  await SecureStore.deleteItemAsync('refreshToken');
-  try { await authAPI.logout(refreshToken); } catch {}
+  try { await signOut(auth); } catch {}
 });
 
 const authSlice = createSlice({
@@ -42,21 +28,18 @@ const authSlice = createSlice({
   },
   reducers: {
     clearError: (state) => { state.error = null; },
+    setAuthState: (state, action) => {
+      if (!action.payload.signedIn) {
+        state.user = null;
+        state.driver = null;
+        state.isAuthenticated = false;
+        state.isLoading = false;
+      }
+    },
     updateDriver: (state, action) => { state.driver = { ...state.driver, ...action.payload }; },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(login.pending, (state) => { state.error = null; })
-      .addCase(login.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.isAuthenticated = true;
-        state.user = action.payload.user;
-        state.driver = action.payload.user?.driver;
-      })
-      .addCase(login.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload?.message || action.payload || 'Login failed';
-      })
       .addCase(loadUser.pending, (state) => { state.isLoading = true; })
       .addCase(loadUser.fulfilled, (state, action) => {
         state.isLoading = false;
@@ -64,16 +47,22 @@ const authSlice = createSlice({
           state.isAuthenticated = true;
           state.user = action.payload;
           state.driver = action.payload.driver;
+        } else {
+          state.isAuthenticated = false;
         }
       })
-      .addCase(loadUser.rejected, (state) => { state.isLoading = false; })
+      .addCase(loadUser.rejected, (state) => {
+        state.isLoading = false;
+        state.isAuthenticated = false;
+      })
       .addCase(logout.fulfilled, (state) => {
         state.user = null;
         state.driver = null;
         state.isAuthenticated = false;
+        state.isLoading = false;
       });
   },
 });
 
-export const { clearError, updateDriver } = authSlice.actions;
+export const { clearError, setAuthState, updateDriver } = authSlice.actions;
 export default authSlice.reducer;

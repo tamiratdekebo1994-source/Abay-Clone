@@ -4,37 +4,35 @@ import {
   StyleSheet, ActivityIndicator, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { PhoneAuthProvider, signInWithCredential } from 'firebase/auth';
 import { useDispatch } from 'react-redux';
-import { authAPI } from '../../services/api';
-import * as SecureStore from 'expo-secure-store';
+import { auth } from '../../services/firebase';
 import { loadUser } from '../../store/authStore';
+import api from '../../services/api';
 import { COLORS } from '../../utils/constants';
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 60;
 const { width: SW } = Dimensions.get('window');
 
-// Masks the middle digits: +251 9XX XXX X89
 function maskPhone(phone) {
   if (!phone || phone.length < 8) return phone;
-  const last2 = phone.slice(-2);
-  const prefix = phone.slice(0, 6);
-  return `${prefix} ••• ••• ${last2}`;
+  return `${phone.slice(0, 6)} ••• ••• ${phone.slice(-2)}`;
 }
 
 export default function OtpVerificationScreen({ navigation, route }) {
-  const { phone, purpose, devCode } = route.params;
+  const { phone, purpose, verificationId: initialVerificationId } = route.params;
   const dispatch = useDispatch();
 
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN);
+  const [verificationId, setVerificationId] = useState(initialVerificationId);
   const inputRef = useRef(null);
 
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 300);
-    if (devCode) setOtp(devCode);
 
     const timer = setInterval(() => {
       setCountdown((c) => {
@@ -45,7 +43,6 @@ export default function OtpVerificationScreen({ navigation, route }) {
     return () => clearInterval(timer);
   }, []);
 
-  // Auto-submit when all digits are filled
   useEffect(() => {
     if (otp.length === OTP_LENGTH && !isLoading) {
       handleVerify(otp);
@@ -60,34 +57,34 @@ export default function OtpVerificationScreen({ navigation, route }) {
     setIsLoading(true);
     setError('');
     try {
-      if (purpose === 'LOGIN') {
-        const { data } = await authAPI.verifyOtpLogin(phone, code);
-        await SecureStore.setItemAsync('accessToken', data.data.accessToken);
-        await SecureStore.setItemAsync('refreshToken', data.data.refreshToken);
+      const credential = PhoneAuthProvider.credential(verificationId, code);
+      await signInWithCredential(auth, credential);
+
+      // Check if this user is already in our DB
+      try {
+        await api.get('/auth/me');
+        // User exists → onAuthStateChanged in App.js + loadUser handles navigation
         dispatch(loadUser());
-      } else {
-        const { data } = await authAPI.verifyOtpRegister(phone, code);
-        navigation.navigate('CompleteProfile', {
-          phone,
-          verificationToken: data.data.verificationToken,
-        });
+      } catch (meErr) {
+        if (meErr.response?.data?.code === 'NOT_PROVISIONED') {
+          // New Firebase user — needs to create a profile
+          navigation.navigate('CompleteProfile', { phone });
+        } else {
+          throw meErr;
+        }
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Incorrect code. Please try again.');
+      const code = err?.code || '';
+      if (code === 'auth/invalid-verification-code') {
+        setError('Incorrect code. Please check and try again.');
+      } else if (code === 'auth/code-expired') {
+        setError('The code has expired. Please request a new one.');
+      } else if (err?.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Verification failed. Please try again.');
+      }
       setIsLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    if (countdown > 0) return;
-    try {
-      const { data } = await authAPI.requestOtp(phone, purpose);
-      setCountdown(RESEND_COOLDOWN);
-      setOtp('');
-      setError('');
-      if (data.data?.devCode) setOtp(data.data.devCode);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to resend. Please try again.');
     }
   };
 
@@ -120,26 +117,22 @@ export default function OtpVerificationScreen({ navigation, route }) {
           </View>
         </View>
 
-        {/* Wavy bottom edge effect */}
         <View style={S.headerWave} />
       </SafeAreaView>
 
       {/* ── Body ────────────────────────────────────────── */}
       <View style={S.body}>
 
-        {/* Error */}
         {!!error && (
           <View style={S.errorBox}>
             <Text style={S.errorText}>⚠  {error}</Text>
           </View>
         )}
 
-        {/* Instruction */}
         <Text style={S.instruction}>
           Enter the {OTP_LENGTH}-digit code below
         </Text>
 
-        {/* Hidden real input */}
         <TextInput
           ref={inputRef}
           style={S.hiddenInput}
@@ -149,7 +142,6 @@ export default function OtpVerificationScreen({ navigation, route }) {
           maxLength={OTP_LENGTH}
         />
 
-        {/* OTP box display */}
         <TouchableOpacity
           style={S.boxRow}
           onPress={() => inputRef.current?.focus()}
@@ -162,11 +154,7 @@ export default function OtpVerificationScreen({ navigation, route }) {
             return (
               <View
                 key={i}
-                style={[
-                  S.box,
-                  isPast && S.boxPast,
-                  isCursor && S.boxCursor,
-                ]}
+                style={[S.box, isPast && S.boxPast, isCursor && S.boxCursor]}
               >
                 {isLoading && isFilled ? (
                   <View style={S.boxDot} />
@@ -180,7 +168,6 @@ export default function OtpVerificationScreen({ navigation, route }) {
           })}
         </TouchableOpacity>
 
-        {/* Progress dots when loading */}
         {isLoading && (
           <View style={S.loadingRow}>
             <ActivityIndicator color={COLORS.primary} size="small" />
@@ -188,7 +175,6 @@ export default function OtpVerificationScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Manual verify button (shown when not auto-submitted) */}
         {!isLoading && otp.length === OTP_LENGTH && (
           <TouchableOpacity style={S.verifyBtn} onPress={() => handleVerify()} activeOpacity={0.88}>
             <Text style={S.verifyBtnText}>Verify & Continue →</Text>
@@ -203,22 +189,21 @@ export default function OtpVerificationScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Resend */}
         <View style={S.resendRow}>
           <Text style={S.resendPrompt}>Didn't receive it? </Text>
-          <TouchableOpacity onPress={handleResend} disabled={countdown > 0}>
+          <TouchableOpacity disabled={countdown > 0}>
             {countdown > 0 ? (
               <View style={S.countdownBadge}>
                 <Text style={S.countdownText}>{countdown}s</Text>
               </View>
             ) : (
-              <Text style={S.resendLink}>Resend Code</Text>
+              <Text style={S.resendLink}>Go back to resend</Text>
             )}
           </TouchableOpacity>
         </View>
 
         <Text style={S.hint}>
-          ℹ  Check your SMS inbox. The code expires in 5 minutes.
+          ℹ  Check your SMS inbox. The code expires in a few minutes.
         </Text>
       </View>
 
@@ -260,8 +245,7 @@ const S = StyleSheet.create({
   },
   phonePillText: { color: COLORS.white, fontSize: 15, fontWeight: '700', letterSpacing: 1 },
   headerWave: {
-    height: 28,
-    backgroundColor: COLORS.white,
+    height: 28, backgroundColor: COLORS.white,
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
     marginTop: -1,
   },
@@ -291,25 +275,15 @@ const S = StyleSheet.create({
     backgroundColor: COLORS.grayLighter,
     alignItems: 'center', justifyContent: 'center',
   },
-  boxPast: {
-    borderColor: COLORS.primaryLighter,
-    backgroundColor: '#E8F5E9',
-  },
+  boxPast: { borderColor: COLORS.primaryLighter, backgroundColor: '#E8F5E9' },
   boxCursor: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.white,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 4,
+    borderColor: COLORS.primary, backgroundColor: COLORS.white,
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25, shadowRadius: 6, elevation: 4,
   },
   boxDigit: { fontSize: 24, color: COLORS.gray, fontWeight: '400' },
   boxDigitFilled: { color: COLORS.primary, fontWeight: '800' },
-  boxDot: {
-    width: 10, height: 10, borderRadius: 5,
-    backgroundColor: COLORS.primaryLighter,
-  },
+  boxDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.primaryLighter },
 
   /* ── Loading ── */
   loadingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 20 },
@@ -325,10 +299,7 @@ const S = StyleSheet.create({
     shadowOpacity: 0.35, shadowRadius: 12, elevation: 8,
   },
   verifyBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '800', letterSpacing: 0.4 },
-  verifyBtnGhost: {
-    backgroundColor: COLORS.grayLighter,
-    shadowOpacity: 0, elevation: 0,
-  },
+  verifyBtnGhost: { backgroundColor: COLORS.grayLighter, shadowOpacity: 0, elevation: 0 },
   verifyBtnGhostText: { color: COLORS.gray, fontSize: 14, fontWeight: '600' },
 
   /* ── Resend ── */

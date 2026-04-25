@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
   requestOtp, loginWithOtp, verifyRegistrationOtp, completeRegistration,
-  login, refreshToken, logout, getMe, updateProfile,
+  login, refreshToken, logout, getMe, updateProfile, provisionFirebaseUser,
 } = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
 const validate = require('../middleware/validate');
@@ -28,6 +28,9 @@ router.post('/login', validate(authValidators.login), login);
 // Token management
 router.post('/refresh', refreshToken);
 router.post('/logout', logout);
+
+// Firebase provisioning — called once after first Firebase sign-in
+router.post('/firebase/provision', provisionFirebaseUser);
 
 // Protected
 router.get('/me', authenticate, getMe);

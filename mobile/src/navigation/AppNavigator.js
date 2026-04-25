@@ -6,7 +6,6 @@ import { View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import { loadUser } from '../store/authStore';
 import { COLORS } from '../utils/constants';
 import { getColors } from '../utils/theme';
 import { driverAPI } from '../services/api';
@@ -145,10 +144,6 @@ function AuthStack() {
 export default function AppNavigator() {
   const dispatch = useDispatch();
   const { isAuthenticated, isLoading, driver, user } = useSelector((state) => state.auth);
-
-  useEffect(() => {
-    dispatch(loadUser());
-  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {

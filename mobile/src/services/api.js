@@ -1,5 +1,4 @@
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { API_URL } from '../utils/constants';
 
@@ -9,46 +8,24 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Request interceptor - attach token
+// Attach Firebase ID token to every request — Firebase handles refresh automatically
 api.interceptors.request.use(
   async (config) => {
-    const token = await SecureStore.getItemAsync('accessToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    try {
+      const { auth } = await import('./firebase');
+      if (auth.currentUser) {
+        const token = await auth.currentUser.getIdToken();
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch {}
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response interceptor - handle token refresh
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    if (error.response?.status === 401 && error.response?.data?.code === 'TOKEN_EXPIRED' && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        const refreshToken = await SecureStore.getItemAsync('refreshToken');
-        const { data } = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
-
-        await SecureStore.setItemAsync('accessToken', data.data.accessToken);
-        await SecureStore.setItemAsync('refreshToken', data.data.refreshToken);
-
-        originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;
-        return api(originalRequest);
-      } catch (refreshError) {
-        await SecureStore.deleteItemAsync('accessToken');
-        await SecureStore.deleteItemAsync('refreshToken');
-        // Navigate to login - handled by auth store
-        return Promise.reject(refreshError);
-      }
-    }
-
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Auth

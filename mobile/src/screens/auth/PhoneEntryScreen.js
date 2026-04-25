@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
   ActivityIndicator, Alert, ScrollView, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDispatch } from 'react-redux';
-import { authAPI } from '../../services/api';
-import { login } from '../../store/authStore';
+import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
+import { PhoneAuthProvider, signInWithEmailAndPassword } from 'firebase/auth';
+import { auth, firebaseApp } from '../../services/firebase';
 import { COLORS, DEV_API_BASE } from '../../utils/constants';
 
 const { width: SW } = Dimensions.get('window');
@@ -15,15 +15,18 @@ const { width: SW } = Dimensions.get('window');
 export default function PhoneEntryScreen({ navigation, route }) {
   const purpose = route?.params?.purpose || 'LOGIN';
   const [localNumber, setLocalNumber] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [usePassword, setUsePassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [phoneFocused, setPhoneFocused] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
   const [passFocused, setPassFocused] = useState(false);
 
-  const dispatch = useDispatch();
+  const recaptchaVerifier = useRef(null);
+
   const isLogin = purpose === 'LOGIN';
   const phone = '+251' + localNumber;
 
@@ -32,72 +35,66 @@ export default function PhoneEntryScreen({ navigation, route }) {
     setError('');
   };
 
-  const handlePasswordLogin = async () => {
-    if (localNumber.length < 9 || !password.trim()) {
-      setError('Please enter your phone number and password.');
+  const handleSendOtp = async () => {
+    if (localNumber.length < 9) {
+      setError('Please enter a valid 9-digit phone number.');
       return;
     }
     setIsLoading(true);
     setError('');
     try {
-      await dispatch(login({ phone, password })).unwrap();
+      const provider = new PhoneAuthProvider(auth);
+      const verificationId = await provider.verifyPhoneNumber(phone, recaptchaVerifier.current);
+      navigation.navigate('OtpVerification', { phone, purpose, verificationId });
     } catch (err) {
-      if (err?.useOtp) {
-        setUsePassword(false);
-        Alert.alert('Use OTP Login', 'Your account uses OTP (one-time code) login. Please use the One-Time Code tab.');
-      } else if (!err?.message || err?.message === 'Login failed') {
-        // Network error — backend unreachable
-        setError(`Cannot reach server at ${DEV_API_BASE}\n\nMake sure the backend is running:\ncd ~/Abay-Clone/backend\nnode src/server.js`);
+      const msg = err?.message || '';
+      if (msg.includes('TOO_LONG') || msg.includes('INVALID_PHONE_NUMBER')) {
+        setError('Invalid phone number. Check the number and try again.');
+      } else if (msg.includes('network') || msg.includes('fetch')) {
+        setError('Network error. Check your internet connection.');
       } else {
-        setError(err?.message || 'Invalid credentials. Please try again.');
+        setError(msg || 'Failed to send verification code. Please try again.');
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (localNumber.length < 9) { setError('Enter your phone number first.'); return; }
-    setIsLoading(true);
-    setError('');
-    try {
-      const { data } = await authAPI.requestOtp(phone, 'LOGIN');
-      navigation.navigate('OtpVerification', { phone, purpose: 'LOGIN', devCode: data.data?.devCode });
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to send code. Please try again.');
-    } finally {
-      setIsLoading(false);
+  const handleEmailLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter your email and password.');
+      return;
     }
-  };
-
-  const handleSendOtp = async () => {
-    if (localNumber.length < 9) { setError('Please enter a valid 9-digit phone number.'); return; }
     setIsLoading(true);
     setError('');
     try {
-      const { data } = await authAPI.requestOtp(phone, purpose);
-      navigation.navigate('OtpVerification', { phone, purpose, devCode: data.data?.devCode });
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+      // onAuthStateChanged in App.js handles the rest
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to send code. Please try again.';
-      if (err.response?.status === 404 && purpose === 'LOGIN') {
-        Alert.alert('Not Registered', 'This number is not registered. Sign up?', [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Sign Up', onPress: () => navigation.replace('PhoneEntry', { purpose: 'REGISTER' }) },
-        ]);
-      } else if (err.response?.status === 409 && purpose === 'REGISTER') {
-        Alert.alert('Already Registered', 'This phone is already registered.', [
-          { text: 'Sign In', onPress: () => navigation.replace('PhoneEntry', { purpose: 'LOGIN' }) },
-        ]);
+      const code = err?.code || '';
+      if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        setError('Invalid email or password.');
+      } else if (code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.');
+      } else if (code === 'auth/too-many-requests') {
+        setError('Too many failed attempts. Please try again later.');
+      } else if (code === 'auth/network-request-failed') {
+        setError('Network error. Check your internet connection.');
       } else {
-        setError(msg);
+        setError(err?.message || 'Sign in failed. Please try again.');
       }
-    } finally {
       setIsLoading(false);
     }
   };
 
   return (
     <SafeAreaView style={S.safe} edges={['top']}>
+      <FirebaseRecaptchaVerifierModal
+        ref={recaptchaVerifier}
+        firebaseConfig={firebaseApp.options}
+        attemptInvisibleVerification
+      />
+
       <KeyboardAvoidingView style={S.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
           contentContainerStyle={S.scroll}
@@ -141,7 +138,7 @@ export default function PhoneEntryScreen({ navigation, route }) {
                 : 'Create your driver or store account'}
             </Text>
 
-            {/* Segmented control — only visible on login */}
+            {/* Segmented control */}
             {isLogin && (
               <View style={S.segWrap}>
                 <View style={S.segTrack}>
@@ -158,7 +155,7 @@ export default function PhoneEntryScreen({ navigation, route }) {
                     onPress={() => { setUsePassword(true); setError(''); }}
                     activeOpacity={0.7}
                   >
-                    <Text style={[S.segLabel, usePassword && S.segLabelActive]}>Password</Text>
+                    <Text style={[S.segLabel, usePassword && S.segLabelActive]}>Admin Login</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -172,30 +169,24 @@ export default function PhoneEntryScreen({ navigation, route }) {
               </View>
             )}
 
-            {/* Phone field */}
-            <Text style={S.fieldLabel}>Phone Number / ስልክ ቁጥር</Text>
-            <View style={[S.phoneField, phoneFocused && S.fieldFocused]}>
-              <View style={S.countryChip}>
-                <Text style={S.countryFlag}>🇪🇹</Text>
-                <Text style={S.countryCode}>+251</Text>
-              </View>
-              <View style={S.fieldDivider} />
-              <TextInput
-                style={S.phoneInput}
-                value={localNumber}
-                onChangeText={formatPhone}
-                keyboardType="phone-pad"
-                maxLength={9}
-                placeholder="9XXXXXXXX"
-                placeholderTextColor={COLORS.gray}
-                onFocus={() => setPhoneFocused(true)}
-                onBlur={() => setPhoneFocused(false)}
-              />
-            </View>
-
-            {/* Password field */}
-            {usePassword && isLogin && (
+            {/* Admin email+password login */}
+            {usePassword && isLogin ? (
               <>
+                <Text style={S.fieldLabel}>Email Address</Text>
+                <View style={[S.passField, emailFocused && S.fieldFocused]}>
+                  <TextInput
+                    style={S.passInput}
+                    value={email}
+                    onChangeText={(v) => { setEmail(v); setError(''); }}
+                    placeholder="admin@fetno.et"
+                    placeholderTextColor={COLORS.gray}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    onFocus={() => setEmailFocused(true)}
+                    onBlur={() => setEmailFocused(false)}
+                  />
+                </View>
+
                 <Text style={[S.fieldLabel, { marginTop: 18 }]}>Password / የይለፍ ቃል</Text>
                 <View style={[S.passField, passFocused && S.fieldFocused]}>
                   <TextInput
@@ -216,16 +207,36 @@ export default function PhoneEntryScreen({ navigation, route }) {
                     <Text style={S.eyeIcon}>{showPassword ? '🙈' : '👁'}</Text>
                   </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={handleForgotPassword} style={S.forgotRow}>
-                  <Text style={S.forgotText}>Forgot password?</Text>
-                </TouchableOpacity>
+              </>
+            ) : (
+              /* OTP phone field */
+              <>
+                <Text style={S.fieldLabel}>Phone Number / ስልክ ቁጥር</Text>
+                <View style={[S.phoneField, phoneFocused && S.fieldFocused]}>
+                  <View style={S.countryChip}>
+                    <Text style={S.countryFlag}>🇪🇹</Text>
+                    <Text style={S.countryCode}>+251</Text>
+                  </View>
+                  <View style={S.fieldDivider} />
+                  <TextInput
+                    style={S.phoneInput}
+                    value={localNumber}
+                    onChangeText={formatPhone}
+                    keyboardType="phone-pad"
+                    maxLength={9}
+                    placeholder="9XXXXXXXX"
+                    placeholderTextColor={COLORS.gray}
+                    onFocus={() => setPhoneFocused(true)}
+                    onBlur={() => setPhoneFocused(false)}
+                  />
+                </View>
               </>
             )}
 
             {/* CTA */}
             <TouchableOpacity
               style={[S.cta, isLoading && S.ctaOff]}
-              onPress={usePassword && isLogin ? handlePasswordLogin : handleSendOtp}
+              onPress={usePassword && isLogin ? handleEmailLogin : handleSendOtp}
               disabled={isLoading}
               activeOpacity={0.88}
             >
@@ -239,18 +250,20 @@ export default function PhoneEntryScreen({ navigation, route }) {
             </TouchableOpacity>
 
             {/* Switch */}
-            <View style={S.switchRow}>
-              <Text style={S.switchPrompt}>
-                {isLogin ? "New to Fetno?  " : 'Already have an account?  '}
-              </Text>
-              <TouchableOpacity
-                onPress={() => navigation.replace('PhoneEntry', { purpose: isLogin ? 'REGISTER' : 'LOGIN' })}
-              >
-                <Text style={S.switchLink}>{isLogin ? 'Sign Up' : 'Sign In'}</Text>
-              </TouchableOpacity>
-            </View>
+            {!usePassword && (
+              <View style={S.switchRow}>
+                <Text style={S.switchPrompt}>
+                  {isLogin ? 'New to Fetno?  ' : 'Already have an account?  '}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => navigation.replace('PhoneEntry', { purpose: isLogin ? 'REGISTER' : 'LOGIN' })}
+                >
+                  <Text style={S.switchLink}>{isLogin ? 'Sign Up' : 'Sign In'}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
-            {/* Divider + trust signals */}
+            {/* Trust */}
             <View style={S.trustRow}>
               <View style={S.trustLine} />
               <Text style={S.trustText}>Secure · Encrypted · Trusted</Text>
@@ -413,8 +426,6 @@ const S = StyleSheet.create({
   },
   eyeBtn: { paddingHorizontal: 14 },
   eyeIcon: { fontSize: 19 },
-  forgotRow: { alignSelf: 'flex-end', marginTop: 10, marginBottom: 4 },
-  forgotText: { fontSize: 13, color: COLORS.primaryLight, fontWeight: '600' },
 
   /* ── CTA ── */
   cta: {
