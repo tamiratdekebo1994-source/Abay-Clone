@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ActivityIndicator, Dimensions,
+  StyleSheet, ActivityIndicator, Dimensions, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
@@ -56,55 +56,49 @@ export default function OtpVerificationScreen({ navigation, route }) {
     setIsLoading(true);
     setError('');
     try {
+      // STEP 1 — Firebase verify
+      Alert.alert('DEBUG 1', `Calling Firebase with phone=${phone} code=${code} sessionInfo=${verificationId?.slice(0,20)}...`);
       const res = await fetch(
         `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPhoneNumber?key=${FIREBASE_API_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            phoneNumber: phone,
-            code,
-            sessionInfo: verificationId,
-          }),
+          body: JSON.stringify({ phoneNumber: phone, code, sessionInfo: verificationId }),
         },
       );
       const data = await res.json();
       if (!res.ok) {
-        const msg = data?.error?.message || '';
-        if (msg.includes('INVALID_CODE') || msg.includes('INVALID_SESSION_INFO')) {
-          setError('Incorrect code. Please check and try again.');
-        } else if (msg.includes('SESSION_EXPIRED') || msg.includes('CODE_EXPIRED')) {
-          setError('The code has expired. Please request a new one.');
-        } else {
-          setError(msg || 'Verification failed. Please try again.');
-        }
+        const msg = data?.error?.message || 'unknown';
+        Alert.alert('DEBUG Firebase FAIL', msg);
+        setError(msg);
         setIsLoading(false);
         return;
       }
 
+      // STEP 2 — Store token
+      Alert.alert('DEBUG 2', 'Firebase OK — storing token');
       await SecureStore.setItemAsync('firebaseIdToken', data.idToken);
-      if (data.refreshToken) {
-        await SecureStore.setItemAsync('firebaseRefreshToken', data.refreshToken);
-      }
 
+      // STEP 3 — Check backend
+      Alert.alert('DEBUG 3', 'Calling /auth/me');
       try {
-        await api.get('/auth/me');
+        const meRes = await api.get('/auth/me');
+        Alert.alert('DEBUG 4', `Backend OK — dispatching loadUser. User: ${JSON.stringify(meRes.data?.data?.role)}`);
         dispatch(loadUser());
       } catch (meErr) {
-        if (meErr.response?.data?.code === 'NOT_PROVISIONED') {
+        const errCode = meErr.response?.data?.code;
+        const errMsg = meErr.response?.data?.message || meErr.message;
+        Alert.alert('DEBUG Backend FAIL', `code=${errCode} msg=${errMsg} status=${meErr.response?.status}`);
+        if (errCode === 'NOT_PROVISIONED') {
           navigation.navigate('CompleteProfile', { phone });
         } else {
           throw meErr;
         }
       }
     } catch (err) {
-      if (err?.response?.data?.message) {
-        setError(err.response.data.message);
-      } else if (!err?.response) {
-        setError('Network error. Check your connection.');
-      } else {
-        setError('Verification failed. Please try again.');
-      }
+      const msg = err?.response?.data?.message || err?.message || 'Unknown error';
+      Alert.alert('DEBUG CATCH', msg);
+      setError(msg);
       setIsLoading(false);
     }
   };
