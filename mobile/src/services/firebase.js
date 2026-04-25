@@ -1,23 +1,17 @@
-import { initializeApp, getApps } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import Constants from 'expo-constants';
 
 const cfg = Constants.expoConfig?.extra?.firebase || {};
 
 const firebaseConfig = {
-  apiKey:            cfg.apiKey            || '',
-  authDomain:        cfg.authDomain        || '',
-  projectId:         cfg.projectId         || '',
-  storageBucket:     cfg.storageBucket     || '',
-  messagingSenderId: cfg.messagingSenderId || '',
-  appId:             cfg.appId             || '',
+  apiKey:            cfg.apiKey            || 'AIzaSyA4YE9aBP7adElrVM_OgZ_6Ffrd8dx4P0A',
+  authDomain:        cfg.authDomain        || 'abay-clone-project-36721.firebaseapp.com',
+  projectId:         cfg.projectId         || 'abay-clone-project-36721',
+  storageBucket:     cfg.storageBucket     || 'abay-clone-project-36721.firebasestorage.app',
+  messagingSenderId: cfg.messagingSenderId || '493277530900',
+  appId:             cfg.appId             || '1:493277530900:web:1ea2b0f3fea9d11eddd001',
 };
 
-export const firebaseApp = getApps().length
-  ? getApps()[0]
-  : initializeApp(firebaseConfig);
+export const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-export const auth = initializeAuth(firebaseApp, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});
+export const FIREBASE_API_KEY = firebaseConfig.apiKey;

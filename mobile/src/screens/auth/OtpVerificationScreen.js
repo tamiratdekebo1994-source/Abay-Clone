@@ -4,10 +4,10 @@ import {
   StyleSheet, ActivityIndicator, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { PhoneAuthProvider, signInWithCredential } from 'firebase/auth';
+import * as SecureStore from 'expo-secure-store';
 import { useDispatch } from 'react-redux';
-import { auth } from '../../services/firebase';
 import { loadUser } from '../../store/authStore';
+import { FIREBASE_API_KEY } from '../../services/firebase';
 import api from '../../services/api';
 import { COLORS } from '../../utils/constants';
 
@@ -28,12 +28,11 @@ export default function OtpVerificationScreen({ navigation, route }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN);
-  const [verificationId, setVerificationId] = useState(initialVerificationId);
+  const [verificationId] = useState(initialVerificationId);
   const inputRef = useRef(null);
 
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 300);
-
     const timer = setInterval(() => {
       setCountdown((c) => {
         if (c <= 1) { clearInterval(timer); return 0; }
@@ -57,30 +56,52 @@ export default function OtpVerificationScreen({ navigation, route }) {
     setIsLoading(true);
     setError('');
     try {
-      const credential = PhoneAuthProvider.credential(verificationId, code);
-      await signInWithCredential(auth, credential);
+      const res = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPhoneNumber?key=${FIREBASE_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phoneNumber: phone,
+            code,
+            sessionInfo: verificationId,
+          }),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        const msg = data?.error?.message || '';
+        if (msg.includes('INVALID_CODE') || msg.includes('INVALID_SESSION_INFO')) {
+          setError('Incorrect code. Please check and try again.');
+        } else if (msg.includes('SESSION_EXPIRED') || msg.includes('CODE_EXPIRED')) {
+          setError('The code has expired. Please request a new one.');
+        } else {
+          setError(msg || 'Verification failed. Please try again.');
+        }
+        setIsLoading(false);
+        return;
+      }
 
-      // Check if this user is already in our DB
+      await SecureStore.setItemAsync('firebaseIdToken', data.idToken);
+      if (data.refreshToken) {
+        await SecureStore.setItemAsync('firebaseRefreshToken', data.refreshToken);
+      }
+
       try {
         await api.get('/auth/me');
-        // User exists → onAuthStateChanged in App.js + loadUser handles navigation
         dispatch(loadUser());
       } catch (meErr) {
         if (meErr.response?.data?.code === 'NOT_PROVISIONED') {
-          // New Firebase user — needs to create a profile
           navigation.navigate('CompleteProfile', { phone });
         } else {
           throw meErr;
         }
       }
     } catch (err) {
-      const code = err?.code || '';
-      if (code === 'auth/invalid-verification-code') {
-        setError('Incorrect code. Please check and try again.');
-      } else if (code === 'auth/code-expired') {
-        setError('The code has expired. Please request a new one.');
-      } else if (err?.response?.data?.message) {
+      if (err?.response?.data?.message) {
         setError(err.response.data.message);
+      } else if (!err?.response) {
+        setError('Network error. Check your connection.');
       } else {
         setError('Verification failed. Please try again.');
       }

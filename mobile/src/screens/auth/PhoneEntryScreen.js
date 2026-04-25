@@ -2,32 +2,29 @@ import React, { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
-  ActivityIndicator, Alert, ScrollView, Dimensions,
+  ActivityIndicator, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
-import { PhoneAuthProvider, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, firebaseApp } from '../../services/firebase';
+import * as SecureStore from 'expo-secure-store';
+import { useDispatch } from 'react-redux';
+import { loadUser } from '../../store/authStore';
+import { FIREBASE_API_KEY } from '../../services/firebase';
 import { COLORS, DEV_API_BASE } from '../../utils/constants';
 
-const { width: SW } = Dimensions.get('window');
-
-export default function PhoneEntryScreen({ navigation, route }) {
-  const purpose = route?.params?.purpose || 'LOGIN';
+export default function PhoneEntryScreen({ navigation }) {
+  const dispatch = useDispatch();
   const [localNumber, setLocalNumber] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showAdmin, setShowAdmin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [usePassword, setUsePassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [phoneFocused, setPhoneFocused] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [passFocused, setPassFocused] = useState(false);
+  const phoneRef = useRef(null);
 
-  const recaptchaVerifier = useRef(null);
-
-  const isLogin = purpose === 'LOGIN';
   const phone = '+251' + localNumber;
 
   const formatPhone = (text) => {
@@ -37,64 +34,94 @@ export default function PhoneEntryScreen({ navigation, route }) {
 
   const handleSendOtp = async () => {
     if (localNumber.length < 9) {
-      setError('Please enter a valid 9-digit phone number.');
+      setError('Enter a valid 9-digit phone number.');
       return;
     }
     setIsLoading(true);
     setError('');
     try {
-      const provider = new PhoneAuthProvider(auth);
-      const verificationId = await provider.verifyPhoneNumber(phone, recaptchaVerifier.current);
-      navigation.navigate('OtpVerification', { phone, purpose, verificationId });
-    } catch (err) {
-      const msg = err?.message || '';
-      if (msg.includes('TOO_LONG') || msg.includes('INVALID_PHONE_NUMBER')) {
-        setError('Invalid phone number. Check the number and try again.');
-      } else if (msg.includes('network') || msg.includes('fetch')) {
-        setError('Network error. Check your internet connection.');
-      } else {
-        setError(msg || 'Failed to send verification code. Please try again.');
+      const res = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:sendVerificationCode?key=${FIREBASE_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phoneNumber: phone, recaptchaToken: 'test' }),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        const msg = data?.error?.message || '';
+        if (msg.includes('TOO_LONG') || msg.includes('INVALID_PHONE_NUMBER')) {
+          setError('Invalid phone number. Please check and try again.');
+        } else if (msg.includes('QUOTA_EXCEEDED')) {
+          setError('Too many requests. Please try again later.');
+        } else {
+          setError(msg || 'Failed to send code. Try again.');
+        }
+        return;
       }
+      navigation.navigate('OtpVerification', {
+        phone,
+        purpose: 'LOGIN',
+        verificationId: data.sessionInfo,
+      });
+    } catch {
+      setError('Network error. Check your connection.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleEmailLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      setError('Please enter your email and password.');
+  const handleAdminLogin = async () => {
+    if (!adminEmail.trim() || !adminPassword.trim()) {
+      setError('Enter your email and password.');
       return;
     }
     setIsLoading(true);
     setError('');
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
-      // onAuthStateChanged in App.js handles the rest
-    } catch (err) {
-      const code = err?.code || '';
-      if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
-        setError('Invalid email or password.');
-      } else if (code === 'auth/invalid-email') {
-        setError('Please enter a valid email address.');
-      } else if (code === 'auth/too-many-requests') {
-        setError('Too many failed attempts. Please try again later.');
-      } else if (code === 'auth/network-request-failed') {
-        setError('Network error. Check your internet connection.');
-      } else {
-        setError(err?.message || 'Sign in failed. Please try again.');
+      const res = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: adminEmail.trim(),
+            password: adminPassword,
+            returnSecureToken: true,
+          }),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        const msg = data?.error?.message || '';
+        if (
+          msg.includes('INVALID_LOGIN_CREDENTIALS') ||
+          msg.includes('INVALID_PASSWORD') ||
+          msg.includes('EMAIL_NOT_FOUND')
+        ) {
+          setError('Invalid email or password.');
+        } else if (msg.includes('TOO_MANY_ATTEMPTS')) {
+          setError('Too many attempts. Try again later.');
+        } else {
+          setError(msg || 'Sign in failed. Please try again.');
+        }
+        return;
       }
+      await SecureStore.setItemAsync('firebaseIdToken', data.idToken);
+      if (data.refreshToken) {
+        await SecureStore.setItemAsync('firebaseRefreshToken', data.refreshToken);
+      }
+      dispatch(loadUser());
+    } catch {
+      setError('Network error. Check your connection.');
+    } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={S.safe} edges={['top']}>
-      <FirebaseRecaptchaVerifierModal
-        ref={recaptchaVerifier}
-        firebaseConfig={firebaseApp.options}
-        attemptInvisibleVerification
-      />
-
+    <SafeAreaView style={S.safe} edges={['top', 'bottom']}>
       <KeyboardAvoidingView style={S.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
           contentContainerStyle={S.scroll}
@@ -102,182 +129,120 @@ export default function PhoneEntryScreen({ navigation, route }) {
           showsVerticalScrollIndicator={false}
         >
 
-          {/* ── Hero ─────────────────────────────────────────── */}
-          <View style={S.hero}>
-            <View style={S.heroBubble1} />
-            <View style={S.heroBubble2} />
-
-            <View style={S.logoShell}>
-              <View style={S.logoRing}>
-                <Text style={S.logoEmoji}>🚚</Text>
-              </View>
-              <View style={S.logoBadge}>
-                <Text style={S.logoBadgeText}>ET</Text>
-              </View>
-            </View>
-
-            <Text style={S.brand}>Fetno</Text>
-            <Text style={S.brandSub}>Driver Partner · ሾፌር ሽርክና</Text>
-
-            <View style={S.heroPills}>
-              <View style={S.heroPill}><Text style={S.heroPillText}>🇪🇹 Ethiopia</Text></View>
-              <View style={S.heroPill}><Text style={S.heroPillText}>⚡ Fast Delivery</Text></View>
-            </View>
+          {/* ── Title ─────────────────────────────────────── */}
+          <View style={S.titleBlock}>
+            <Text style={S.title}>
+              {showAdmin ? 'Admin Sign In' : 'Enter your\nphone number'}
+            </Text>
+            {!showAdmin && (
+              <Text style={S.subtitle}>We'll send a 6-digit verification code</Text>
+            )}
           </View>
 
-          {/* ── Card ─────────────────────────────────────────── */}
-          <View style={S.card}>
-            <View style={S.cardHandle} />
+          {/* ── Error ─────────────────────────────────────── */}
+          {!!error && (
+            <View style={S.errorBox}>
+              <Text style={S.errorText}>{error}</Text>
+            </View>
+          )}
 
-            <Text style={S.cardTitle}>
-              {isLogin ? 'Welcome back' : 'Join Fetno'}
-            </Text>
-            <Text style={S.cardSub}>
-              {isLogin
-                ? 'Sign in to start accepting deliveries'
-                : 'Create your driver or store account'}
-            </Text>
-
-            {/* Segmented control */}
-            {isLogin && (
-              <View style={S.segWrap}>
-                <View style={S.segTrack}>
-                  <View style={[S.segThumb, usePassword && S.segThumbRight]} />
-                  <TouchableOpacity
-                    style={S.segBtn}
-                    onPress={() => { setUsePassword(false); setError(''); }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[S.segLabel, !usePassword && S.segLabelActive]}>One-Time Code</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={S.segBtn}
-                    onPress={() => { setUsePassword(true); setError(''); }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[S.segLabel, usePassword && S.segLabelActive]}>Admin Login</Text>
-                  </TouchableOpacity>
-                </View>
+          {showAdmin ? (
+            /* ── Admin fields ──────────────────────────────── */
+            <>
+              <View style={[S.inputBox, emailFocused && S.inputBoxFocused]}>
+                <Text style={S.inputIcon}>✉️</Text>
+                <TextInput
+                  style={S.inputText}
+                  value={adminEmail}
+                  onChangeText={(v) => { setAdminEmail(v); setError(''); }}
+                  placeholder="Email address"
+                  placeholderTextColor={COLORS.gray}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
+                />
               </View>
-            )}
 
-            {/* Error */}
-            {!!error && (
-              <View style={S.errorBox}>
-                <View style={S.errorIcon}><Text style={S.errorIconText}>!</Text></View>
-                <Text style={S.errorMsg}>{error}</Text>
-              </View>
-            )}
-
-            {/* Admin email+password login */}
-            {usePassword && isLogin ? (
-              <>
-                <Text style={S.fieldLabel}>Email Address</Text>
-                <View style={[S.passField, emailFocused && S.fieldFocused]}>
-                  <TextInput
-                    style={S.passInput}
-                    value={email}
-                    onChangeText={(v) => { setEmail(v); setError(''); }}
-                    placeholder="admin@fetno.et"
-                    placeholderTextColor={COLORS.gray}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    onFocus={() => setEmailFocused(true)}
-                    onBlur={() => setEmailFocused(false)}
-                  />
-                </View>
-
-                <Text style={[S.fieldLabel, { marginTop: 18 }]}>Password / የይለፍ ቃል</Text>
-                <View style={[S.passField, passFocused && S.fieldFocused]}>
-                  <TextInput
-                    style={S.passInput}
-                    value={password}
-                    onChangeText={(v) => { setPassword(v); setError(''); }}
-                    placeholder="Enter your password"
-                    placeholderTextColor={COLORS.gray}
-                    secureTextEntry={!showPassword}
-                    onFocus={() => setPassFocused(true)}
-                    onBlur={() => setPassFocused(false)}
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={S.eyeBtn}
-                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                  >
-                    <Text style={S.eyeIcon}>{showPassword ? '🙈' : '👁'}</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            ) : (
-              /* OTP phone field */
-              <>
-                <Text style={S.fieldLabel}>Phone Number / ስልክ ቁጥር</Text>
-                <View style={[S.phoneField, phoneFocused && S.fieldFocused]}>
-                  <View style={S.countryChip}>
-                    <Text style={S.countryFlag}>🇪🇹</Text>
-                    <Text style={S.countryCode}>+251</Text>
-                  </View>
-                  <View style={S.fieldDivider} />
-                  <TextInput
-                    style={S.phoneInput}
-                    value={localNumber}
-                    onChangeText={formatPhone}
-                    keyboardType="phone-pad"
-                    maxLength={9}
-                    placeholder="9XXXXXXXX"
-                    placeholderTextColor={COLORS.gray}
-                    onFocus={() => setPhoneFocused(true)}
-                    onBlur={() => setPhoneFocused(false)}
-                  />
-                </View>
-              </>
-            )}
-
-            {/* CTA */}
-            <TouchableOpacity
-              style={[S.cta, isLoading && S.ctaOff]}
-              onPress={usePassword && isLogin ? handleEmailLogin : handleSendOtp}
-              disabled={isLoading}
-              activeOpacity={0.88}
-            >
-              {isLoading ? (
-                <ActivityIndicator color={COLORS.white} size="small" />
-              ) : (
-                <Text style={S.ctaText}>
-                  {usePassword && isLogin ? 'Sign In' : isLogin ? 'Continue →' : 'Create Account →'}
-                </Text>
-              )}
-            </TouchableOpacity>
-
-            {/* Switch */}
-            {!usePassword && (
-              <View style={S.switchRow}>
-                <Text style={S.switchPrompt}>
-                  {isLogin ? 'New to Fetno?  ' : 'Already have an account?  '}
-                </Text>
+              <View style={[S.inputBox, S.inputBoxGap, passFocused && S.inputBoxFocused]}>
+                <Text style={S.inputIcon}>🔒</Text>
+                <TextInput
+                  style={[S.inputText, S.flex]}
+                  value={adminPassword}
+                  onChangeText={(v) => { setAdminPassword(v); setError(''); }}
+                  placeholder="Password"
+                  placeholderTextColor={COLORS.gray}
+                  secureTextEntry={!showPassword}
+                  onFocus={() => setPassFocused(true)}
+                  onBlur={() => setPassFocused(false)}
+                />
                 <TouchableOpacity
-                  onPress={() => navigation.replace('PhoneEntry', { purpose: isLogin ? 'REGISTER' : 'LOGIN' })}
+                  onPress={() => setShowPassword(!showPassword)}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  style={S.eyeBtn}
                 >
-                  <Text style={S.switchLink}>{isLogin ? 'Sign Up' : 'Sign In'}</Text>
+                  <Text style={S.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
                 </TouchableOpacity>
               </View>
-            )}
+            </>
+          ) : (
+            /* ── Phone row ─────────────────────────────────── */
+            <View style={S.phoneRow}>
+              <View style={S.countryBox}>
+                <Text style={S.flagText}>🇪🇹</Text>
+                <Text style={S.countryCode}>+251</Text>
+              </View>
 
-            {/* Trust */}
-            <View style={S.trustRow}>
-              <View style={S.trustLine} />
-              <Text style={S.trustText}>Secure · Encrypted · Trusted</Text>
-              <View style={S.trustLine} />
+              <TouchableOpacity
+                style={[S.phoneBox, phoneFocused && S.inputBoxFocused]}
+                onPress={() => phoneRef.current?.focus()}
+                activeOpacity={1}
+              >
+                <TextInput
+                  ref={phoneRef}
+                  style={S.phoneInput}
+                  value={localNumber}
+                  onChangeText={formatPhone}
+                  keyboardType="phone-pad"
+                  maxLength={9}
+                  placeholder="9XX XXX XXXX"
+                  placeholderTextColor={COLORS.gray}
+                  onFocus={() => setPhoneFocused(true)}
+                  onBlur={() => setPhoneFocused(false)}
+                />
+              </TouchableOpacity>
             </View>
-          </View>
+          )}
 
-          {/* Footer */}
-          <View style={S.footer}>
-            <Text style={S.footerText}>Fetno © 2025 · Made with ❤ in Ethiopia</Text>
-            {__DEV__ && (
-              <Text style={S.devUrl} numberOfLines={1}>🔌 {DEV_API_BASE}</Text>
+          {/* ── Continue button ────────────────────────────── */}
+          <TouchableOpacity
+            style={[S.cta, isLoading && S.ctaLoading]}
+            onPress={showAdmin ? handleAdminLogin : handleSendOtp}
+            disabled={isLoading}
+            activeOpacity={0.85}
+          >
+            {isLoading ? (
+              <ActivityIndicator color={COLORS.white} size="small" />
+            ) : (
+              <Text style={S.ctaText}>
+                {showAdmin ? 'Sign In' : 'Continue →'}
+              </Text>
             )}
-          </View>
+          </TouchableOpacity>
+
+          {/* ── Bottom link ────────────────────────────────── */}
+          <TouchableOpacity
+            style={S.adminToggle}
+            onPress={() => { setShowAdmin(!showAdmin); setError(''); }}
+          >
+            <Text style={S.adminToggleText}>
+              {showAdmin ? '← Back to Phone Login' : 'Admin Sign In'}
+            </Text>
+          </TouchableOpacity>
+
+          {__DEV__ && (
+            <Text style={S.devUrl} numberOfLines={1}>🔌 {DEV_API_BASE}</Text>
+          )}
 
         </ScrollView>
       </KeyboardAvoidingView>
@@ -286,173 +251,140 @@ export default function PhoneEntryScreen({ navigation, route }) {
 }
 
 const S = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.primary },
+  safe: { flex: 1, backgroundColor: COLORS.white },
   flex: { flex: 1 },
-  scroll: { flexGrow: 1 },
+  scroll: {
+    flexGrow: 1,
+    paddingHorizontal: 28,
+    paddingTop: 56,
+    paddingBottom: 40,
+    justifyContent: 'center',
+  },
 
-  /* ── Hero ── */
-  hero: {
-    alignItems: 'center',
-    paddingTop: 32, paddingBottom: 40, paddingHorizontal: 24,
-    overflow: 'hidden',
+  /* ── Title ── */
+  titleBlock: { marginBottom: 40 },
+  title: {
+    fontSize: 38,
+    fontWeight: '800',
+    color: COLORS.black,
+    lineHeight: 46,
+    letterSpacing: -0.5,
   },
-  heroBubble1: {
-    position: 'absolute', width: 220, height: 220, borderRadius: 110,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    top: -60, right: -50,
+  subtitle: {
+    fontSize: 15,
+    color: COLORS.gray,
+    marginTop: 10,
+    lineHeight: 22,
   },
-  heroBubble2: {
-    position: 'absolute', width: 160, height: 160, borderRadius: 80,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    bottom: 20, left: -40,
-  },
-  logoShell: { position: 'relative', marginBottom: 20 },
-  logoRing: {
-    width: 88, height: 88, borderRadius: 44,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  logoEmoji: { fontSize: 38 },
-  logoBadge: {
-    position: 'absolute', bottom: 0, right: -4,
-    backgroundColor: COLORS.accent, borderRadius: 10,
-    paddingHorizontal: 6, paddingVertical: 2,
-    borderWidth: 2, borderColor: COLORS.primary,
-  },
-  logoBadgeText: { fontSize: 10, fontWeight: '900', color: COLORS.primary, letterSpacing: 0.5 },
-  brand: { color: COLORS.white, fontSize: 34, fontWeight: '900', letterSpacing: 1, marginBottom: 4 },
-  brandSub: { color: 'rgba(255,255,255,0.6)', fontSize: 13, marginBottom: 20 },
-  heroPills: { flexDirection: 'row', gap: 10 },
-  heroPill: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
-  },
-  heroPillText: { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '500' },
-
-  /* ── Card ── */
-  card: {
-    backgroundColor: COLORS.white,
-    borderTopLeftRadius: 32, borderTopRightRadius: 32,
-    paddingHorizontal: 26, paddingTop: 14, paddingBottom: 36,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  cardHandle: {
-    alignSelf: 'center',
-    width: 40, height: 4, borderRadius: 2,
-    backgroundColor: COLORS.grayLight,
-    marginBottom: 26,
-  },
-  cardTitle: { fontSize: 26, fontWeight: '800', color: COLORS.black, marginBottom: 5 },
-  cardSub: { fontSize: 14, color: COLORS.gray, marginBottom: 28, lineHeight: 20 },
-
-  /* ── Segmented control ── */
-  segWrap: { marginBottom: 28 },
-  segTrack: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.grayLighter,
-    borderRadius: 14, padding: 4,
-    position: 'relative', height: 46,
-  },
-  segThumb: {
-    position: 'absolute',
-    top: 4, left: 4,
-    width: '50%', height: 38,
-    backgroundColor: COLORS.white,
-    borderRadius: 11,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  segThumbRight: { left: '50%', marginLeft: -4 },
-  segBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
-  segLabel: { fontSize: 14, fontWeight: '600', color: COLORS.gray },
-  segLabelActive: { color: COLORS.primary },
 
   /* ── Error ── */
   errorBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: '#FEF2F2',
-    borderRadius: 12, padding: 14, marginBottom: 22,
-    borderLeftWidth: 3, borderLeftColor: COLORS.error,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#FECACA',
   },
-  errorIcon: {
-    width: 22, height: 22, borderRadius: 11,
-    backgroundColor: COLORS.error,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  errorIconText: { color: COLORS.white, fontSize: 13, fontWeight: '900' },
-  errorMsg: { flex: 1, color: '#991B1B', fontSize: 13, lineHeight: 18 },
+  errorText: { color: '#991B1B', fontSize: 14 },
 
-  /* ── Fields ── */
-  fieldLabel: {
-    fontSize: 12, fontWeight: '700', color: COLORS.text,
-    marginBottom: 8, letterSpacing: 0.4, textTransform: 'uppercase',
+  /* ── Phone row ── */
+  phoneRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 28,
   },
-  phoneField: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: COLORS.border,
-    borderRadius: 14, backgroundColor: '#FAFAFA',
-    overflow: 'hidden', marginBottom: 4,
+  countryBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.grayLighter,
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 20,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
   },
-  passField: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: COLORS.border,
-    borderRadius: 14, backgroundColor: '#FAFAFA',
-    overflow: 'hidden',
+  flagText: { fontSize: 24 },
+  countryCode: { fontSize: 17, fontWeight: '700', color: COLORS.black },
+
+  phoneBox: {
+    flex: 1,
+    backgroundColor: COLORS.grayLighter,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    justifyContent: 'center',
   },
-  fieldFocused: { borderColor: COLORS.primary, backgroundColor: COLORS.white },
-  countryChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 16,
-  },
-  countryFlag: { fontSize: 20 },
-  countryCode: { fontSize: 15, fontWeight: '700', color: COLORS.text },
-  fieldDivider: { width: 1, height: 26, backgroundColor: COLORS.border },
   phoneInput: {
-    flex: 1, fontSize: 16, fontWeight: '600', color: COLORS.text,
-    paddingHorizontal: 14, paddingVertical: 16,
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.black,
+    paddingHorizontal: 18,
+    paddingVertical: 20,
+    letterSpacing: 1,
   },
-  passInput: {
-    flex: 1, fontSize: 15, color: COLORS.text,
-    paddingHorizontal: 16, paddingVertical: 16,
+
+  /* ── Admin inputs ── */
+  inputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.grayLighter,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    marginBottom: 28,
   },
-  eyeBtn: { paddingHorizontal: 14 },
-  eyeIcon: { fontSize: 19 },
+  inputBoxGap: { marginBottom: 28 },
+  inputBoxFocused: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.white,
+  },
+  inputIcon: { fontSize: 18, paddingLeft: 16 },
+  inputText: {
+    flex: 1,
+    fontSize: 16,
+    color: COLORS.black,
+    paddingHorizontal: 12,
+    paddingVertical: 20,
+  },
+  eyeBtn: { paddingHorizontal: 16 },
+  eyeIcon: { fontSize: 18 },
 
   /* ── CTA ── */
   cta: {
     backgroundColor: COLORS.primary,
-    borderRadius: 14, paddingVertical: 18,
-    alignItems: 'center', marginTop: 24,
+    borderRadius: 18,
+    paddingVertical: 22,
+    alignItems: 'center',
+    marginBottom: 24,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.3,
     shadowRadius: 12,
-    elevation: 8,
+    elevation: 6,
   },
-  ctaOff: { opacity: 0.55, shadowOpacity: 0 },
-  ctaText: { color: COLORS.white, fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
+  ctaLoading: { opacity: 0.7 },
+  ctaText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.white,
+    letterSpacing: 0.3,
+  },
 
-  /* ── Switch row ── */
-  switchRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 22 },
-  switchPrompt: { fontSize: 14, color: COLORS.gray },
-  switchLink: { fontSize: 14, fontWeight: '800', color: COLORS.primary },
+  /* ── Admin toggle ── */
+  adminToggle: { alignItems: 'center', paddingVertical: 8 },
+  adminToggleText: {
+    fontSize: 14,
+    color: COLORS.gray,
+    fontWeight: '600',
+  },
 
-  /* ── Trust ── */
-  trustRow: { flexDirection: 'row', alignItems: 'center', marginTop: 28, gap: 10 },
-  trustLine: { flex: 1, height: 1, backgroundColor: COLORS.grayLight },
-  trustText: { fontSize: 11, color: COLORS.gray, fontWeight: '500' },
-
-  /* ── Footer ── */
-  footer: { backgroundColor: COLORS.white, paddingVertical: 18, alignItems: 'center' },
-  footerText: { fontSize: 12, color: COLORS.gray },
-  devUrl: { fontSize: 10, color: COLORS.gray, marginTop: 4, opacity: 0.6 },
+  devUrl: {
+    fontSize: 10,
+    color: COLORS.gray,
+    textAlign: 'center',
+    marginTop: 20,
+    opacity: 0.5,
+  },
 });
