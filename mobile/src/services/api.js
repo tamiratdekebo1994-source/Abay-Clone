@@ -8,15 +8,13 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach Firebase ID token to every request — Firebase handles refresh automatically
+// Attach Firebase ID token (stored in SecureStore) to every request
 api.interceptors.request.use(
   async (config) => {
     try {
-      const { auth } = await import('./firebase');
-      if (auth.currentUser) {
-        const token = await auth.currentUser.getIdToken();
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+      const SecureStore = await import('expo-secure-store');
+      const token = await SecureStore.getItemAsync('firebaseIdToken');
+      if (token) config.headers.Authorization = `Bearer ${token}`;
     } catch {}
     return config;
   },
