@@ -24,7 +24,7 @@ export default function OtpVerificationScreen({ navigation, route }) {
   const { phone, purpose, verificationId: initialVerificationId } = route.params;
   const dispatch = useDispatch();
 
-  const [otp, setOtp] = useState('');
+  const [otp, setOtp] = useState(__DEV__ ? '123456' : '');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN);
@@ -32,7 +32,7 @@ export default function OtpVerificationScreen({ navigation, route }) {
   const inputRef = useRef(null);
 
   useEffect(() => {
-    setTimeout(() => inputRef.current?.focus(), 300);
+    if (!__DEV__) setTimeout(() => inputRef.current?.focus(), 300);
     const timer = setInterval(() => {
       setCountdown((c) => {
         if (c <= 1) { clearInterval(timer); return 0; }
@@ -153,6 +153,12 @@ export default function OtpVerificationScreen({ navigation, route }) {
         <Text style={S.instruction}>
           Enter the {OTP_LENGTH}-digit code below
         </Text>
+
+        {__DEV__ && (
+          <View style={S.devBanner}>
+            <Text style={S.devBannerText}>🛠 DEV: code pre-filled as 123456</Text>
+          </View>
+        )}
 
         <TextInput
           ref={inputRef}
@@ -337,4 +343,12 @@ const S = StyleSheet.create({
     fontSize: 12, color: COLORS.gray, textAlign: 'center',
     lineHeight: 18, paddingHorizontal: 20,
   },
+
+  devBanner: {
+    backgroundColor: '#FFF3CD', borderRadius: 10,
+    paddingVertical: 8, paddingHorizontal: 14,
+    marginBottom: 16, alignSelf: 'center',
+    borderWidth: 1, borderColor: '#FCEDB2',
+  },
+  devBannerText: { fontSize: 12, color: '#856404', fontWeight: '600' },
 });
