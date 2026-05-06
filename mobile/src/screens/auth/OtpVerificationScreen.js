@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ActivityIndicator, Dimensions, Alert,
+  StyleSheet, ActivityIndicator, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
@@ -56,8 +56,6 @@ export default function OtpVerificationScreen({ navigation, route }) {
     setIsLoading(true);
     setError('');
     try {
-      // STEP 1 — Firebase verify
-      Alert.alert('DEBUG 1', `Calling Firebase with phone=${phone} code=${code} sessionInfo=${verificationId?.slice(0,20)}...`);
       const res = await fetch(
         `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPhoneNumber?key=${FIREBASE_API_KEY}`,
         {
@@ -68,27 +66,19 @@ export default function OtpVerificationScreen({ navigation, route }) {
       );
       const data = await res.json();
       if (!res.ok) {
-        const msg = data?.error?.message || 'unknown';
-        Alert.alert('DEBUG Firebase FAIL', msg);
+        const msg = data?.error?.message || 'Verification failed. Try again.';
         setError(msg);
         setIsLoading(false);
         return;
       }
 
-      // STEP 2 — Store token
-      Alert.alert('DEBUG 2', 'Firebase OK — storing token');
       await SecureStore.setItemAsync('firebaseIdToken', data.idToken);
 
-      // STEP 3 — Check backend
-      Alert.alert('DEBUG 3', 'Calling /auth/me');
       try {
-        const meRes = await api.get('/auth/me');
-        Alert.alert('DEBUG 4', `Backend OK — dispatching loadUser. User: ${JSON.stringify(meRes.data?.data?.role)}`);
+        await api.get('/auth/me');
         dispatch(loadUser());
       } catch (meErr) {
         const errCode = meErr.response?.data?.code;
-        const errMsg = meErr.response?.data?.message || meErr.message;
-        Alert.alert('DEBUG Backend FAIL', `code=${errCode} msg=${errMsg} status=${meErr.response?.status}`);
         if (errCode === 'NOT_PROVISIONED') {
           navigation.navigate('CompleteProfile', { phone });
         } else {
@@ -97,7 +87,6 @@ export default function OtpVerificationScreen({ navigation, route }) {
       }
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || 'Unknown error';
-      Alert.alert('DEBUG CATCH', msg);
       setError(msg);
       setIsLoading(false);
     }
