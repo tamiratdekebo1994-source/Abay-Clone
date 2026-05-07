@@ -1,6 +1,41 @@
 const { verifyAccessToken } = require('../config/jwt');
 const prisma = require('../config/database');
 
+async function verifyFirebaseToken(token) {
+  // Try Firebase Admin SDK first (requires FIREBASE_SERVICE_ACCOUNT_JSON)
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    try {
+      const { getFirebaseAdmin } = require('../config/firebaseAdmin');
+      const decoded = await getFirebaseAdmin().auth().verifyIdToken(token);
+      return { phone_number: decoded.phone_number || null, email: decoded.email || null, uid: decoded.uid };
+    } catch {
+      // Admin SDK failed — fall through to REST API
+    }
+  }
+
+  // Fallback: Firebase REST API — works with just the API key, no service account needed
+  const apiKey = process.env.FIREBASE_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: token }),
+      },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const u = data.users?.[0];
+    if (!u) return null;
+    return { phone_number: u.phoneNumber || null, email: u.email || null, uid: u.localId };
+  } catch {
+    return null;
+  }
+}
+
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -10,13 +45,10 @@ const authenticate = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
-    // Try Firebase ID token first
-    try {
-      const { getFirebaseAdmin } = require('../config/firebaseAdmin');
-      const decoded = await getFirebaseAdmin().auth().verifyIdToken(token);
-
-      const phone = decoded.phone_number || null;
-      const email = decoded.email || null;
+    // Try Firebase ID token verification
+    const firebaseUser = await verifyFirebaseToken(token);
+    if (firebaseUser) {
+      const { phone_number: phone, email } = firebaseUser;
 
       const conditions = [];
       if (phone) conditions.push({ phone });
@@ -34,9 +66,8 @@ const authenticate = async (req, res, next) => {
           success: false,
           message: 'Account not found. Please complete registration.',
           code: 'NOT_PROVISIONED',
-          firebaseUid: decoded.uid,
-          phone: decoded.phone_number,
-          email: decoded.email,
+          phone,
+          email,
         });
       }
 
@@ -45,18 +76,10 @@ const authenticate = async (req, res, next) => {
       }
 
       req.user = user;
-      next();
-      return;
-    } catch (firebaseError) {
-      // Only fall through to JWT if it's a token-format error (not a Firebase auth error)
-      const code = firebaseError.code || '';
-      if (!code.startsWith('auth/') && firebaseError.errorInfo?.code?.startsWith('auth/') === false) {
-        // If Firebase Admin SDK itself errored (no config, etc.) — fall through silently
-      }
-      // Fall through to JWT
+      return next();
     }
 
-    // Legacy JWT fallback
+    // Legacy JWT fallback (admin email/password login)
     const decoded = verifyAccessToken(token);
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
