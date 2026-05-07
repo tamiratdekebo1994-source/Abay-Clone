@@ -339,23 +339,44 @@ const updateProfile = async (req, res, next) => {
  * Called after a new user signs in with Firebase (phone or email/password) for
  * the first time.  Creates the DB record and returns the user profile.
  */
+async function verifyFirebaseTokenForProvision(token) {
+  // Try Firebase Admin SDK first (requires FIREBASE_SERVICE_ACCOUNT_JSON)
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    try {
+      const { getFirebaseAdmin } = require('../config/firebaseAdmin');
+      const decoded = await getFirebaseAdmin().auth().verifyIdToken(token);
+      return { phone_number: decoded.phone_number || null, email: decoded.email || null, uid: decoded.uid };
+    } catch {}
+  }
+  // Fallback: Firebase REST API — no service account needed
+  const apiKey = process.env.FIREBASE_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: token }) },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const u = data.users?.[0];
+    if (!u) return null;
+    return { phone_number: u.phoneNumber || null, email: u.email || null, uid: u.localId };
+  } catch { return null; }
+}
+
 const provisionFirebaseUser = async (req, res, next) => {
   try {
     const { fullName, role, email: bodyEmail } = req.body;
-    const { firebaseUid, phone, email: fbEmail } = req.body._firebase || {};
 
-    // Re-verify the Firebase token to get the source-of-truth identity
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
       return res.status(401).json({ success: false, message: 'No token provided' });
     }
     const token = authHeader.split(' ')[1];
 
-    const { getFirebaseAdmin } = require('../config/firebaseAdmin');
-    let decoded;
-    try {
-      decoded = await getFirebaseAdmin().auth().verifyIdToken(token);
-    } catch {
+    const decoded = await verifyFirebaseTokenForProvision(token);
+    if (!decoded) {
       return res.status(401).json({ success: false, message: 'Invalid Firebase token' });
     }
 
@@ -386,7 +407,7 @@ const provisionFirebaseUser = async (req, res, next) => {
 
     const user = await prisma.user.create({
       data: {
-        phone: resolvedPhone || `firebase_${decoded.uid}`,
+        phone: resolvedPhone || `firebase_${decoded.uid || Date.now()}`,
         email: resolvedEmail,
         passwordHash: '',
         fullName: fullName.trim(),
