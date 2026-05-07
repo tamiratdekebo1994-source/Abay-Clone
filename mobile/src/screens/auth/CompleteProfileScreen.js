@@ -44,7 +44,10 @@ export default function CompleteProfileScreen({ navigation, route }) {
         dispatch(loadUser());
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      const msg = err?.response?.data?.message
+        || err?.message
+        || 'Registration failed. Please try again.';
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
