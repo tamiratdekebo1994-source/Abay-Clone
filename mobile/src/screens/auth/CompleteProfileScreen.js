@@ -35,6 +35,7 @@ export default function CompleteProfileScreen({ navigation, route }) {
       await api.post('/auth/firebase/provision', {
         fullName: fullName.trim(),
         role,
+        phone,
         email: email.trim() || undefined,
       });
       if (role === 'DRIVER') {
