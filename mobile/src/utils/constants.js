@@ -3,11 +3,8 @@ import Constants from 'expo-constants';
 // Auto-detect the dev server host from Expo's own connection info.
 // Priority: explicit API_BASE_URL env var → Expo bundler host → localhost fallback.
 const _getDevBase = () => {
-  // 1. Explicit override from mobile/.env via app.config.js extra.apiBaseUrl
-  const envUrl = Constants.expoConfig?.extra?.apiBaseUrl;
-  if (envUrl && !envUrl.includes('192.168.1.100')) return envUrl;
-
-  // 2. Derive IP from the Expo bundler connection — try every SDK variant
+  // 1. Derive IP from the Expo bundler connection — most reliable for physical devices
+  //    because the phone already reached this IP to load the bundle.
   const hostUri =
     Constants.expoGoConfig?.debuggerHost ||          // SDK 50+ in Expo Go
     Constants.expoConfig?.hostUri ||                  // SDK 46–49
@@ -21,6 +18,11 @@ const _getDevBase = () => {
       return `http://${ip}:5000`;
     }
   }
+
+  // 2. Explicit override from mobile/.env (only if set and not a placeholder IP)
+  const envUrl = Constants.expoConfig?.extra?.apiBaseUrl;
+  const PLACEHOLDER_IPS = ['192.168.1.100', '21.4.0.206', '10.0.0.1'];
+  if (envUrl && !PLACEHOLDER_IPS.some((p) => envUrl.includes(p))) return envUrl;
 
   // 3. Localhost fallback (works in iOS Simulator / Android Emulator)
   return 'http://localhost:5000';
