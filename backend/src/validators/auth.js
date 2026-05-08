@@ -29,7 +29,7 @@ module.exports = {
   otpVerify: [phone, otpCode],
 
   completeRegistration: [
-    body('verificationToken').notEmpty().withMessage('verificationToken is required'),
+    body('verificationToken').optional(),
     body('fullName')
       .trim()
       .notEmpty().withMessage('Full name is required')
