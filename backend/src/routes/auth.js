@@ -20,6 +20,25 @@ const otpRateLimit = makeRateLimiter({
 router.post('/otp/request', otpRateLimit, validate(authValidators.otpRequest), requestOtp);
 router.post('/otp/verify-login', validate(authValidators.otpVerify), loginWithOtp);
 router.post('/otp/verify-register', validate(authValidators.otpVerify), verifyRegistrationOtp);
+// Pre-processor: generate verificationToken from phone (body or Firebase token)
+router.use('/register/complete', async (req, res, next) => {
+  if (req.body.verificationToken) return next();
+  try {
+    let phone = req.body.phone || null;
+    if (!phone && req.headers.authorization && process.env.FIREBASE_API_KEY) {
+      const token = req.headers.authorization.replace('Bearer ', '');
+      const r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' + process.env.FIREBASE_API_KEY,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: token }) });
+      if (r.ok) { const d = await r.json(); phone = d.users?.[0]?.phoneNumber || null; }
+    }
+    if (phone) {
+      const { generateAccessToken } = require('../config/jwt');
+      req.body.verificationToken = generateAccessToken({ phone, scope: 'COMPLETE_REGISTRATION' });
+    }
+  } catch {}
+  next();
+});
+
 router.post('/register/complete', validate(authValidators.completeRegistration), completeRegistration);
 
 // Password login (admin)
