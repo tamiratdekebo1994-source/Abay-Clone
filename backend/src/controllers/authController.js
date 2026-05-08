@@ -133,26 +133,48 @@ const verifyRegistrationOtp = async (req, res, next) => {
  */
 const completeRegistration = async (req, res, next) => {
   try {
-    const { verificationToken, fullName, role, email } = req.body;
-
-    // Verify the registration token
-    const jwt = require('jsonwebtoken');
-    let decoded;
-    try {
-      decoded = jwt.verify(verificationToken, process.env.JWT_SECRET);
-    } catch {
-      return res.status(400).json({ success: false, message: 'Invalid or expired verification token' });
-    }
-
-    if (decoded.scope !== 'COMPLETE_REGISTRATION') {
-      return res.status(400).json({ success: false, message: 'Invalid token scope' });
-    }
+    const { verificationToken, fullName, role, email, phone: bodyPhone } = req.body;
 
     if (!['DRIVER', 'STORE'].includes(role)) {
       return res.status(400).json({ success: false, message: 'Role must be DRIVER or STORE' });
     }
 
-    const { phone } = decoded;
+    let phone = bodyPhone || null;
+
+    if (verificationToken) {
+      // Legacy flow: JWT verification token from /auth/otp/verify-register
+      const jwt = require('jsonwebtoken');
+      let decoded;
+      try {
+        decoded = jwt.verify(verificationToken, process.env.JWT_SECRET);
+      } catch {
+        return res.status(400).json({ success: false, message: 'Invalid or expired verification token' });
+      }
+      if (decoded.scope !== 'COMPLETE_REGISTRATION') {
+        return res.status(400).json({ success: false, message: 'Invalid token scope' });
+      }
+      phone = decoded.phone;
+    } else {
+      // Firebase flow: get phone from Firebase ID token in Authorization header
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith('Bearer ') && process.env.FIREBASE_API_KEY) {
+        try {
+          const token = authHeader.split(' ')[1];
+          const r = await fetch(
+            `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${process.env.FIREBASE_API_KEY}`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: token }) },
+          );
+          if (r.ok) {
+            const d = await r.json();
+            phone = phone || d.users?.[0]?.phoneNumber || null;
+          }
+        } catch {}
+      }
+    }
+
+    if (!phone) {
+      return res.status(400).json({ success: false, message: 'Could not verify phone number. Please try again.' });
+    }
 
     // Check phone not already registered (race condition guard)
     const existing = await prisma.user.findUnique({ where: { phone } });
