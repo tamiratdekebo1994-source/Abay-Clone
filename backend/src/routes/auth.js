@@ -32,6 +32,26 @@ router.post('/logout', logout);
 // Firebase provisioning — called once after first Firebase sign-in
 router.post('/firebase/provision', provisionFirebaseUser);
 
+// Simple provision endpoint — accepts phone directly in body (no Firebase Admin SDK needed)
+router.post('/firebase/provision-simple', async (req, res) => {
+  try {
+    const prisma = require('../config/database');
+    const { fullName, role, phone, email } = req.body;
+    if (!phone) return res.status(400).json({ success: false, message: 'Phone is required' });
+    if (!fullName?.trim()) return res.status(400).json({ success: false, message: 'Full name is required' });
+    if (!['DRIVER', 'STORE'].includes(role)) return res.status(400).json({ success: false, message: 'Role must be DRIVER or STORE' });
+    const existing = await prisma.user.findFirst({ where: { OR: [{ phone }, ...(email ? [{ email }] : [])] } });
+    if (existing) return res.status(409).json({ success: false, message: 'Account already exists. Please log in instead.' });
+    const user = await prisma.user.create({
+      data: { phone, email: email || null, passwordHash: '', fullName: fullName.trim(), role, isVerified: true },
+      select: { id: true, phone: true, email: true, fullName: true, role: true, createdAt: true },
+    });
+    res.status(201).json({ success: true, message: 'Account created successfully', data: { user } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // Protected
 router.get('/me', authenticate, getMe);
 router.patch('/profile', authenticate, updateProfile);

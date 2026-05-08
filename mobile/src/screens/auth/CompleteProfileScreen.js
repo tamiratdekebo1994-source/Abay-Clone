@@ -32,7 +32,7 @@ export default function CompleteProfileScreen({ navigation, route }) {
     setIsLoading(true);
     setError('');
     try {
-      await api.post('/auth/firebase/provision', {
+      await api.post('/auth/firebase/provision-simple', {
         fullName: fullName.trim(),
         role,
         phone,
