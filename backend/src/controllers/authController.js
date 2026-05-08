@@ -412,10 +412,6 @@ const provisionFirebaseUser = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Phone number is required' });
     }
 
-    if (!resolvedPhone && !resolvedEmail) {
-      return res.status(400).json({ success: false, message: 'Cannot determine identity from Firebase token' });
-    }
-
     if (!fullName?.trim()) {
       return res.status(400).json({ success: false, message: 'Full name is required' });
     }
@@ -436,7 +432,7 @@ const provisionFirebaseUser = async (req, res, next) => {
 
     const user = await prisma.user.create({
       data: {
-        phone: resolvedPhone || `firebase_${decoded.uid || Date.now()}`,
+        phone: resolvedPhone || `firebase_${Date.now()}`,
         email: resolvedEmail,
         passwordHash: '',
         fullName: fullName.trim(),
