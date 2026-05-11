@@ -26,6 +26,7 @@ export default function PhoneEntryScreen({ navigation }) {
   const phoneRef = useRef(null);
 
   const phone = '+251' + localNumber;
+  const phoneReady = localNumber.length === 9;
 
   const formatPhone = (text) => {
     setLocalNumber(text.replace(/\D/g, '').slice(0, 9));
@@ -33,7 +34,7 @@ export default function PhoneEntryScreen({ navigation }) {
   };
 
   const handleSendOtp = async () => {
-    if (localNumber.length < 9) {
+    if (!phoneReady) {
       setError('Enter a valid 9-digit phone number.');
       return;
     }
@@ -95,11 +96,7 @@ export default function PhoneEntryScreen({ navigation }) {
       const data = await res.json();
       if (!res.ok) {
         const msg = data?.error?.message || '';
-        if (
-          msg.includes('INVALID_LOGIN_CREDENTIALS') ||
-          msg.includes('INVALID_PASSWORD') ||
-          msg.includes('EMAIL_NOT_FOUND')
-        ) {
+        if (msg.includes('INVALID_LOGIN_CREDENTIALS') || msg.includes('EMAIL_NOT_FOUND')) {
           setError('Invalid email or password.');
         } else if (msg.includes('TOO_MANY_ATTEMPTS')) {
           setError('Too many attempts. Try again later.');
@@ -129,33 +126,52 @@ export default function PhoneEntryScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
         >
 
-          {/* ── Title ─────────────────────────────────────── */}
-          <View style={S.titleBlock}>
-            <Text style={S.title}>
-              {showAdmin ? 'Admin Sign In' : 'Enter your\nphone number'}
-            </Text>
-            {!showAdmin && (
-              <Text style={S.subtitle}>We'll send a 6-digit verification code</Text>
-            )}
+          {/* ── Back button ───────────────────────────────── */}
+          <TouchableOpacity
+            style={S.backBtn}
+            onPress={() => navigation.canGoBack() && navigation.goBack()}
+          >
+            <Text style={S.backArrow}>←</Text>
+          </TouchableOpacity>
+
+          {/* ── Icon badge ────────────────────────────────── */}
+          <View style={S.iconArea}>
+            <View style={S.iconRing}>
+              <View style={S.iconBox}>
+                <Text style={S.iconEmoji}>{showAdmin ? '🔐' : '📱'}</Text>
+              </View>
+            </View>
           </View>
+
+          {/* ── Heading ───────────────────────────────────── */}
+          <Text style={S.title}>
+            {showAdmin ? 'Admin Sign In' : 'Enter your\nphone number'}
+          </Text>
+          {!showAdmin && (
+            <Text style={S.subtitle}>
+              We'll send a 6-digit verification code via SMS
+            </Text>
+          )}
 
           {/* ── Error ─────────────────────────────────────── */}
           {!!error && (
             <View style={S.errorBox}>
+              <Text style={S.errorIcon}>⚠</Text>
               <Text style={S.errorText}>{error}</Text>
             </View>
           )}
 
           {showAdmin ? (
-            /* ── Admin fields ──────────────────────────────── */
-            <>
+            /* ── Admin fields ─────────────────────────────── */
+            <View style={S.fields}>
+              <Text style={S.fieldLabel}>Email Address</Text>
               <View style={[S.inputBox, emailFocused && S.inputBoxFocused]}>
                 <Text style={S.inputIcon}>✉️</Text>
                 <TextInput
                   style={S.inputText}
                   value={adminEmail}
                   onChangeText={(v) => { setAdminEmail(v); setError(''); }}
-                  placeholder="Email address"
+                  placeholder="admin@example.com"
                   placeholderTextColor={COLORS.gray}
                   keyboardType="email-address"
                   autoCapitalize="none"
@@ -164,13 +180,14 @@ export default function PhoneEntryScreen({ navigation }) {
                 />
               </View>
 
-              <View style={[S.inputBox, S.inputBoxGap, passFocused && S.inputBoxFocused]}>
+              <Text style={[S.fieldLabel, { marginTop: 16 }]}>Password</Text>
+              <View style={[S.inputBox, passFocused && S.inputBoxFocused]}>
                 <Text style={S.inputIcon}>🔒</Text>
                 <TextInput
                   style={[S.inputText, S.flex]}
                   value={adminPassword}
                   onChangeText={(v) => { setAdminPassword(v); setError(''); }}
-                  placeholder="Password"
+                  placeholder="••••••••"
                   placeholderTextColor={COLORS.gray}
                   secureTextEntry={!showPassword}
                   onFocus={() => setPassFocused(true)}
@@ -184,20 +201,21 @@ export default function PhoneEntryScreen({ navigation }) {
                   <Text style={S.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
                 </TouchableOpacity>
               </View>
-            </>
+            </View>
           ) : (
-            /* ── Phone row ─────────────────────────────────── */
-            <View style={S.phoneRow}>
-              <View style={S.countryBox}>
-                <Text style={S.flagText}>🇪🇹</Text>
-                <Text style={S.countryCode}>+251</Text>
-              </View>
-
+            /* ── Phone row ────────────────────────────────── */
+            <View style={S.fields}>
+              <Text style={S.fieldLabel}>Mobile Number · +251</Text>
               <TouchableOpacity
-                style={[S.phoneBox, phoneFocused && S.inputBoxFocused]}
+                style={[S.phoneBox, phoneFocused && S.phoneBoxFocused]}
                 onPress={() => phoneRef.current?.focus()}
                 activeOpacity={1}
               >
+                <View style={S.countryChip}>
+                  <Text style={S.flagEmoji}>🇪🇹</Text>
+                  <Text style={S.countryCode}>+251</Text>
+                </View>
+                <View style={S.phoneDivider} />
                 <TextInput
                   ref={phoneRef}
                   style={S.phoneInput}
@@ -210,38 +228,50 @@ export default function PhoneEntryScreen({ navigation }) {
                   onFocus={() => setPhoneFocused(true)}
                   onBlur={() => setPhoneFocused(false)}
                 />
+                {phoneReady && (
+                  <View style={S.checkBadge}>
+                    <Text style={S.checkText}>✓</Text>
+                  </View>
+                )}
               </TouchableOpacity>
+
+              <Text style={S.privacyNote}>
+                🔒  Your number is only used to verify your identity
+              </Text>
             </View>
           )}
 
-          {/* ── Continue button ────────────────────────────── */}
+          {/* ── CTA ───────────────────────────────────────── */}
           <TouchableOpacity
-            style={[S.cta, isLoading && S.ctaLoading]}
+            style={[
+              S.cta,
+              (isLoading || (!showAdmin && !phoneReady)) && S.ctaOff,
+            ]}
             onPress={showAdmin ? handleAdminLogin : handleSendOtp}
-            disabled={isLoading}
+            disabled={isLoading || (!showAdmin && !phoneReady)}
             activeOpacity={0.85}
           >
             {isLoading ? (
               <ActivityIndicator color={COLORS.white} size="small" />
             ) : (
               <Text style={S.ctaText}>
-                {showAdmin ? 'Sign In' : 'Continue →'}
+                {showAdmin ? 'Sign In' : 'Send Code →'}
               </Text>
             )}
           </TouchableOpacity>
 
-          {/* ── Bottom link ────────────────────────────────── */}
+          {/* ── Admin toggle ──────────────────────────────── */}
           <TouchableOpacity
-            style={S.adminToggle}
+            style={S.toggleRow}
             onPress={() => { setShowAdmin(!showAdmin); setError(''); }}
           >
-            <Text style={S.adminToggleText}>
+            <Text style={S.toggleText}>
               {showAdmin ? '← Back to Phone Login' : 'Admin Sign In'}
             </Text>
           </TouchableOpacity>
 
           {__DEV__ && (
-            <Text style={S.devUrl} numberOfLines={1}>🔌 {DEV_API_BASE}</Text>
+            <Text style={S.devUrl} numberOfLines={1}>🔌  {DEV_API_BASE}</Text>
           )}
 
         </ScrollView>
@@ -253,138 +283,121 @@ export default function PhoneEntryScreen({ navigation }) {
 const S = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.white },
   flex: { flex: 1 },
-  scroll: {
-    flexGrow: 1,
-    paddingHorizontal: 28,
-    paddingTop: 56,
-    paddingBottom: 40,
-    justifyContent: 'center',
-  },
+  scroll: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 16, paddingBottom: 40 },
 
-  /* ── Title ── */
-  titleBlock: { marginBottom: 40 },
+  /* ── Back ── */
+  backBtn: {
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: COLORS.grayLighter,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 28,
+    alignSelf: 'flex-start',
+  },
+  backArrow: { fontSize: 20, color: COLORS.text, lineHeight: 24 },
+
+  /* ── Icon ── */
+  iconArea: { alignItems: 'flex-start', marginBottom: 24 },
+  iconRing: {
+    width: 72, height: 72, borderRadius: 36,
+    borderWidth: 2, borderColor: COLORS.grayLight,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  iconBox: {
+    width: 58, height: 58, borderRadius: 29,
+    backgroundColor: '#E8F5E9',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  iconEmoji: { fontSize: 26 },
+
+  /* ── Heading ── */
   title: {
-    fontSize: 38,
-    fontWeight: '800',
-    color: COLORS.black,
-    lineHeight: 46,
-    letterSpacing: -0.5,
+    fontSize: 32, fontWeight: '800', color: COLORS.black,
+    lineHeight: 38, letterSpacing: -0.5, marginBottom: 10,
   },
   subtitle: {
-    fontSize: 15,
-    color: COLORS.gray,
-    marginTop: 10,
-    lineHeight: 22,
+    fontSize: 15, color: COLORS.gray, lineHeight: 22, marginBottom: 28,
   },
 
   /* ── Error ── */
   errorBox: {
-    backgroundColor: '#FEF2F2',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#FECACA',
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    backgroundColor: '#FEF2F2', borderRadius: 14,
+    padding: 14, marginBottom: 20,
+    borderWidth: 1, borderColor: '#FECACA',
   },
-  errorText: { color: '#991B1B', fontSize: 14 },
+  errorIcon: { fontSize: 14, color: COLORS.error },
+  errorText: { flex: 1, color: '#991B1B', fontSize: 13, lineHeight: 18 },
 
-  /* ── Phone row ── */
-  phoneRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 28,
+  /* ── Fields ── */
+  fields: { marginBottom: 28 },
+  fieldLabel: {
+    fontSize: 12, fontWeight: '700', color: COLORS.text,
+    marginBottom: 10, letterSpacing: 0.4, textTransform: 'uppercase',
   },
-  countryBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: COLORS.grayLighter,
-    borderRadius: 16,
-    paddingHorizontal: 18,
-    paddingVertical: 20,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-  },
-  flagText: { fontSize: 24 },
-  countryCode: { fontSize: 17, fontWeight: '700', color: COLORS.black },
 
+  /* ── Phone input ── */
   phoneBox: {
-    flex: 1,
-    backgroundColor: COLORS.grayLighter,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    justifyContent: 'center',
+    flexDirection: 'row', alignItems: 'center',
+    borderWidth: 2, borderColor: COLORS.border,
+    borderRadius: 18, backgroundColor: COLORS.grayLighter,
+    overflow: 'hidden', height: 64,
   },
+  phoneBoxFocused: { borderColor: COLORS.primary, backgroundColor: COLORS.white },
+  countryChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 16,
+  },
+  flagEmoji: { fontSize: 22 },
+  countryCode: { fontSize: 16, fontWeight: '700', color: COLORS.black },
+  phoneDivider: { width: 1.5, height: 28, backgroundColor: COLORS.border },
   phoneInput: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.black,
-    paddingHorizontal: 18,
-    paddingVertical: 20,
-    letterSpacing: 1,
+    flex: 1, fontSize: 18, fontWeight: '600', color: COLORS.black,
+    paddingHorizontal: 16, letterSpacing: 1,
+  },
+  checkBadge: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center', justifyContent: 'center',
+    marginRight: 16,
+  },
+  checkText: { color: COLORS.white, fontSize: 13, fontWeight: '900' },
+
+  privacyNote: {
+    fontSize: 12, color: COLORS.gray, marginTop: 10, lineHeight: 17,
   },
 
   /* ── Admin inputs ── */
   inputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center',
     backgroundColor: COLORS.grayLighter,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    marginBottom: 28,
+    borderRadius: 16, borderWidth: 2, borderColor: COLORS.border,
   },
-  inputBoxGap: { marginBottom: 28 },
-  inputBoxFocused: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.white,
-  },
+  inputBoxFocused: { borderColor: COLORS.primary, backgroundColor: COLORS.white },
   inputIcon: { fontSize: 18, paddingLeft: 16 },
   inputText: {
-    flex: 1,
-    fontSize: 16,
-    color: COLORS.black,
-    paddingHorizontal: 12,
-    paddingVertical: 20,
+    flex: 1, fontSize: 15, color: COLORS.black,
+    paddingHorizontal: 12, paddingVertical: 18,
   },
   eyeBtn: { paddingHorizontal: 16 },
   eyeIcon: { fontSize: 18 },
 
   /* ── CTA ── */
   cta: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 18,
-    paddingVertical: 22,
-    alignItems: 'center',
-    marginBottom: 24,
+    backgroundColor: COLORS.primary, borderRadius: 18,
+    paddingVertical: 20, alignItems: 'center', marginBottom: 16,
     shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.28, shadowRadius: 16, elevation: 8,
   },
-  ctaLoading: { opacity: 0.7 },
-  ctaText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: COLORS.white,
-    letterSpacing: 0.3,
-  },
+  ctaOff: { opacity: 0.4, shadowOpacity: 0 },
+  ctaText: { fontSize: 17, fontWeight: '800', color: COLORS.white, letterSpacing: 0.3 },
 
-  /* ── Admin toggle ── */
-  adminToggle: { alignItems: 'center', paddingVertical: 8 },
-  adminToggleText: {
-    fontSize: 14,
-    color: COLORS.gray,
-    fontWeight: '600',
-  },
+  /* ── Toggle ── */
+  toggleRow: { alignItems: 'center', paddingVertical: 8 },
+  toggleText: { fontSize: 14, color: COLORS.gray, fontWeight: '600' },
 
   devUrl: {
-    fontSize: 10,
-    color: COLORS.gray,
-    textAlign: 'center',
-    marginTop: 20,
-    opacity: 0.5,
+    fontSize: 10, color: COLORS.gray,
+    textAlign: 'center', marginTop: 20, opacity: 0.4,
   },
 });

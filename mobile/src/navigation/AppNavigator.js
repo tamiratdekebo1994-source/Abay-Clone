@@ -12,6 +12,7 @@ import { driverAPI } from '../services/api';
 import { t } from '../utils/i18n';
 
 // Auth Screens
+import WelcomeScreen from '../screens/auth/WelcomeScreen';
 import PhoneEntryScreen from '../screens/auth/PhoneEntryScreen';
 import OtpVerificationScreen from '../screens/auth/OtpVerificationScreen';
 import CompleteProfileScreen from '../screens/auth/CompleteProfileScreen';
@@ -121,6 +122,7 @@ function MainTabs() {
 function AuthStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="PhoneEntry" component={PhoneEntryScreen} />
       <Stack.Screen
         name="OtpVerification"
