@@ -70,7 +70,11 @@ function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={{
-        headerShown: false,
+        headerShown: true,
+        headerStyle: { backgroundColor: COLORS.primary },
+        headerTintColor: COLORS.white,
+        headerTitleStyle: { fontWeight: '700', fontSize: 18 },
+        headerShadowVisible: false,
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: '#999',
         tabBarStyle: {
@@ -88,8 +92,9 @@ function MainTabs() {
         name="Home"
         component={HomeScreen}
         options={{
+          headerShown: false,
           tabBarLabel: 'Home',
-          tabBarIcon: ({ focused, color }) => (
+          tabBarIcon: ({ focused }) => (
             <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>🏠</Text>
           ),
         }}
@@ -98,6 +103,7 @@ function MainTabs() {
         name="Trips"
         component={OrdersScreen}
         options={{
+          title: 'Trips',
           tabBarLabel: 'Trips',
           tabBarIcon: ({ focused }) => (
             <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>🚗</Text>
@@ -108,6 +114,7 @@ function MainTabs() {
         name="Earnings"
         component={EarningsScreen}
         options={{
+          title: 'Earnings',
           tabBarLabel: 'Earnings',
           tabBarIcon: ({ focused }) => (
             <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>💲</Text>
@@ -118,6 +125,7 @@ function MainTabs() {
         name="Notifications"
         component={NotificationsScreen}
         options={{
+          title: 'Notifications',
           tabBarLabel: 'Notifications',
           tabBarIcon: ({ focused }) => (
             <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>🔔</Text>
