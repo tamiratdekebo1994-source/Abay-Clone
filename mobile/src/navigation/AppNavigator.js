@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
@@ -32,6 +32,7 @@ import OrdersScreen from '../screens/OrdersScreen';
 import ReviewScreen from '../screens/ReviewScreen';
 import HelpSupportScreen from '../screens/HelpSupportScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
+import MoreScreen from '../screens/MoreScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -69,13 +70,17 @@ function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: COLORS.primary },
-        headerTintColor: COLORS.white,
-        tabBarActiveTintColor: COLORS.accent,
-        tabBarInactiveTintColor: 'rgba(255,255,255,0.5)',
-        tabBarStyle: { backgroundColor: COLORS.primary, paddingTop: 8, paddingBottom: 8, borderTopWidth: 0 },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
-        tabBarIconStyle: { marginBottom: 2 },
+        headerShown: false,
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: '#999',
+        tabBarStyle: {
+          backgroundColor: COLORS.white,
+          paddingTop: 6, paddingBottom: 8,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: '#E0E0E0',
+          height: 64,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: 2 },
         sceneStyle: { backgroundColor: C.background },
       }}
     >
@@ -83,36 +88,52 @@ function MainTabs() {
         name="Home"
         component={HomeScreen}
         options={{
-          title: 'Fetno | Fetno',
-          tabBarLabel: t('appName').split(' ')[0],
-          tabBarIcon: ({ focused }) => <Text style={{ fontSize: 22 }}>{focused ? '🏠' : '🏡'}</Text>,
+          tabBarLabel: 'Home',
+          tabBarIcon: ({ focused, color }) => (
+            <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>🏠</Text>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Trips"
+        component={OrdersScreen}
+        options={{
+          tabBarLabel: 'Trips',
+          tabBarIcon: ({ focused }) => (
+            <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>🚗</Text>
+          ),
         }}
       />
       <Tab.Screen
         name="Earnings"
         component={EarningsScreen}
         options={{
-          title: t('earnings'),
-          tabBarLabel: t('earnings'),
-          tabBarIcon: ({ focused }) => <Text style={{ fontSize: 22 }}>{focused ? '💰' : '💵'}</Text>,
+          tabBarLabel: 'Earnings',
+          tabBarIcon: ({ focused }) => (
+            <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>💲</Text>
+          ),
         }}
       />
       <Tab.Screen
-        name="Wallet"
-        component={WalletScreen}
+        name="Notifications"
+        component={NotificationsScreen}
         options={{
-          title: t('wallet'),
-          tabBarLabel: t('wallet'),
-          tabBarIcon: ({ focused }) => <Text style={{ fontSize: 22 }}>{focused ? '👝' : '💼'}</Text>,
+          tabBarLabel: 'Notifications',
+          tabBarIcon: ({ focused }) => (
+            <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>🔔</Text>
+          ),
         }}
       />
       <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
+        name="More"
+        component={MoreScreen}
         options={{
-          title: t('profile'),
-          tabBarLabel: t('profile'),
-          tabBarIcon: ({ focused }) => <Text style={{ fontSize: 22 }}>{focused ? '👤' : '👥'}</Text>,
+          tabBarLabel: 'More',
+          tabBarIcon: ({ focused }) => (
+            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>•••</Text>
+            </View>
+          ),
         }}
       />
     </Tab.Navigator>
