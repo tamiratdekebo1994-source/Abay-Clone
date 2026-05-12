@@ -1,325 +1,210 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform,
-  ActivityIndicator, ScrollView,
+  StyleSheet, ActivityIndicator, ScrollView,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import { useDispatch } from 'react-redux';
 import { loadUser } from '../../store/authStore';
-import { FIREBASE_API_KEY } from '../../services/firebase';
 import { COLORS, DEV_API_BASE, API_URL } from '../../utils/constants';
 
 export default function PhoneEntryScreen({ navigation }) {
   const dispatch = useDispatch();
-  const [localNumber, setLocalNumber] = useState('');
+  const [digits, setDigits] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [showAdmin, setShowAdmin] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [phoneFocused, setPhoneFocused] = useState(false);
-  const [adminPhoneFocused, setAdminPhoneFocused] = useState(false);
-  const [passFocused, setPassFocused] = useState(false);
-  const phoneRef = useRef(null);
+  const inputRef = useRef(null);
 
-  const phone = '+251' + localNumber;
-  const phoneReady = localNumber.length === 9;
+  const fullPhone = '+251' + digits;
+  const phoneReady = digits.length === 9;
 
-  const formatPhone = (text) => {
-    setLocalNumber(text.replace(/\D/g, '').slice(0, 9));
-    setError('');
-  };
-
-  // Backend OTP: send OTP via backend (no Firebase). Returns devCode in dev mode.
-  const sendBackendOtp = async () => {
-    const res = await fetch(`${API_URL}/auth/otp/request`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, purpose: 'LOGIN' }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data?.message || 'Failed to send code.');
-    }
-    // devCode is returned by backend when SMS is not configured
-    return data.data?.devCode || null;
-  };
-
-  const handleSendOtp = async () => {
-    if (!phoneReady) {
-      setError('Enter a valid 9-digit phone number.');
-      return;
-    }
-    setIsLoading(true);
+  const handleContinue = async () => {
+    if (!phoneReady) { setError('Enter a valid 9-digit number.'); return; }
+    setLoading(true);
     setError('');
     try {
-      // In dev mode skip Firebase entirely — reCAPTCHA always fails in dev.
-      // Use backend OTP which prints the code to server console.
-      if (__DEV__) {
-        const devCode = await sendBackendOtp();
-        navigation.navigate('OtpVerification', { phone, purpose: 'LOGIN', verificationId: null, devCode });
-        return;
-      }
-
-      // Production: try Firebase first
-      const res = await fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:sendVerificationCode?key=${FIREBASE_API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phoneNumber: phone, recaptchaToken: 'test' }),
-        },
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        const msg = data?.error?.message || '';
-        if (msg.includes('TOO_LONG') || msg.includes('INVALID_PHONE_NUMBER')) {
-          setError('Invalid phone number. Please check and try again.');
-          return;
-        }
-        // Any Firebase failure → fall back to backend OTP
-        const devCode = await sendBackendOtp();
-        navigation.navigate('OtpVerification', { phone, purpose: 'LOGIN', verificationId: null, devCode });
-        return;
-      }
-      navigation.navigate('OtpVerification', {
-        phone,
-        purpose: 'LOGIN',
-        verificationId: data.sessionInfo,
-      });
-    } catch {
-      setError('Network error. Check your connection.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Admin login calls the backend directly — no Firebase dependency
-  const handleAdminLogin = async () => {
-    const rawPhone = adminPhone.trim();
-    if (!rawPhone || !adminPassword.trim()) {
-      setError('Enter your phone number and password.');
-      return;
-    }
-    // Accept with or without +251 prefix
-    const fullPhone = rawPhone.startsWith('+') ? rawPhone : `+251${rawPhone.replace(/^0/, '')}`;
-    setIsLoading(true);
-    setError('');
-    try {
-      const res = await fetch(`${API_URL}/auth/login`, {
+      // Try LOGIN first; if user not found, switch to REGISTER flow
+      let purpose = 'LOGIN';
+      let res = await fetch(API_URL + '/auth/otp/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: fullPhone, password: adminPassword }),
+        body: JSON.stringify({ phone: fullPhone, purpose }),
+      });
+      let data = await res.json();
+
+      if (!res.ok && res.status === 404) {
+        // New user — send REGISTER OTP instead
+        purpose = 'REGISTER';
+        res = await fetch(API_URL + '/auth/otp/request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: fullPhone, purpose }),
+        });
+        data = await res.json();
+      }
+
+      if (!res.ok) {
+        setError(data.message || 'Could not send code. Try again.');
+        return;
+      }
+
+      navigation.navigate('OtpVerification', {
+        phone: fullPhone,
+        purpose,
+        devCode: data.data && data.data.devCode,
+      });
+    } catch {
+      setError('Network error. Check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdminLogin = async () => {
+    const raw = adminPhone.trim();
+    if (!raw || !adminPassword.trim()) { setError('Enter phone and password.'); return; }
+    const phone = raw.startsWith('+') ? raw : '+251' + raw.replace(/^0/, '');
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(API_URL + '/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, password: adminPassword }),
       });
       const data = await res.json();
       if (!res.ok) {
-        const msg = data?.message || '';
-        if (res.status === 401) {
-          setError('Wrong phone number or password.');
-        } else if (res.status === 429) {
-          setError('Too many attempts. Try again later.');
-        } else {
-          setError(msg || 'Sign in failed. Please try again.');
-        }
+        setError(res.status === 401 ? 'Wrong phone or password.' : data.message || 'Sign in failed.');
         return;
       }
-      // Store the backend JWT as the bearer token — auth middleware validates it via JWT fallback
-      const { accessToken, refreshToken } = data.data;
-      await SecureStore.setItemAsync('firebaseIdToken', accessToken);
-      if (refreshToken) {
-        await SecureStore.setItemAsync('refreshToken', refreshToken);
+      await SecureStore.setItemAsync('firebaseIdToken', data.data.accessToken);
+      if (data.data.refreshToken) {
+        await SecureStore.setItemAsync('refreshToken', data.data.refreshToken);
       }
       dispatch(loadUser());
     } catch {
       setError('Network error. Check your connection.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
     <SafeAreaView style={S.safe} edges={['top', 'bottom']}>
       <KeyboardAvoidingView style={S.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <ScrollView
-          contentContainerStyle={S.scroll}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView contentContainerStyle={S.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-          {/* ── Back button ───────────────────────────────── */}
-          <TouchableOpacity
-            style={S.backBtn}
-            onPress={() => navigation.canGoBack() && navigation.goBack()}
-          >
+          {/* Back */}
+          <TouchableOpacity style={S.backBtn} onPress={() => navigation.canGoBack() && navigation.goBack()}>
             <Text style={S.backArrow}>←</Text>
           </TouchableOpacity>
 
-          {/* ── Icon badge ────────────────────────────────── */}
-          <View style={S.iconArea}>
-            <View style={S.iconRing}>
-              <View style={S.iconBox}>
-                <Text style={S.iconEmoji}>{showAdmin ? '🔐' : '📱'}</Text>
-              </View>
+          {/* Icon */}
+          <View style={S.iconWrap}>
+            <View style={S.iconCircle}>
+              <Text style={S.iconEmoji}>{showAdmin ? '🔐' : '📱'}</Text>
             </View>
           </View>
 
-          {/* ── Heading ───────────────────────────────────── */}
-          <Text style={S.title}>
-            {showAdmin ? 'Admin Sign In' : 'Enter your\nphone number'}
+          {/* Title */}
+          <Text style={S.title}>{showAdmin ? 'Admin Sign In' : 'Enter your\nphone number'}</Text>
+          <Text style={S.subtitle}>
+            {showAdmin
+              ? 'Sign in with your admin phone and password'
+              : 'We\'ll send a 6-digit code to verify your number'}
           </Text>
-          {showAdmin ? (
-            <Text style={S.subtitle}>Sign in with your admin phone number and password</Text>
-          ) : (
-            <Text style={S.subtitle}>We'll send a 6-digit verification code via SMS</Text>
-          )}
 
-          {/* ── Error ─────────────────────────────────────── */}
+          {/* Error */}
           {!!error && (
             <View style={S.errorBox}>
-              <Text style={S.errorIcon}>⚠</Text>
-              <Text style={S.errorText}>{error}</Text>
+              <Text style={S.errorText}>⚠  {error}</Text>
             </View>
           )}
 
           {showAdmin ? (
-            /* ── Admin fields (phone + password, calls backend directly) ── */
             <View style={S.fields}>
-              <Text style={S.fieldLabel}>Phone Number</Text>
-              <View style={[S.inputBox, adminPhoneFocused && S.inputBoxFocused]}>
+              <Text style={S.label}>PHONE NUMBER</Text>
+              <View style={S.inputRow}>
                 <Text style={S.inputIcon}>📱</Text>
                 <TextInput
-                  style={S.inputText}
+                  style={S.textInput}
                   value={adminPhone}
-                  onChangeText={(v) => { setAdminPhone(v); setError(''); }}
-                  placeholder="+251 9XX XXX XXXX"
+                  onChangeText={v => { setAdminPhone(v); setError(''); }}
+                  placeholder="+251 9XX XXX XXX"
                   placeholderTextColor={COLORS.gray}
                   keyboardType="phone-pad"
-                  autoCapitalize="none"
-                  onFocus={() => setAdminPhoneFocused(true)}
-                  onBlur={() => setAdminPhoneFocused(false)}
                 />
               </View>
-
-              <Text style={[S.fieldLabel, { marginTop: 16 }]}>Password</Text>
-              <View style={[S.inputBox, passFocused && S.inputBoxFocused]}>
+              <Text style={[S.label, { marginTop: 16 }]}>PASSWORD</Text>
+              <View style={S.inputRow}>
                 <Text style={S.inputIcon}>🔒</Text>
                 <TextInput
-                  style={[S.inputText, S.flex]}
+                  style={[S.textInput, { flex: 1 }]}
                   value={adminPassword}
-                  onChangeText={(v) => { setAdminPassword(v); setError(''); }}
+                  onChangeText={v => { setAdminPassword(v); setError(''); }}
                   placeholder="••••••••"
                   placeholderTextColor={COLORS.gray}
-                  secureTextEntry={!showPassword}
-                  onFocus={() => setPassFocused(true)}
-                  onBlur={() => setPassFocused(false)}
+                  secureTextEntry={!showPass}
                 />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                  style={S.eyeBtn}
-                >
-                  <Text style={S.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+                <TouchableOpacity onPress={() => setShowPass(!showPass)} style={S.eyeBtn}>
+                  <Text style={S.eyeIcon}>{showPass ? '🙈' : '👁️'}</Text>
                 </TouchableOpacity>
               </View>
-
-              <Text style={S.adminHint}>
-                Admin accounts are created via the server setup script.
-              </Text>
             </View>
           ) : (
-            /* ── Phone row ────────────────────────────────── */
             <View style={S.fields}>
-              <Text style={S.fieldLabel}>Mobile Number · +251</Text>
-              <TouchableOpacity
-                style={[S.phoneBox, phoneFocused && S.phoneBoxFocused]}
-                onPress={() => phoneRef.current?.focus()}
-                activeOpacity={1}
-              >
-                <View style={S.countryChip}>
-                  <Text style={S.flagEmoji}>🇪🇹</Text>
+              <Text style={S.label}>MOBILE NUMBER</Text>
+              <TouchableOpacity style={S.phoneRow} onPress={() => inputRef.current?.focus()} activeOpacity={1}>
+                <View style={S.countryBadge}>
+                  <Text style={S.flag}>🇪🇹</Text>
                   <Text style={S.countryCode}>+251</Text>
                 </View>
-                <View style={S.phoneDivider} />
+                <View style={S.divider} />
                 <TextInput
-                  ref={phoneRef}
+                  ref={inputRef}
                   style={S.phoneInput}
-                  value={localNumber}
-                  onChangeText={formatPhone}
+                  value={digits}
+                  onChangeText={v => { setDigits(v.replace(/\D/g, '').slice(0, 9)); setError(''); }}
                   keyboardType="phone-pad"
                   maxLength={9}
-                  placeholder="9XX XXX XXXX"
+                  placeholder="9XX XXX XXX"
                   placeholderTextColor={COLORS.gray}
-                  onFocus={() => setPhoneFocused(true)}
-                  onBlur={() => setPhoneFocused(false)}
                 />
                 {phoneReady && (
-                  <View style={S.checkBadge}>
+                  <View style={S.checkMark}>
                     <Text style={S.checkText}>✓</Text>
                   </View>
                 )}
               </TouchableOpacity>
-
-              <Text style={S.privacyNote}>
-                🔒  Your number is only used to verify your identity
-              </Text>
-
-              {__DEV__ && phoneReady && (
-                <TouchableOpacity
-                  style={S.devBypass}
-                  onPress={async () => {
-                    setIsLoading(true);
-                    setError('');
-                    try {
-                      const devCode = await sendBackendOtp();
-                      navigation.navigate('OtpVerification', { phone, purpose: 'LOGIN', verificationId: null, devCode });
-                    } catch (e) {
-                      setError(e.message || 'Backend OTP failed.');
-                    } finally {
-                      setIsLoading(false);
-                    }
-                  }}
-                >
-                  <Text style={S.devBypassText}>🛠 DEV: Use Backend OTP (no Firebase)</Text>
-                </TouchableOpacity>
-              )}
+              <Text style={S.hint}>🔒  Your number is only used to verify your identity</Text>
             </View>
           )}
 
-          {/* ── CTA ───────────────────────────────────────── */}
+          {/* CTA */}
           <TouchableOpacity
-            style={[
-              S.cta,
-              (isLoading || (!showAdmin && !phoneReady)) && S.ctaOff,
-            ]}
-            onPress={showAdmin ? handleAdminLogin : handleSendOtp}
-            disabled={isLoading || (!showAdmin && !phoneReady)}
+            style={[S.cta, (loading || (!showAdmin && !phoneReady)) && S.ctaOff]}
+            onPress={showAdmin ? handleAdminLogin : handleContinue}
+            disabled={loading || (!showAdmin && !phoneReady)}
             activeOpacity={0.85}
           >
-            {isLoading ? (
-              <ActivityIndicator color={COLORS.white} size="small" />
-            ) : (
-              <Text style={S.ctaText}>
-                {showAdmin ? 'Sign In' : 'Send Code →'}
-              </Text>
-            )}
+            {loading
+              ? <ActivityIndicator color={COLORS.white} />
+              : <Text style={S.ctaText}>{showAdmin ? 'Sign In' : 'Continue  →'}</Text>
+            }
           </TouchableOpacity>
 
-          {/* ── Admin toggle ──────────────────────────────── */}
-          <TouchableOpacity
-            style={S.toggleRow}
-            onPress={() => { setShowAdmin(!showAdmin); setError(''); }}
-          >
-            <Text style={S.toggleText}>
-              {showAdmin ? '← Back to Phone Login' : 'Admin Sign In'}
-            </Text>
+          {/* Admin toggle */}
+          <TouchableOpacity style={S.toggleRow} onPress={() => { setShowAdmin(!showAdmin); setError(''); }}>
+            <Text style={S.toggleText}>{showAdmin ? '← Back to Phone Login' : 'Admin Sign In'}</Text>
           </TouchableOpacity>
 
-          {__DEV__ && (
-            <Text style={S.devUrl} numberOfLines={1}>🔌  {DEV_API_BASE}</Text>
-          )}
+          {__DEV__ && <Text style={S.devNote}>🔌  {DEV_API_BASE}</Text>}
 
         </ScrollView>
       </KeyboardAvoidingView>
@@ -332,131 +217,77 @@ const S = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 16, paddingBottom: 40 },
 
-  /* ── Back ── */
   backBtn: {
     width: 42, height: 42, borderRadius: 21,
-    backgroundColor: COLORS.grayLighter,
+    backgroundColor: '#F5F5F5',
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: 28,
-    alignSelf: 'flex-start',
+    marginBottom: 32, alignSelf: 'flex-start',
   },
-  backArrow: { fontSize: 20, color: COLORS.text, lineHeight: 24 },
+  backArrow: { fontSize: 20, color: COLORS.text },
 
-  /* ── Icon ── */
-  iconArea: { alignItems: 'flex-start', marginBottom: 24 },
-  iconRing: {
+  iconWrap: { marginBottom: 28 },
+  iconCircle: {
     width: 72, height: 72, borderRadius: 36,
-    borderWidth: 2, borderColor: COLORS.grayLight,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  iconBox: {
-    width: 58, height: 58, borderRadius: 29,
     backgroundColor: '#E8F5E9',
     alignItems: 'center', justifyContent: 'center',
   },
-  iconEmoji: { fontSize: 26 },
+  iconEmoji: { fontSize: 30 },
 
-  /* ── Heading ── */
-  title: {
-    fontSize: 32, fontWeight: '800', color: COLORS.black,
-    lineHeight: 38, letterSpacing: -0.5, marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 15, color: COLORS.gray, lineHeight: 22, marginBottom: 28,
-  },
+  title: { fontSize: 32, fontWeight: '800', color: COLORS.black, lineHeight: 38, marginBottom: 10 },
+  subtitle: { fontSize: 15, color: COLORS.gray, lineHeight: 22, marginBottom: 28 },
 
-  /* ── Error ── */
   errorBox: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
     backgroundColor: '#FEF2F2', borderRadius: 14,
     padding: 14, marginBottom: 20,
     borderWidth: 1, borderColor: '#FECACA',
   },
-  errorIcon: { fontSize: 14, color: COLORS.error },
-  errorText: { flex: 1, color: '#991B1B', fontSize: 13, lineHeight: 18 },
+  errorText: { color: '#991B1B', fontSize: 13, lineHeight: 18 },
 
-  /* ── Fields ── */
   fields: { marginBottom: 28 },
-  fieldLabel: {
-    fontSize: 12, fontWeight: '700', color: COLORS.text,
-    marginBottom: 10, letterSpacing: 0.4, textTransform: 'uppercase',
-  },
+  label: { fontSize: 11, fontWeight: '700', color: COLORS.gray, letterSpacing: 0.8, marginBottom: 8 },
 
-  /* ── Phone input ── */
-  phoneBox: {
+  phoneRow: {
     flexDirection: 'row', alignItems: 'center',
-    borderWidth: 2, borderColor: COLORS.border,
-    borderRadius: 18, backgroundColor: COLORS.grayLighter,
-    overflow: 'hidden', height: 64,
+    borderWidth: 2, borderColor: COLORS.border, borderRadius: 18,
+    backgroundColor: '#F9F9F9', height: 64, overflow: 'hidden',
   },
-  phoneBoxFocused: { borderColor: COLORS.primary, backgroundColor: COLORS.white },
-  countryChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 16,
-  },
-  flagEmoji: { fontSize: 22 },
+  countryBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16 },
+  flag: { fontSize: 22 },
   countryCode: { fontSize: 16, fontWeight: '700', color: COLORS.black },
-  phoneDivider: { width: 1.5, height: 28, backgroundColor: COLORS.border },
+  divider: { width: 1.5, height: 28, backgroundColor: COLORS.border },
   phoneInput: {
     flex: 1, fontSize: 18, fontWeight: '600', color: COLORS.black,
     paddingHorizontal: 16, letterSpacing: 1,
   },
-  checkBadge: {
+  checkMark: {
     width: 28, height: 28, borderRadius: 14,
     backgroundColor: COLORS.primary,
-    alignItems: 'center', justifyContent: 'center',
-    marginRight: 16,
+    alignItems: 'center', justifyContent: 'center', marginRight: 16,
   },
   checkText: { color: COLORS.white, fontSize: 13, fontWeight: '900' },
+  hint: { fontSize: 12, color: COLORS.gray, marginTop: 10 },
 
-  privacyNote: {
-    fontSize: 12, color: COLORS.gray, marginTop: 10, lineHeight: 17,
-  },
-
-  adminHint: {
-    fontSize: 11, color: COLORS.gray, marginTop: 12, lineHeight: 16, fontStyle: 'italic',
-  },
-
-  /* ── Admin inputs ── */
-  inputBox: {
+  inputRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.grayLighter,
-    borderRadius: 16, borderWidth: 2, borderColor: COLORS.border,
+    borderWidth: 2, borderColor: COLORS.border, borderRadius: 16,
+    backgroundColor: '#F9F9F9',
   },
-  inputBoxFocused: { borderColor: COLORS.primary, backgroundColor: COLORS.white },
   inputIcon: { fontSize: 18, paddingLeft: 16 },
-  inputText: {
-    flex: 1, fontSize: 15, color: COLORS.black,
-    paddingHorizontal: 12, paddingVertical: 18,
-  },
+  textInput: { flex: 1, fontSize: 15, color: COLORS.black, paddingHorizontal: 12, paddingVertical: 18 },
   eyeBtn: { paddingHorizontal: 16 },
   eyeIcon: { fontSize: 18 },
 
-  /* ── CTA ── */
   cta: {
     backgroundColor: COLORS.primary, borderRadius: 18,
     paddingVertical: 20, alignItems: 'center', marginBottom: 16,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 8 },
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.28, shadowRadius: 16, elevation: 8,
   },
   ctaOff: { opacity: 0.4, shadowOpacity: 0 },
-  ctaText: { fontSize: 17, fontWeight: '800', color: COLORS.white, letterSpacing: 0.3 },
+  ctaText: { fontSize: 17, fontWeight: '800', color: COLORS.white },
 
-  /* ── Toggle ── */
   toggleRow: { alignItems: 'center', paddingVertical: 8 },
   toggleText: { fontSize: 14, color: COLORS.gray, fontWeight: '600' },
 
-  devUrl: {
-    fontSize: 10, color: COLORS.gray,
-    textAlign: 'center', marginTop: 20, opacity: 0.4,
-  },
-
-  devBypass: {
-    marginTop: 12, alignItems: 'center',
-    backgroundColor: '#FFF3CD', borderRadius: 10,
-    paddingVertical: 8, paddingHorizontal: 14,
-    borderWidth: 1, borderColor: '#FCEDB2',
-  },
-  devBypassText: { fontSize: 11, color: '#856404', fontWeight: '600' },
+  devNote: { fontSize: 10, color: COLORS.gray, textAlign: 'center', marginTop: 20, opacity: 0.4 },
 });
