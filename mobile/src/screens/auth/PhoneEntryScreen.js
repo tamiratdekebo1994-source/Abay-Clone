@@ -56,6 +56,15 @@ export default function PhoneEntryScreen({ navigation }) {
     setIsLoading(true);
     setError('');
     try {
+      // In dev mode skip Firebase entirely — reCAPTCHA always fails in dev.
+      // Use backend OTP which prints the code to server console.
+      if (__DEV__) {
+        const devCode = await sendBackendOtp();
+        navigation.navigate('OtpVerification', { phone, purpose: 'LOGIN', verificationId: null, devCode });
+        return;
+      }
+
+      // Production: try Firebase first
       const res = await fetch(
         `https://identitytoolkit.googleapis.com/v1/accounts:sendVerificationCode?key=${FIREBASE_API_KEY}`,
         {
@@ -71,13 +80,9 @@ export default function PhoneEntryScreen({ navigation }) {
           setError('Invalid phone number. Please check and try again.');
           return;
         }
-        // Firebase quota exceeded or unavailable → fall back to backend OTP
-        if (msg.includes('QUOTA_EXCEEDED') || msg.includes('BILLING_NOT_ENABLED') || msg.includes('TOO_MANY_ATTEMPTS')) {
-          const devCode = await sendBackendOtp();
-          navigation.navigate('OtpVerification', { phone, purpose: 'LOGIN', verificationId: null, devCode });
-          return;
-        }
-        setError(msg || 'Failed to send code. Try again.');
+        // Any Firebase failure → fall back to backend OTP
+        const devCode = await sendBackendOtp();
+        navigation.navigate('OtpVerification', { phone, purpose: 'LOGIN', verificationId: null, devCode });
         return;
       }
       navigation.navigate('OtpVerification', {
