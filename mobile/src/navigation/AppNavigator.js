@@ -84,6 +84,9 @@ function MainTabs() {
           borderTopColor: '#E0E0E0',
           height: 64,
         },
+        tabBarBackground: () => (
+          <View style={{ flex: 1, backgroundColor: COLORS.white, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E0E0E0' }} />
+        ),
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: 2 },
         sceneStyle: { backgroundColor: C.background },
       }}
