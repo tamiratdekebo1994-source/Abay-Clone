@@ -44,8 +44,9 @@ export default function HomeScreen({ navigation }) {
   }, []);
 
   const connectSocket = async () => {
+    if (user?.role !== 'DRIVER') return;
     try {
-      const token = await SecureStore.getItemAsync('accessToken');
+      const token = await SecureStore.getItemAsync('firebaseIdToken');
       if (!token) return;
       const socket = io(SOCKET_URL, { auth: { token }, transports: ['websocket'] });
 
@@ -84,6 +85,7 @@ export default function HomeScreen({ navigation }) {
   };
 
   const loadData = async () => {
+    if (user?.role !== 'DRIVER') return;
     try {
       const [earningsRes, ordersRes] = await Promise.all([
         driverAPI.getEarnings('today'),
@@ -100,7 +102,7 @@ export default function HomeScreen({ navigation }) {
   };
 
   const loadNearbyOrders = async () => {
-    if (!isOnline || !location) return;
+    if (user?.role !== 'DRIVER' || !isOnline || !location) return;
     try {
       const { data } = await driverAPI.getNearbyOrders(
         location.latitude, location.longitude, 10
@@ -154,6 +156,20 @@ export default function HomeScreen({ navigation }) {
   };
 
   const styles = getStyles(C);
+
+  if (user?.role === 'ADMIN') {
+    return (
+      <View style={[styles.container, { alignItems: 'center', justifyContent: 'center', padding: 32 }]}>
+        <Text style={{ fontSize: 48, marginBottom: 16 }}>🔐</Text>
+        <Text style={{ fontSize: 22, fontWeight: '800', color: C.text, marginBottom: 8 }}>Admin Account</Text>
+        <Text style={{ fontSize: 15, color: C.gray, textAlign: 'center', lineHeight: 22 }}>
+          Logged in as admin.{'\n'}Use the web dashboard for admin controls.
+        </Text>
+        <Text style={{ marginTop: 16, fontSize: 13, color: C.gray }}>👤 {user.fullName}</Text>
+        <Text style={{ fontSize: 13, color: C.gray }}>📱 {user.phone}</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
