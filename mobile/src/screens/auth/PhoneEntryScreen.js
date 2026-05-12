@@ -9,19 +9,19 @@ import * as SecureStore from 'expo-secure-store';
 import { useDispatch } from 'react-redux';
 import { loadUser } from '../../store/authStore';
 import { FIREBASE_API_KEY } from '../../services/firebase';
-import { COLORS, DEV_API_BASE } from '../../utils/constants';
+import { COLORS, DEV_API_BASE, API_URL } from '../../utils/constants';
 
 export default function PhoneEntryScreen({ navigation }) {
   const dispatch = useDispatch();
   const [localNumber, setLocalNumber] = useState('');
-  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPhone, setAdminPhone] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [showAdmin, setShowAdmin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [phoneFocused, setPhoneFocused] = useState(false);
-  const [emailFocused, setEmailFocused] = useState(false);
+  const [adminPhoneFocused, setAdminPhoneFocused] = useState(false);
   const [passFocused, setPassFocused] = useState(false);
   const phoneRef = useRef(null);
 
@@ -31,6 +31,21 @@ export default function PhoneEntryScreen({ navigation }) {
   const formatPhone = (text) => {
     setLocalNumber(text.replace(/\D/g, '').slice(0, 9));
     setError('');
+  };
+
+  // Backend OTP: send OTP via backend (no Firebase). Returns devCode in dev mode.
+  const sendBackendOtp = async () => {
+    const res = await fetch(`${API_URL}/auth/otp/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, purpose: 'LOGIN' }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data?.message || 'Failed to send code.');
+    }
+    // devCode is returned by backend when SMS is not configured
+    return data.data?.devCode || null;
   };
 
   const handleSendOtp = async () => {
@@ -54,11 +69,15 @@ export default function PhoneEntryScreen({ navigation }) {
         const msg = data?.error?.message || '';
         if (msg.includes('TOO_LONG') || msg.includes('INVALID_PHONE_NUMBER')) {
           setError('Invalid phone number. Please check and try again.');
-        } else if (msg.includes('QUOTA_EXCEEDED')) {
-          setError('Too many requests. Please try again later.');
-        } else {
-          setError(msg || 'Failed to send code. Try again.');
+          return;
         }
+        // Firebase quota exceeded or unavailable → fall back to backend OTP
+        if (msg.includes('QUOTA_EXCEEDED') || msg.includes('BILLING_NOT_ENABLED') || msg.includes('TOO_MANY_ATTEMPTS')) {
+          const devCode = await sendBackendOtp();
+          navigation.navigate('OtpVerification', { phone, purpose: 'LOGIN', verificationId: null, devCode });
+          return;
+        }
+        setError(msg || 'Failed to send code. Try again.');
         return;
       }
       navigation.navigate('OtpVerification', {
@@ -73,41 +92,40 @@ export default function PhoneEntryScreen({ navigation }) {
     }
   };
 
+  // Admin login calls the backend directly — no Firebase dependency
   const handleAdminLogin = async () => {
-    if (!adminEmail.trim() || !adminPassword.trim()) {
-      setError('Enter your email and password.');
+    const rawPhone = adminPhone.trim();
+    if (!rawPhone || !adminPassword.trim()) {
+      setError('Enter your phone number and password.');
       return;
     }
+    // Accept with or without +251 prefix
+    const fullPhone = rawPhone.startsWith('+') ? rawPhone : `+251${rawPhone.replace(/^0/, '')}`;
     setIsLoading(true);
     setError('');
     try {
-      const res = await fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: adminEmail.trim(),
-            password: adminPassword,
-            returnSecureToken: true,
-          }),
-        },
-      );
+      const res = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: fullPhone, password: adminPassword }),
+      });
       const data = await res.json();
       if (!res.ok) {
-        const msg = data?.error?.message || '';
-        if (msg.includes('INVALID_LOGIN_CREDENTIALS') || msg.includes('EMAIL_NOT_FOUND')) {
-          setError('Invalid email or password.');
-        } else if (msg.includes('TOO_MANY_ATTEMPTS')) {
+        const msg = data?.message || '';
+        if (res.status === 401) {
+          setError('Wrong phone number or password.');
+        } else if (res.status === 429) {
           setError('Too many attempts. Try again later.');
         } else {
           setError(msg || 'Sign in failed. Please try again.');
         }
         return;
       }
-      await SecureStore.setItemAsync('firebaseIdToken', data.idToken);
-      if (data.refreshToken) {
-        await SecureStore.setItemAsync('firebaseRefreshToken', data.refreshToken);
+      // Store the backend JWT as the bearer token — auth middleware validates it via JWT fallback
+      const { accessToken, refreshToken } = data.data;
+      await SecureStore.setItemAsync('firebaseIdToken', accessToken);
+      if (refreshToken) {
+        await SecureStore.setItemAsync('refreshToken', refreshToken);
       }
       dispatch(loadUser());
     } catch {
@@ -147,10 +165,10 @@ export default function PhoneEntryScreen({ navigation }) {
           <Text style={S.title}>
             {showAdmin ? 'Admin Sign In' : 'Enter your\nphone number'}
           </Text>
-          {!showAdmin && (
-            <Text style={S.subtitle}>
-              We'll send a 6-digit verification code via SMS
-            </Text>
+          {showAdmin ? (
+            <Text style={S.subtitle}>Sign in with your admin phone number and password</Text>
+          ) : (
+            <Text style={S.subtitle}>We'll send a 6-digit verification code via SMS</Text>
           )}
 
           {/* ── Error ─────────────────────────────────────── */}
@@ -162,21 +180,21 @@ export default function PhoneEntryScreen({ navigation }) {
           )}
 
           {showAdmin ? (
-            /* ── Admin fields ─────────────────────────────── */
+            /* ── Admin fields (phone + password, calls backend directly) ── */
             <View style={S.fields}>
-              <Text style={S.fieldLabel}>Email Address</Text>
-              <View style={[S.inputBox, emailFocused && S.inputBoxFocused]}>
-                <Text style={S.inputIcon}>✉️</Text>
+              <Text style={S.fieldLabel}>Phone Number</Text>
+              <View style={[S.inputBox, adminPhoneFocused && S.inputBoxFocused]}>
+                <Text style={S.inputIcon}>📱</Text>
                 <TextInput
                   style={S.inputText}
-                  value={adminEmail}
-                  onChangeText={(v) => { setAdminEmail(v); setError(''); }}
-                  placeholder="admin@example.com"
+                  value={adminPhone}
+                  onChangeText={(v) => { setAdminPhone(v); setError(''); }}
+                  placeholder="+251 9XX XXX XXXX"
                   placeholderTextColor={COLORS.gray}
-                  keyboardType="email-address"
+                  keyboardType="phone-pad"
                   autoCapitalize="none"
-                  onFocus={() => setEmailFocused(true)}
-                  onBlur={() => setEmailFocused(false)}
+                  onFocus={() => setAdminPhoneFocused(true)}
+                  onBlur={() => setAdminPhoneFocused(false)}
                 />
               </View>
 
@@ -201,6 +219,10 @@ export default function PhoneEntryScreen({ navigation }) {
                   <Text style={S.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
                 </TouchableOpacity>
               </View>
+
+              <Text style={S.adminHint}>
+                Admin accounts are created via the server setup script.
+              </Text>
             </View>
           ) : (
             /* ── Phone row ────────────────────────────────── */
@@ -238,6 +260,26 @@ export default function PhoneEntryScreen({ navigation }) {
               <Text style={S.privacyNote}>
                 🔒  Your number is only used to verify your identity
               </Text>
+
+              {__DEV__ && phoneReady && (
+                <TouchableOpacity
+                  style={S.devBypass}
+                  onPress={async () => {
+                    setIsLoading(true);
+                    setError('');
+                    try {
+                      const devCode = await sendBackendOtp();
+                      navigation.navigate('OtpVerification', { phone, purpose: 'LOGIN', verificationId: null, devCode });
+                    } catch (e) {
+                      setError(e.message || 'Backend OTP failed.');
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
+                >
+                  <Text style={S.devBypassText}>🛠 DEV: Use Backend OTP (no Firebase)</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
 
@@ -366,6 +408,10 @@ const S = StyleSheet.create({
     fontSize: 12, color: COLORS.gray, marginTop: 10, lineHeight: 17,
   },
 
+  adminHint: {
+    fontSize: 11, color: COLORS.gray, marginTop: 12, lineHeight: 16, fontStyle: 'italic',
+  },
+
   /* ── Admin inputs ── */
   inputBox: {
     flexDirection: 'row', alignItems: 'center',
@@ -400,4 +446,12 @@ const S = StyleSheet.create({
     fontSize: 10, color: COLORS.gray,
     textAlign: 'center', marginTop: 20, opacity: 0.4,
   },
+
+  devBypass: {
+    marginTop: 12, alignItems: 'center',
+    backgroundColor: '#FFF3CD', borderRadius: 10,
+    paddingVertical: 8, paddingHorizontal: 14,
+    borderWidth: 1, borderColor: '#FCEDB2',
+  },
+  devBypassText: { fontSize: 11, color: '#856404', fontWeight: '600' },
 });

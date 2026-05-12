@@ -9,7 +9,7 @@ import { useDispatch } from 'react-redux';
 import { loadUser } from '../../store/authStore';
 import { FIREBASE_API_KEY } from '../../services/firebase';
 import api from '../../services/api';
-import { COLORS } from '../../utils/constants';
+import { COLORS, API_URL } from '../../utils/constants';
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 60;
@@ -21,10 +21,13 @@ function maskPhone(phone) {
 }
 
 export default function OtpVerificationScreen({ navigation, route }) {
-  const { phone, purpose, verificationId: initialVerificationId } = route.params;
+  const { phone, purpose, verificationId: initialVerificationId, devCode } = route.params;
   const dispatch = useDispatch();
 
-  const [otp, setOtp] = useState(__DEV__ ? '123456' : '');
+  // verificationId === null means: use backend OTP (no Firebase session)
+  const useBackendOtp = !initialVerificationId;
+
+  const [otp, setOtp] = useState(__DEV__ ? (devCode || '123456') : '');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN);
@@ -48,6 +51,61 @@ export default function OtpVerificationScreen({ navigation, route }) {
     }
   }, [otp]);
 
+  // Verify via Firebase (standard flow)
+  const verifyWithFirebase = async (code) => {
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPhoneNumber?key=${FIREBASE_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: phone, code, sessionInfo: verificationId }),
+      },
+    );
+    const data = await res.json();
+    if (!res.ok) {
+      const msg = data?.error?.message || 'Verification failed. Try again.';
+      throw new Error(msg);
+    }
+
+    await SecureStore.setItemAsync('firebaseIdToken', data.idToken);
+
+    try {
+      await api.get('/auth/me');
+      dispatch(loadUser());
+    } catch (meErr) {
+      const errCode = meErr.response?.data?.code;
+      if (errCode === 'NOT_PROVISIONED') {
+        navigation.navigate('CompleteProfile', { phone });
+      } else {
+        throw meErr;
+      }
+    }
+  };
+
+  // Verify via backend OTP (no Firebase — used when Firebase is unavailable or for testing)
+  const verifyWithBackend = async (code) => {
+    // LOGIN: verify OTP → get JWT tokens directly
+    const res = await fetch(`${API_URL}/auth/otp/verify-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, code }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      const msg = data?.message || 'Verification failed. Try again.';
+      throw new Error(msg);
+    }
+
+    // Store JWT as bearer token — auth middleware JWT fallback validates it
+    const { accessToken, refreshToken } = data.data;
+    await SecureStore.setItemAsync('firebaseIdToken', accessToken);
+    if (refreshToken) {
+      await SecureStore.setItemAsync('refreshToken', refreshToken);
+    }
+    dispatch(loadUser());
+  };
+
   const handleVerify = async (code = otp) => {
     if (code.length !== OTP_LENGTH) {
       setError(`Enter the ${OTP_LENGTH}-digit code sent to your phone`);
@@ -56,34 +114,10 @@ export default function OtpVerificationScreen({ navigation, route }) {
     setIsLoading(true);
     setError('');
     try {
-      const res = await fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPhoneNumber?key=${FIREBASE_API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phoneNumber: phone, code, sessionInfo: verificationId }),
-        },
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        const msg = data?.error?.message || 'Verification failed. Try again.';
-        setError(msg);
-        setIsLoading(false);
-        return;
-      }
-
-      await SecureStore.setItemAsync('firebaseIdToken', data.idToken);
-
-      try {
-        await api.get('/auth/me');
-        dispatch(loadUser());
-      } catch (meErr) {
-        const errCode = meErr.response?.data?.code;
-        if (errCode === 'NOT_PROVISIONED') {
-          navigation.navigate('CompleteProfile', { phone });
-        } else {
-          throw meErr;
-        }
+      if (useBackendOtp) {
+        await verifyWithBackend(code);
+      } else {
+        await verifyWithFirebase(code);
       }
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || 'Unknown error';
@@ -111,10 +145,12 @@ export default function OtpVerificationScreen({ navigation, route }) {
 
           <View style={S.headerCenter}>
             <View style={S.iconCircle}>
-              <Text style={S.iconEmoji}>📲</Text>
+              <Text style={S.iconEmoji}>{useBackendOtp ? '🔑' : '📲'}</Text>
             </View>
             <Text style={S.headerTitle}>Verify your number</Text>
-            <Text style={S.headerSub}>Code sent to</Text>
+            <Text style={S.headerSub}>
+              {useBackendOtp ? 'Check your SMS or backend logs' : 'Code sent to'}
+            </Text>
             <View style={S.phonePill}>
               <Text style={S.phonePillText}>{maskPhone(phone)}</Text>
             </View>
@@ -139,7 +175,19 @@ export default function OtpVerificationScreen({ navigation, route }) {
 
         {__DEV__ && (
           <View style={S.devBanner}>
-            <Text style={S.devBannerText}>🛠 DEV: code pre-filled as 123456</Text>
+            <Text style={S.devBannerText}>
+              {useBackendOtp
+                ? '🛠 DEV: Backend OTP — check server console for code'
+                : '🛠 DEV: Firebase OTP — code pre-filled as 123456'}
+            </Text>
+          </View>
+        )}
+
+        {useBackendOtp && __DEV__ && devCode && (
+          <View style={[S.devBanner, { backgroundColor: '#D1FAE5', borderColor: '#6EE7B7' }]}>
+            <Text style={[S.devBannerText, { color: '#065F46' }]}>
+              🔢 Your test code: {devCode}
+            </Text>
           </View>
         )}
 
@@ -213,7 +261,9 @@ export default function OtpVerificationScreen({ navigation, route }) {
         </View>
 
         <Text style={S.hint}>
-          ℹ  Check your SMS inbox. The code expires in a few minutes.
+          {useBackendOtp
+            ? 'ℹ  Code sent via backend SMS. Check server logs if SMS is not configured.'
+            : 'ℹ  Check your SMS inbox. The code expires in a few minutes.'}
         </Text>
       </View>
 
