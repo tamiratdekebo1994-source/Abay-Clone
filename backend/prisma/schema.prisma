@@ -85,16 +85,35 @@ model Driver {
   id              String      @id @default(uuid())
   userId          String      @unique
   user            User        @relation(fields: [userId], references: [id])
+
+  // Personal identity
+  dateOfBirth     DateTime?
+  gender          String?
+  nationalId      String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  homeAddress     String?
+  profilePhotoUrl String?
+
+  // License
   licenseNumber   String      @unique
   licenseExpiry   DateTime
+  licenseClass    String?
+  licensePhotoUrl String?
+  nationalIdPhotoUrl String?
+
+  // Vehicle
   vehicleType     VehicleType
-  vehiclePlate    String      @unique
+  vehicleMake     String?
   vehicleModel    String
   vehicleColor    String
   vehicleYear     Int
-  idCardUrl        String?
-  licensePhotoUrl  String?
-  vehiclePhotoUrl  String?
+  vehiclePlate    String      @unique
+  vehiclePhotoUrl String?
+
+  // Legacy
+  idCardUrl       String?
+
   status          DriverStatus @default(PENDING)
   rating          Float        @default(0)
   totalDeliveries Int          @default(0)

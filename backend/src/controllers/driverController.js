@@ -4,13 +4,14 @@ const { calculateDistance } = require('../utils/pricing');
 const registerDriver = async (req, res, next) => {
   try {
     const {
-      licenseNumber, licenseExpiry, vehicleType, vehiclePlate,
-      vehicleModel, vehicleColor, vehicleYear, city,
+      dateOfBirth, gender, nationalId,
+      emergencyContactName, emergencyContactPhone, homeAddress,
+      licenseNumber, licenseExpiry, licenseClass,
+      vehicleType, vehicleMake, vehiclePlate, vehicleModel, vehicleColor, vehicleYear,
+      city,
     } = req.body;
 
-    const existing = await prisma.driver.findFirst({
-      where: { userId: req.user.id },
-    });
+    const existing = await prisma.driver.findFirst({ where: { userId: req.user.id } });
     if (existing) {
       return res.status(409).json({ success: false, message: 'Driver profile already exists' });
     }
@@ -18,13 +19,21 @@ const registerDriver = async (req, res, next) => {
     const driver = await prisma.driver.create({
       data: {
         userId: req.user.id,
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+        gender: gender || null,
+        nationalId: nationalId || null,
+        emergencyContactName: emergencyContactName || null,
+        emergencyContactPhone: emergencyContactPhone || null,
+        homeAddress: homeAddress || null,
         licenseNumber,
         licenseExpiry: new Date(licenseExpiry),
+        licenseClass: licenseClass || null,
         vehicleType,
+        vehicleMake: vehicleMake || null,
         vehiclePlate: vehiclePlate.toUpperCase(),
-        vehicleModel,
-        vehicleColor,
-        vehicleYear: parseInt(vehicleYear),
+        vehicleModel: vehicleModel || '',
+        vehicleColor: vehicleColor || '',
+        vehicleYear: vehicleYear ? parseInt(vehicleYear) : new Date().getFullYear(),
         city,
         status: 'PENDING',
       },

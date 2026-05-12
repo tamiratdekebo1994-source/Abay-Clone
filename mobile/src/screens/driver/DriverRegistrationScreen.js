@@ -1,47 +1,153 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  StyleSheet, ActivityIndicator, Alert, Image,
+  StyleSheet, ActivityIndicator, Alert, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { driverAPI } from '../../services/api';
-import api from '../../services/api';
 import { useDispatch } from 'react-redux';
 import { loadUser } from '../../store/authStore';
-import { COLORS, ETHIOPIAN_CITIES, VEHICLE_TYPES } from '../../utils/constants';
-import { t } from '../../utils/i18n';
+import { driverAPI } from '../../services/api';
+import { COLORS } from '../../utils/constants';
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 
-const VEHICLE_ICONS = {
-  MOTORCYCLE: '🏍️',
-  BAJAJ: '🛺',
-  CAR: '🚗',
-  VAN: '🚐',
-  TRUCK: '🚚',
+const ETHIOPIAN_CITIES = [
+  'Addis Ababa', 'Dire Dawa', 'Mekelle', 'Gondar', 'Bahir Dar',
+  'Hawassa', 'Adama', 'Jimma', 'Dessie', 'Jijiga',
+  'Shashamane', 'Bishoftu', 'Arba Minch', 'Hosaena', 'Harar',
+];
+
+const VEHICLE_TYPES = [
+  { key: 'MOTORCYCLE', label: 'Motorcycle', icon: '🏍️' },
+  { key: 'BAJAJ', label: 'Bajaj', icon: '🛺' },
+  { key: 'CAR', label: 'Car', icon: '🚗' },
+  { key: 'VAN', label: 'Van', icon: '🚐' },
+  { key: 'TRUCK', label: 'Truck', icon: '🚚' },
+];
+
+const VEHICLE_MAKES = {
+  MOTORCYCLE: ['Bajaj', 'Honda', 'Yamaha', 'TVS', 'Hero', 'Lifan', 'Other'],
+  BAJAJ: ['Bajaj', 'Piaggio', 'TVS', 'Other'],
+  CAR: ['Toyota', 'Hyundai', 'Nissan', 'Suzuki', 'Kia', 'Ford', 'Volkswagen', 'Other'],
+  VAN: ['Toyota', 'Hyundai', 'Nissan', 'Mitsubishi', 'Ford', 'Other'],
+  TRUCK: ['Isuzu', 'Mitsubishi', 'Toyota', 'Hyundai', 'Tata', 'Other'],
 };
+
+const LICENSE_CLASSES = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+const GENDERS = [
+  { key: 'MALE', label: 'Male' },
+  { key: 'FEMALE', label: 'Female' },
+];
+
+const STEP_META = [
+  { icon: '👤', title: 'Personal Info', titleAm: 'የግል መረጃ' },
+  { icon: '📍', title: 'Location', titleAm: 'መኖሪያ ቦታ' },
+  { icon: '🚗', title: 'Vehicle', titleAm: 'ተሽከርካሪ' },
+  { icon: '📋', title: 'License', titleAm: 'ፍቃድ' },
+  { icon: '📸', title: 'Documents', titleAm: 'ሰነዶች' },
+];
+
+function FieldLabel({ label }) {
+  return <Text style={S.label}>{label}</Text>;
+}
+
+function StyledInput({ value, onChangeText, placeholder, keyboardType, maxLength, multiline }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <TextInput
+      style={[S.input, focused && S.inputFocused, multiline && S.inputMulti]}
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      placeholderTextColor={COLORS.gray}
+      keyboardType={keyboardType || 'default'}
+      maxLength={maxLength}
+      multiline={multiline}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+    />
+  );
+}
+
+function ChipRow({ options, selected, onSelect, keyField = 'key', labelField = 'label' }) {
+  return (
+    <View style={S.chipRow}>
+      {options.map((opt) => {
+        const k = typeof opt === 'string' ? opt : opt[keyField];
+        const l = typeof opt === 'string' ? opt : opt[labelField];
+        const active = selected === k;
+        return (
+          <TouchableOpacity
+            key={k}
+            style={[S.chip, active && S.chipActive]}
+            onPress={() => onSelect(k)}
+            activeOpacity={0.75}
+          >
+            <Text style={[S.chipText, active && S.chipTextActive]}>{l}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+function PhotoBlock({ label, uri, onPick }) {
+  return (
+    <View style={S.photoBlock}>
+      <TouchableOpacity style={[S.photoBox, uri && S.photoBoxFilled]} onPress={onPick} activeOpacity={0.8}>
+        {uri ? (
+          <Text style={S.photoCheck}>✓ Uploaded</Text>
+        ) : (
+          <>
+            <Text style={S.photoPlus}>+</Text>
+            <Text style={S.photoHint}>Tap to upload</Text>
+          </>
+        )}
+      </TouchableOpacity>
+      <Text style={S.photoLabel}>{label}</Text>
+    </View>
+  );
+}
 
 export default function DriverRegistrationScreen({ navigation }) {
   const dispatch = useDispatch();
   const [step, setStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
+  // Step 1: Personal Info
+  const [fullName, setFullName] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [gender, setGender] = useState('');
+  const [nationalId, setNationalId] = useState('');
+  const [emergencyContactName, setEmergencyContactName] = useState('');
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
+
+  // Step 2: Location
   const [city, setCity] = useState('');
-  const [vehicleType, setVehicleType] = useState('');
-  const [vehiclePlate, setVehiclePlate] = useState('');
-  const [vehicleModel, setVehicleModel] = useState('');
-  const [vehicleColor, setVehicleColor] = useState('');
-  const [vehicleYear, setVehicleYear] = useState('');
-  const [licenseNumber, setLicenseNumber] = useState('');
-  const [licenseExpiry, setLicenseExpiry] = useState('');
-  const [licensePhoto, setLicensePhoto] = useState(null);
-  const [idPhoto, setIdPhoto] = useState(null);
-  const [uploadingLicense, setUploadingLicense] = useState(false);
-  const [uploadingId, setUploadingId] = useState(false);
+  const [homeAddress, setHomeAddress] = useState('');
 
-  const pickImage = async (type) => {
+  // Step 3: Vehicle
+  const [vehicleType, setVehicleType] = useState('');
+  const [vehicleMake, setVehicleMake] = useState('');
+  const [vehicleModel, setVehicleModel] = useState('');
+  const [vehicleYear, setVehicleYear] = useState('');
+  const [vehicleColor, setVehicleColor] = useState('');
+  const [vehiclePlate, setVehiclePlate] = useState('');
+
+  // Step 4: License
+  const [licenseNumber, setLicenseNumber] = useState('');
+  const [licenseClass, setLicenseClass] = useState('');
+  const [licenseExpiry, setLicenseExpiry] = useState('');
+
+  // Step 5: Documents
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [licensePhoto, setLicensePhoto] = useState(null);
+  const [nationalIdPhoto, setNationalIdPhoto] = useState(null);
+  const [vehiclePhoto, setVehiclePhoto] = useState(null);
+
+  const pickImage = async (setter) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission needed', 'Please allow photo access to upload documents.');
@@ -49,493 +155,454 @@ export default function DriverRegistrationScreen({ navigation }) {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.85,
       allowsEditing: true,
+      quality: 0.7,
     });
-    if (!result.canceled) {
-      const asset = result.assets[0];
-      if (type === 'license') { setLicensePhoto(asset); uploadDocument(asset, 'license'); }
-      else { setIdPhoto(asset); uploadDocument(asset, 'id_card'); }
+    if (!result.canceled && result.assets?.[0]) {
+      setter(result.assets[0].uri);
     }
   };
 
-  const takePicture = async (type) => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow camera access.');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.85, allowsEditing: true });
-    if (!result.canceled) {
-      const asset = result.assets[0];
-      if (type === 'license') { setLicensePhoto(asset); uploadDocument(asset, 'license'); }
-      else { setIdPhoto(asset); uploadDocument(asset, 'id_card'); }
-    }
-  };
-
-  const uploadDocument = async (asset, docType) => {
-    const setter = docType === 'license' ? setUploadingLicense : setUploadingId;
-    setter(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', { uri: asset.uri, type: asset.mimeType || 'image/jpeg', name: `${docType}_${Date.now()}.jpg` });
-      await api.post(`/upload/driver/document/${docType}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-    } catch (err) {
-      Alert.alert('Upload failed', err.response?.data?.message || 'Could not upload photo. Please try again.');
-    } finally {
-      setter(false);
-    }
-  };
-
-  const nextStep = () => {
-    setError('');
+  const validateStep = () => {
     if (step === 1) {
-      if (!city) { setError('Please select the city you will be driving in.'); return; }
-    } else if (step === 2) {
-      if (!vehicleType) { setError('Please select your vehicle type.'); return; }
-      if (!vehiclePlate.trim()) { setError('Please enter your license plate number.'); return; }
-      if (!vehicleModel.trim()) { setError('Please enter your vehicle model.'); return; }
-      if (!vehicleColor.trim()) { setError('Please enter your vehicle color.'); return; }
-      if (!vehicleYear || isNaN(vehicleYear)) { setError('Please enter a valid vehicle year.'); return; }
-    } else if (step === 3) {
-      if (!licenseNumber.trim()) { setError('Please enter your license number.'); return; }
-      if (!licenseExpiry.trim()) { setError('Please enter your license expiry date.'); return; }
+      if (!fullName.trim()) { Alert.alert('Required', 'Full name is required.'); return false; }
+      if (!emergencyContactPhone.trim()) { Alert.alert('Required', 'Emergency contact phone is required.'); return false; }
+      return true;
     }
-    setStep((s) => s + 1);
+    if (step === 2) {
+      if (!city) { Alert.alert('Required', 'Please select your city.'); return false; }
+      return true;
+    }
+    if (step === 3) {
+      if (!vehicleType) { Alert.alert('Required', 'Please select vehicle type.'); return false; }
+      if (!vehiclePlate.trim()) { Alert.alert('Required', 'Vehicle plate number is required.'); return false; }
+      return true;
+    }
+    if (step === 4) {
+      if (!licenseNumber.trim()) { Alert.alert('Required', 'License number is required.'); return false; }
+      if (!licenseExpiry.trim()) { Alert.alert('Required', 'License expiry date is required.'); return false; }
+      const expiryDate = new Date(licenseExpiry);
+      if (isNaN(expiryDate.getTime())) { Alert.alert('Invalid', 'Enter expiry as YYYY-MM-DD.'); return false; }
+      if (expiryDate < new Date()) { Alert.alert('Invalid', 'License has already expired.'); return false; }
+      return true;
+    }
+    return true;
+  };
+
+  const handleNext = () => {
+    if (!validateStep()) return;
+    if (step < TOTAL_STEPS) setStep(step + 1);
+  };
+
+  const handleBack = () => {
+    if (step > 1) setStep(step - 1);
   };
 
   const handleSubmit = async () => {
-    setIsLoading(true);
-    setError('');
+    if (!validateStep()) return;
+    setLoading(true);
     try {
       await driverAPI.register({
-        city, vehicleType, vehiclePlate, vehicleModel, vehicleColor,
-        vehicleYear: parseInt(vehicleYear),
-        licenseNumber, licenseExpiry,
+        fullName: fullName.trim(),
+        dateOfBirth: dateOfBirth || undefined,
+        gender: gender || undefined,
+        nationalId: nationalId.trim() || undefined,
+        emergencyContactName: emergencyContactName.trim() || undefined,
+        emergencyContactPhone: emergencyContactPhone.trim(),
+        city,
+        homeAddress: homeAddress.trim() || undefined,
+        vehicleType,
+        vehicleMake: vehicleMake || undefined,
+        vehicleModel: vehicleModel.trim() || undefined,
+        vehicleYear: vehicleYear ? parseInt(vehicleYear, 10) : undefined,
+        vehicleColor: vehicleColor.trim() || undefined,
+        vehiclePlate: vehiclePlate.trim().toUpperCase(),
+        licenseNumber: licenseNumber.trim(),
+        licenseClass: licenseClass || undefined,
+        licenseExpiry,
       });
-      await api.get('/wallet').catch(() => {});
-      dispatch(loadUser());
+      await dispatch(loadUser());
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
-      setIsLoading(false);
+      const msg = err?.response?.data?.message || 'Registration failed. Please try again.';
+      Alert.alert('Error', msg);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const progressPct = `${(step / TOTAL_STEPS) * 100}%`;
-
-  const STEP_META = [
-    { icon: '📍', title: 'Select your city', subtitle: 'ሾፌር የሚሰሩበት ከተማ ይምረጡ' },
-    { icon: '🚗', title: 'Vehicle details', subtitle: 'የተሽከርካሪ መረጃ ያስገቡ' },
-    { icon: '🪪', title: 'License information', subtitle: 'የሾፌር ፍቃድ መረጃ ያስገቡ' },
-    { icon: '📄', title: 'Upload documents', subtitle: 'ሰነዶችዎን ይስቀሉ — ኋላ ማስገባት ይቻላል' },
-  ];
-
   const meta = STEP_META[step - 1];
+  const progress = step / TOTAL_STEPS;
 
   return (
-    <SafeAreaView style={styles.safe}>
-      {/* ── Top Bar ── */}
-      <View style={styles.topBar}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => (step > 1 ? setStep((s) => s - 1) : navigation.goBack())}
-        >
-          <Text style={styles.backIcon}>←</Text>
+    <SafeAreaView style={S.safe} edges={['top', 'bottom']}>
+      {/* ── Header ── */}
+      <View style={S.header}>
+        <TouchableOpacity style={S.backBtn} onPress={handleBack} disabled={step === 1}>
+          <Text style={[S.backArrow, step === 1 && { opacity: 0 }]}>←</Text>
         </TouchableOpacity>
-
-        <View style={styles.topMeta}>
-          <Text style={styles.topTitle}>Driver Registration</Text>
-          <Text style={styles.topSub}>Step {step} of {TOTAL_STEPS}</Text>
+        <View style={S.headerCenter}>
+          <Text style={S.headerBrand}>Fetno Driver</Text>
+          <Text style={S.headerSub}>Step {step} of {TOTAL_STEPS}</Text>
         </View>
-
-        {/* Step dots */}
-        <View style={styles.dots}>
-          {Array.from({ length: TOTAL_STEPS }, (_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.dot,
-                i + 1 < step && styles.dotDone,
-                i + 1 === step && styles.dotActive,
-              ]}
-            />
-          ))}
-        </View>
+        <View style={{ width: 42 }} />
       </View>
 
-      {/* Progress bar */}
-      <View style={styles.progressBg}>
-        <View style={[styles.progressFill, { width: progressPct }]} />
+      {/* ── Progress ── */}
+      <View style={S.progressTrack}>
+        <View style={[S.progressFill, { width: `${progress * 100}%` }]} />
+      </View>
+      <View style={S.dotRow}>
+        {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+          <View key={i} style={[S.dot, i < step && S.dotDone]} />
+        ))}
       </View>
 
-      {/* Scrollable content */}
       <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        style={S.scroll}
+        contentContainerStyle={S.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Step header */}
-        <View style={styles.stepHeader}>
-          <View style={styles.stepIconWrap}>
-            <Text style={styles.stepIcon}>{meta.icon}</Text>
+        {/* ── Step header ── */}
+        <View style={S.stepHeader}>
+          <View style={S.stepIconBox}>
+            <Text style={S.stepIcon}>{meta.icon}</Text>
           </View>
-          <View style={styles.stepHeaderText}>
-            <Text style={styles.stepTitle}>{meta.title}</Text>
-            <Text style={styles.stepSubtitle}>{meta.subtitle}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={S.stepTitle}>{meta.title}</Text>
+            <Text style={S.stepTitleAm}>{meta.titleAm}</Text>
           </View>
         </View>
 
-        {/* Error */}
-        {!!error && (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorMsg}>{error}</Text>
-          </View>
-        )}
-
-        {/* ─── Step 1: City ─── */}
+        {/* ── STEP 1: Personal Info ── */}
         {step === 1 && (
-          <View style={styles.cityGrid}>
-            {ETHIOPIAN_CITIES.map((c) => (
-              <TouchableOpacity
-                key={c.value}
-                style={[styles.cityChip, city === c.value && styles.cityChipActive]}
-                onPress={() => { setCity(c.value); setError(''); }}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.cityChipText, city === c.value && styles.cityChipTextActive]}>
-                  {c.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <View>
+            <FieldLabel label="Full Name *" />
+            <StyledInput value={fullName} onChangeText={setFullName} placeholder="As on your ID" />
+
+            <FieldLabel label="Date of Birth" />
+            <StyledInput value={dateOfBirth} onChangeText={setDateOfBirth} placeholder="YYYY-MM-DD" />
+
+            <FieldLabel label="Gender" />
+            <ChipRow options={GENDERS} selected={gender} onSelect={setGender} />
+
+            <FieldLabel label="National ID Number" />
+            <StyledInput value={nationalId} onChangeText={setNationalId} placeholder="National ID / Fayda" maxLength={50} />
+
+            <View style={S.sectionDivider}>
+              <Text style={S.sectionLabel}>Emergency Contact</Text>
+            </View>
+
+            <FieldLabel label="Contact Name" />
+            <StyledInput value={emergencyContactName} onChangeText={setEmergencyContactName} placeholder="Full name" maxLength={100} />
+
+            <FieldLabel label="Contact Phone *" />
+            <StyledInput value={emergencyContactPhone} onChangeText={setEmergencyContactPhone} placeholder="+251 9XX XXX XXX" keyboardType="phone-pad" maxLength={20} />
           </View>
         )}
 
-        {/* ─── Step 2: Vehicle ─── */}
+        {/* ── STEP 2: Location ── */}
         {step === 2 && (
-          <>
-            <Text style={styles.sectionLabel}>Vehicle type *</Text>
-            <View style={styles.vehicleGrid}>
+          <View>
+            <FieldLabel label="City *" />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={S.cityScroll}>
+              {ETHIOPIAN_CITIES.map((c) => (
+                <TouchableOpacity
+                  key={c}
+                  style={[S.cityChip, city === c && S.cityChipActive]}
+                  onPress={() => setCity(c)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[S.cityChipText, city === c && S.cityChipTextActive]}>{c}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            {city ? <Text style={S.selectedCity}>📍 {city}</Text> : null}
+
+            <FieldLabel label="Home Address" />
+            <StyledInput
+              value={homeAddress}
+              onChangeText={setHomeAddress}
+              placeholder="Subcity, Woreda, Street..."
+              multiline
+            />
+          </View>
+        )}
+
+        {/* ── STEP 3: Vehicle ── */}
+        {step === 3 && (
+          <View>
+            <FieldLabel label="Vehicle Type *" />
+            <View style={S.vehicleGrid}>
               {VEHICLE_TYPES.map((v) => (
                 <TouchableOpacity
-                  key={v.value}
-                  style={[styles.vehicleCard, vehicleType === v.value && styles.vehicleCardActive]}
-                  onPress={() => { setVehicleType(v.value); setError(''); }}
+                  key={v.key}
+                  style={[S.vehicleCard, vehicleType === v.key && S.vehicleCardActive]}
+                  onPress={() => { setVehicleType(v.key); setVehicleMake(''); }}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.vehicleIcon}>{VEHICLE_ICONS[v.value]}</Text>
-                  <Text style={[styles.vehicleLabel, vehicleType === v.value && styles.vehicleLabelActive]}>
-                    {v.label.split(' ')[0]}
-                  </Text>
-                  {vehicleType === v.value && (
-                    <View style={styles.vehicleCheck}>
-                      <Text style={styles.vehicleCheckText}>✓</Text>
-                    </View>
-                  )}
+                  <Text style={S.vehicleIcon}>{v.icon}</Text>
+                  <Text style={[S.vehicleLabel, vehicleType === v.key && S.vehicleLabelActive]}>{v.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <FormField label="License plate *" value={vehiclePlate} onChangeText={setVehiclePlate} placeholder="e.g. AA-12345" autoCapitalize="characters" />
-            <FormField label="Vehicle model *" value={vehicleModel} onChangeText={setVehicleModel} placeholder="e.g. Honda CB150R" />
-            <View style={styles.row}>
-              <View style={styles.rowHalf}>
-                <FormField label="Color *" value={vehicleColor} onChangeText={setVehicleColor} placeholder="e.g. Red" />
-              </View>
-              <View style={[styles.rowHalf, { marginLeft: 12 }]}>
-                <FormField label="Year *" value={vehicleYear} onChangeText={setVehicleYear} placeholder="2020" keyboardType="number-pad" maxLength={4} />
-              </View>
-            </View>
-          </>
+            {vehicleType ? (
+              <>
+                <FieldLabel label="Vehicle Make" />
+                <ChipRow
+                  options={VEHICLE_MAKES[vehicleType] || []}
+                  selected={vehicleMake}
+                  onSelect={setVehicleMake}
+                  keyField={undefined}
+                  labelField={undefined}
+                />
+
+                <FieldLabel label="Model" />
+                <StyledInput value={vehicleModel} onChangeText={setVehicleModel} placeholder="e.g. Corolla, HB20..." maxLength={100} />
+
+                <View style={S.twoCol}>
+                  <View style={S.colHalf}>
+                    <FieldLabel label="Year" />
+                    <StyledInput value={vehicleYear} onChangeText={setVehicleYear} placeholder="2020" keyboardType="numeric" maxLength={4} />
+                  </View>
+                  <View style={S.colHalf}>
+                    <FieldLabel label="Color" />
+                    <StyledInput value={vehicleColor} onChangeText={setVehicleColor} placeholder="White" maxLength={50} />
+                  </View>
+                </View>
+
+                <FieldLabel label="Plate Number *" />
+                <StyledInput value={vehiclePlate} onChangeText={(t) => setVehiclePlate(t.toUpperCase())} placeholder="AA 12345" maxLength={20} />
+              </>
+            ) : null}
+          </View>
         )}
 
-        {/* ─── Step 3: License ─── */}
-        {step === 3 && (
-          <>
-            <FormField label="License number *" value={licenseNumber} onChangeText={setLicenseNumber} placeholder="e.g. ETH-001234" autoCapitalize="characters" />
-            <FormField
-              label="Expiry date *"
-              value={licenseExpiry}
-              onChangeText={setLicenseExpiry}
-              placeholder="YYYY-MM-DD"
-              keyboardType="numbers-and-punctuation"
-            />
-            <View style={styles.hintBox}>
-              <Text style={styles.hintText}>
-                Make sure your license is valid for at least 3 months from today.
-              </Text>
-            </View>
-          </>
-        )}
-
-        {/* ─── Step 4: Documents ─── */}
+        {/* ── STEP 4: License ── */}
         {step === 4 && (
-          <>
-            <DocBox
-              label="Driver's License"
-              sublabel="የሾፌር ፍቃድ ፎቶ"
-              photo={licensePhoto}
-              isUploading={uploadingLicense}
-              onPickPhoto={() => pickImage('license')}
-              onTakePhoto={() => takePicture('license')}
-            />
-            <DocBox
-              label="National ID / Passport"
-              sublabel="የሀገር መታወቂያ ወይም ፓስፖርት"
-              photo={idPhoto}
-              isUploading={uploadingId}
-              onPickPhoto={() => pickImage('id_card')}
-              onTakePhoto={() => takePicture('id_card')}
-            />
-            <View style={styles.hintBox}>
-              <Text style={styles.hintText}>
-                Documents are optional now — you can upload them later from your Profile. Uploading speeds up account approval.
-              </Text>
+          <View>
+            <FieldLabel label="License Number *" />
+            <StyledInput value={licenseNumber} onChangeText={setLicenseNumber} placeholder="ETH-DL-XXXXXXXXX" maxLength={50} />
+
+            <FieldLabel label="License Class" />
+            <ChipRow options={LICENSE_CLASSES} selected={licenseClass} onSelect={setLicenseClass} />
+
+            <FieldLabel label="Expiry Date *" />
+            <StyledInput value={licenseExpiry} onChangeText={setLicenseExpiry} placeholder="YYYY-MM-DD" />
+
+            <View style={S.infoCard}>
+              <Text style={S.infoIcon}>ℹ️</Text>
+              <Text style={S.infoText}>Your license must be valid. Expired licenses will be rejected.</Text>
             </View>
-          </>
+          </View>
         )}
+
+        {/* ── STEP 5: Documents ── */}
+        {step === 5 && (
+          <View>
+            <Text style={S.docNote}>Upload clear photos of your documents. All uploads are optional but speed up approval.</Text>
+            <View style={S.photoGrid}>
+              <PhotoBlock label="Profile Photo" uri={profilePhoto} onPick={() => pickImage(setProfilePhoto)} />
+              <PhotoBlock label="Driver's License" uri={licensePhoto} onPick={() => pickImage(setLicensePhoto)} />
+              <PhotoBlock label="National ID" uri={nationalIdPhoto} onPick={() => pickImage(setNationalIdPhoto)} />
+              <PhotoBlock label="Vehicle Photo" uri={vehiclePhoto} onPick={() => pickImage(setVehiclePhoto)} />
+            </View>
+
+            <View style={S.reviewCard}>
+              <Text style={S.reviewTitle}>Review Summary</Text>
+              <Text style={S.reviewLine}>👤 {fullName || '—'}</Text>
+              <Text style={S.reviewLine}>📍 {city || '—'}</Text>
+              <Text style={S.reviewLine}>🚗 {vehicleType} {vehicleMake ? `· ${vehicleMake}` : ''}</Text>
+              <Text style={S.reviewLine}>🔖 {vehiclePlate || '—'}</Text>
+              <Text style={S.reviewLine}>📋 License: {licenseNumber || '—'}</Text>
+            </View>
+          </View>
+        )}
+
+        <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* ── Bottom CTA ── */}
-      <View style={styles.bottomBar}>
+      {/* ── Footer CTA ── */}
+      <View style={S.footer}>
         <TouchableOpacity
-          style={[styles.ctaBtn, isLoading && styles.ctaBtnDisabled]}
-          onPress={step < TOTAL_STEPS ? nextStep : handleSubmit}
-          disabled={isLoading}
+          style={[S.cta, loading && S.ctaOff]}
+          onPress={step === TOTAL_STEPS ? handleSubmit : handleNext}
+          disabled={loading}
           activeOpacity={0.85}
         >
-          {isLoading ? (
-            <ActivityIndicator color={COLORS.white} size="small" />
+          {loading ? (
+            <ActivityIndicator color={COLORS.white} />
           ) : (
-            <Text style={styles.ctaBtnText}>
-              {step < TOTAL_STEPS ? 'Continue' : 'Submit Application'}
+            <Text style={S.ctaText}>
+              {step === TOTAL_STEPS ? 'Submit Application ✓' : 'Continue →'}
             </Text>
           )}
         </TouchableOpacity>
         {step === TOTAL_STEPS && (
-          <TouchableOpacity onPress={handleSubmit} disabled={isLoading} style={styles.skipLink}>
-            <Text style={styles.skipText}>Skip documents for now</Text>
-          </TouchableOpacity>
+          <Text style={S.footerNote}>Your application will be reviewed within 24 hours</Text>
         )}
       </View>
     </SafeAreaView>
   );
 }
 
-/* ── Sub-components ── */
-
-function FormField({ label, value, onChangeText, placeholder, ...props }) {
-  const [focused, setFocused] = useState(false);
-  return (
-    <View style={fieldStyles.group}>
-      <Text style={fieldStyles.label}>{label}</Text>
-      <TextInput
-        style={[fieldStyles.input, focused && fieldStyles.inputFocused]}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={COLORS.gray}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        {...props}
-      />
-    </View>
-  );
-}
-
-function DocBox({ label, sublabel, photo, isUploading, onPickPhoto, onTakePhoto }) {
-  return (
-    <View style={docStyles.wrap}>
-      <View style={docStyles.header}>
-        <View>
-          <Text style={docStyles.label}>{label}</Text>
-          <Text style={docStyles.sublabel}>{sublabel}</Text>
-        </View>
-        {photo && !isUploading && (
-          <View style={docStyles.uploadedBadge}>
-            <Text style={docStyles.uploadedText}>✓ Uploaded</Text>
-          </View>
-        )}
-      </View>
-
-      {photo ? (
-        <View style={docStyles.preview}>
-          <Image source={{ uri: photo.uri }} style={docStyles.previewImg} resizeMode="cover" />
-          {isUploading && (
-            <View style={docStyles.uploadOverlay}>
-              <ActivityIndicator color={COLORS.white} />
-              <Text style={docStyles.uploadOverlayText}>Uploading…</Text>
-            </View>
-          )}
-        </View>
-      ) : (
-        <View style={docStyles.btnRow}>
-          <TouchableOpacity style={docStyles.btn} onPress={onTakePhoto} activeOpacity={0.8}>
-            <Text style={docStyles.btnIcon}>📷</Text>
-            <Text style={docStyles.btnText}>Take Photo</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={docStyles.btn} onPress={onPickPhoto} activeOpacity={0.8}>
-            <Text style={docStyles.btnIcon}>🖼️</Text>
-            <Text style={docStyles.btnText}>From Gallery</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
-  );
-}
-
-/* ── Styles ── */
-
-const styles = StyleSheet.create({
+const S = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.white },
 
-  topBar: {
+  header: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12,
+    paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
   },
   backBtn: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: COLORS.grayLighter,
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: '#F5F5F5',
     alignItems: 'center', justifyContent: 'center',
-    marginRight: 12,
   },
-  backIcon: { fontSize: 20, color: COLORS.text, lineHeight: 24 },
-  topMeta: { flex: 1 },
-  topTitle: { fontSize: 16, fontWeight: '700', color: COLORS.black },
-  topSub: { fontSize: 12, color: COLORS.gray, marginTop: 1 },
-  dots: { flexDirection: 'row', gap: 6 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.grayLight },
-  dotDone: { backgroundColor: COLORS.primaryLighter },
-  dotActive: { backgroundColor: COLORS.primary, width: 20, borderRadius: 4 },
+  backArrow: { fontSize: 20, color: COLORS.text },
+  headerCenter: { flex: 1, alignItems: 'center' },
+  headerBrand: { fontSize: 16, fontWeight: '800', color: COLORS.primary },
+  headerSub: { fontSize: 11, color: COLORS.gray, marginTop: 1 },
 
-  progressBg: { height: 3, backgroundColor: COLORS.grayLight },
-  progressFill: { height: 3, backgroundColor: COLORS.primary },
+  progressTrack: {
+    height: 4, backgroundColor: '#E8F5E9', marginHorizontal: 0,
+  },
+  progressFill: {
+    height: 4, backgroundColor: COLORS.primary, borderRadius: 2,
+  },
+  dotRow: {
+    flexDirection: 'row', justifyContent: 'center', gap: 8,
+    paddingVertical: 10,
+  },
+  dot: {
+    width: 8, height: 8, borderRadius: 4,
+    backgroundColor: '#DDD',
+  },
+  dotDone: { backgroundColor: COLORS.primary },
 
   scroll: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 32 },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 24 },
 
   stepHeader: {
-    flexDirection: 'row', alignItems: 'center',
-    marginBottom: 24, gap: 14,
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: '#E8F5E9', borderRadius: 16,
+    padding: 16, marginBottom: 24,
   },
-  stepIconWrap: {
+  stepIconBox: {
     width: 52, height: 52, borderRadius: 26,
-    backgroundColor: '#E8F5E9',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  stepIcon: { fontSize: 24 },
-  stepHeaderText: { flex: 1 },
-  stepTitle: { fontSize: 20, fontWeight: '800', color: COLORS.black },
-  stepSubtitle: { fontSize: 13, color: COLORS.gray, marginTop: 2 },
-
-  errorBanner: {
-    backgroundColor: '#FEF2F2', borderRadius: 12,
-    padding: 14, marginBottom: 20,
-    borderLeftWidth: 3, borderLeftColor: COLORS.error,
-  },
-  errorMsg: { color: '#991B1B', fontSize: 13 },
-
-  /* City */
-  cityGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  cityChip: {
-    borderWidth: 1.5, borderColor: COLORS.border,
-    borderRadius: 24, paddingHorizontal: 16, paddingVertical: 10,
-    backgroundColor: '#FAFAFA',
-  },
-  cityChipActive: { borderColor: COLORS.primary, backgroundColor: '#E8F5E9' },
-  cityChipText: { fontSize: 13, color: COLORS.gray, fontWeight: '500' },
-  cityChipTextActive: { color: COLORS.primary, fontWeight: '700' },
-
-  /* Vehicle */
-  sectionLabel: { fontSize: 13, fontWeight: '600', color: COLORS.text, marginBottom: 12 },
-  vehicleGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
-  vehicleCard: {
-    width: '30%', borderWidth: 1.5, borderColor: COLORS.border,
-    borderRadius: 14, paddingVertical: 14, alignItems: 'center',
-    backgroundColor: '#FAFAFA', position: 'relative',
-  },
-  vehicleCardActive: { borderColor: COLORS.primary, backgroundColor: '#E8F5E9' },
-  vehicleIcon: { fontSize: 26, marginBottom: 6 },
-  vehicleLabel: { fontSize: 11, color: COLORS.gray, fontWeight: '600', textAlign: 'center' },
-  vehicleLabelActive: { color: COLORS.primary },
-  vehicleCheck: {
-    position: 'absolute', top: 6, right: 6,
-    width: 18, height: 18, borderRadius: 9,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  vehicleCheckText: { color: COLORS.white, fontSize: 10, fontWeight: '800' },
-
-  row: { flexDirection: 'row' },
-  rowHalf: { flex: 1 },
-
-  hintBox: {
-    backgroundColor: '#FFFBEB', borderRadius: 12,
-    padding: 14, marginTop: 8,
-    borderLeftWidth: 3, borderLeftColor: '#FCBF49',
-  },
-  hintText: { color: '#92400E', fontSize: 13, lineHeight: 20 },
-
-  /* Bottom bar */
-  bottomBar: {
-    padding: 20, paddingBottom: 28,
     backgroundColor: COLORS.white,
-    borderTopWidth: 1, borderTopColor: COLORS.grayLight,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
-  ctaBtn: {
-    backgroundColor: COLORS.primary, borderRadius: 14,
-    paddingVertical: 17, alignItems: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 8,
-    elevation: 5,
-  },
-  ctaBtnDisabled: { opacity: 0.6, shadowOpacity: 0 },
-  ctaBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
-  skipLink: { alignItems: 'center', marginTop: 14 },
-  skipText: { fontSize: 13, color: COLORS.gray },
-});
+  stepIcon: { fontSize: 26 },
+  stepTitle: { fontSize: 20, fontWeight: '800', color: COLORS.primary },
+  stepTitleAm: { fontSize: 13, color: '#2E7D32', marginTop: 2 },
 
-const fieldStyles = StyleSheet.create({
-  group: { marginBottom: 16 },
-  label: { fontSize: 13, fontWeight: '600', color: COLORS.text, marginBottom: 8 },
+  label: {
+    fontSize: 12, fontWeight: '700', color: COLORS.text,
+    marginBottom: 8, letterSpacing: 0.4, textTransform: 'uppercase',
+    marginTop: 16,
+  },
   input: {
-    borderWidth: 1.5, borderColor: COLORS.border,
-    borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14,
-    fontSize: 15, backgroundColor: '#FAFAFA', color: COLORS.text,
+    backgroundColor: '#F9F9F9', borderRadius: 14,
+    borderWidth: 2, borderColor: '#ECECEC',
+    paddingHorizontal: 16, paddingVertical: 14,
+    fontSize: 15, color: COLORS.black,
   },
   inputFocused: { borderColor: COLORS.primary, backgroundColor: COLORS.white },
-});
+  inputMulti: { height: 90, textAlignVertical: 'top' },
 
-const docStyles = StyleSheet.create({
-  wrap: {
-    borderWidth: 1.5, borderColor: COLORS.border,
-    borderRadius: 16, padding: 16, marginBottom: 16,
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    paddingHorizontal: 16, paddingVertical: 9,
+    borderRadius: 20, borderWidth: 2, borderColor: '#ECECEC',
+    backgroundColor: '#F9F9F9',
+  },
+  chipActive: { borderColor: COLORS.primary, backgroundColor: '#E8F5E9' },
+  chipText: { fontSize: 13, fontWeight: '600', color: COLORS.text },
+  chipTextActive: { color: COLORS.primary },
+
+  sectionDivider: {
+    marginTop: 24, marginBottom: 4,
+    borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingTop: 16,
+  },
+  sectionLabel: { fontSize: 13, fontWeight: '700', color: COLORS.gray, textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  cityScroll: { marginBottom: 12 },
+  cityChip: {
+    paddingHorizontal: 18, paddingVertical: 10, marginRight: 8,
+    borderRadius: 20, borderWidth: 2, borderColor: '#ECECEC',
+    backgroundColor: '#F9F9F9',
+  },
+  cityChipActive: { borderColor: COLORS.primary, backgroundColor: '#E8F5E9' },
+  cityChipText: { fontSize: 13, fontWeight: '600', color: COLORS.text },
+  cityChipTextActive: { color: COLORS.primary },
+  selectedCity: { fontSize: 14, color: COLORS.primary, fontWeight: '600', marginBottom: 4 },
+
+  vehicleGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 4,
+  },
+  vehicleCard: {
+    width: '29%', aspectRatio: 1,
+    borderRadius: 16, borderWidth: 2, borderColor: '#ECECEC',
+    backgroundColor: '#F9F9F9',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  vehicleCardActive: { borderColor: COLORS.primary, backgroundColor: '#E8F5E9' },
+  vehicleIcon: { fontSize: 28, marginBottom: 4 },
+  vehicleLabel: { fontSize: 11, fontWeight: '600', color: COLORS.text },
+  vehicleLabelActive: { color: COLORS.primary },
+
+  twoCol: { flexDirection: 'row', gap: 12 },
+  colHalf: { flex: 1 },
+
+  infoCard: {
+    flexDirection: 'row', gap: 10,
+    backgroundColor: '#EEF9EE', borderRadius: 14,
+    padding: 14, marginTop: 20,
+    borderWidth: 1, borderColor: '#C8E6C9',
+  },
+  infoIcon: { fontSize: 16 },
+  infoText: { flex: 1, fontSize: 13, color: '#2E7D32', lineHeight: 19 },
+
+  docNote: {
+    fontSize: 13, color: COLORS.gray, lineHeight: 19, marginBottom: 20,
+  },
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
+  photoBlock: { width: '47%', alignItems: 'center' },
+  photoBox: {
+    width: '100%', aspectRatio: 1,
+    borderRadius: 16, borderWidth: 2, borderStyle: 'dashed', borderColor: '#CCCCCC',
     backgroundColor: '#FAFAFA',
+    alignItems: 'center', justifyContent: 'center',
   },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
-  label: { fontSize: 15, fontWeight: '700', color: COLORS.text },
-  sublabel: { fontSize: 12, color: COLORS.gray, marginTop: 2 },
-  uploadedBadge: {
-    backgroundColor: '#E8F5E9', borderRadius: 20,
-    paddingHorizontal: 10, paddingVertical: 4,
+  photoBoxFilled: { borderColor: COLORS.primary, backgroundColor: '#E8F5E9', borderStyle: 'solid' },
+  photoPlus: { fontSize: 32, color: '#BBBBBB', lineHeight: 38 },
+  photoHint: { fontSize: 11, color: '#AAAAAA', marginTop: 4 },
+  photoCheck: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
+  photoLabel: { fontSize: 12, fontWeight: '600', color: COLORS.text, marginTop: 6, textAlign: 'center' },
+
+  reviewCard: {
+    backgroundColor: '#F9F9F9', borderRadius: 16,
+    padding: 18, borderWidth: 1, borderColor: '#ECECEC',
   },
-  uploadedText: { fontSize: 12, color: COLORS.primary, fontWeight: '700' },
-  btnRow: { flexDirection: 'row', gap: 10 },
-  btn: {
-    flex: 1, borderWidth: 1.5, borderColor: COLORS.border,
-    borderRadius: 12, borderStyle: 'dashed',
-    paddingVertical: 18, alignItems: 'center',
+  reviewTitle: { fontSize: 14, fontWeight: '800', color: COLORS.primary, marginBottom: 12 },
+  reviewLine: { fontSize: 13, color: COLORS.text, marginBottom: 6, lineHeight: 19 },
+
+  footer: {
+    paddingHorizontal: 24, paddingBottom: Platform.OS === 'ios' ? 24 : 20,
+    paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F0F0F0',
     backgroundColor: COLORS.white,
   },
-  btnIcon: { fontSize: 26, marginBottom: 6 },
-  btnText: { fontSize: 12, color: COLORS.gray, fontWeight: '600' },
-  preview: { borderRadius: 12, overflow: 'hidden' },
-  previewImg: { width: '100%', height: 160 },
-  uploadOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    alignItems: 'center', justifyContent: 'center', borderRadius: 12,
+  cta: {
+    backgroundColor: COLORS.primary, borderRadius: 18,
+    paddingVertical: 18, alignItems: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25, shadowRadius: 16, elevation: 8,
   },
-  uploadOverlayText: { color: COLORS.white, marginTop: 8, fontSize: 13, fontWeight: '600' },
+  ctaOff: { opacity: 0.5, shadowOpacity: 0 },
+  ctaText: { fontSize: 17, fontWeight: '800', color: COLORS.white, letterSpacing: 0.3 },
+  footerNote: { fontSize: 12, color: COLORS.gray, textAlign: 'center', marginTop: 8 },
 });
