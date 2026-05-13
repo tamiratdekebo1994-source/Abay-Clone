@@ -237,24 +237,6 @@ export default function HomeScreen({ navigation }) {
         )}
 
         {/* Today earnings summary */}
-        {earnings && (
-          <View style={styles.earningsRow}>
-            <View style={styles.earningsStat}>
-              <Text style={styles.earningsVal}>ETB {earnings.totalEarnings?.toFixed(0) || '0'}</Text>
-              <Text style={styles.earningsLabel}>Earned today</Text>
-            </View>
-            <View style={styles.earningsDivider} />
-            <View style={styles.earningsStat}>
-              <Text style={styles.earningsVal}>{earnings.totalDeliveries || 0}</Text>
-              <Text style={styles.earningsLabel}>Trips</Text>
-            </View>
-            <View style={styles.earningsDivider} />
-            <View style={styles.earningsStat}>
-              <Text style={styles.earningsVal}>ETB {earnings.avgPerTrip?.toFixed(0) || '0'}</Text>
-              <Text style={styles.earningsLabel}>Avg/Trip</Text>
-            </View>
-          </View>
-        )}
 
         {/* Location tip */}
         {!isOnline && (
