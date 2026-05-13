@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, Dimensions,
+  KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
@@ -94,7 +95,8 @@ export default function OtpVerificationScreen({ navigation, route }) {
   const boxes = Array.from({ length: CODE_LEN }, (_, i) => code[i] || '');
 
   return (
-    <View style={S.root}>
+    <KeyboardAvoidingView style={S.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
 
       {/* ── Green header ── */}
       <SafeAreaView style={S.headerBg} edges={['top']}>
@@ -202,7 +204,8 @@ export default function OtpVerificationScreen({ navigation, route }) {
           Code expires in 5 minutes.{'\n'}Check your SMS inbox.
         </Text>
       </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
