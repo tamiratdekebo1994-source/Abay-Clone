@@ -37,6 +37,7 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [routeCoords, setRouteCoords] = useState([]);
   const [nextStepText, setNextStepText] = useState('');
+  const [eta, setEta] = useState(null);
   const [podPhotoUri, setPodPhotoUri] = useState(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const mapRef = useRef(null);
@@ -85,9 +86,21 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
       const res = await fetch(url);
       const json = await res.json();
       if (json.routes?.length) {
-        setRouteCoords(decodePolyline(json.routes[0].overview_polyline.points));
-        const rawStep = json.routes[0].legs[0]?.steps[0]?.html_instructions || '';
+        const coords = decodePolyline(json.routes[0].overview_polyline.points);
+        setRouteCoords(coords);
+        const leg = json.routes[0].legs[0];
+        const rawStep = leg?.steps[0]?.html_instructions || '';
         setNextStepText(rawStep.replace(/<[^>]+>/g, ''));
+        if (leg?.duration?.text) setEta(leg.duration.text);
+        // Auto-fit map to show full route
+        if (mapRef.current && coords.length > 1) {
+          setTimeout(() => {
+            mapRef.current?.fitToCoordinates(
+              [origin, { latitude: dest.lat, longitude: dest.lng }],
+              { edgePadding: { top: 80, right: 40, bottom: 80, left: 40 }, animated: true }
+            );
+          }, 500);
+        }
       }
     } catch (_) {}
   };
@@ -189,9 +202,15 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
         )}
       </MapView>
 
-      {nextStepText ? (
+      {(eta || nextStepText) ? (
         <View style={styles.stepBanner}>
-          <Text style={styles.stepText} numberOfLines={2}>↗ {nextStepText}</Text>
+          {eta && (
+            <View style={styles.etaBadge}>
+              <Text style={styles.etaIcon}>🕐</Text>
+              <Text style={styles.etaText}>{eta} away</Text>
+            </View>
+          )}
+          {nextStepText ? <Text style={styles.stepText} numberOfLines={2}>↗ {nextStepText}</Text> : null}
         </View>
       ) : null}
 
@@ -340,9 +359,17 @@ const getStyles = (C) => StyleSheet.create({
   actionButtonTextAm: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 },
   stepBanner: {
     position: 'absolute', top: 0, left: 0, right: 0,
-    backgroundColor: 'rgba(27,67,50,0.92)', paddingHorizontal: 16, paddingVertical: 10,
+    backgroundColor: 'rgba(17,24,39,0.90)', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12,
+    gap: 6,
   },
-  stepText: { color: COLORS.white, fontSize: 14, fontWeight: '600' },
+  etaBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: COLORS.primary, alignSelf: 'flex-start',
+    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
+  },
+  etaIcon: { fontSize: 13 },
+  etaText: { color: COLORS.white, fontSize: 14, fontWeight: '800' },
+  stepText: { color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '500' },
   podSection: {
     margin: 16, padding: 16, backgroundColor: C.grayLighter,
     borderRadius: 12, borderWidth: 1, borderColor: C.border,

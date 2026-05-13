@@ -20,6 +20,7 @@ const { height: SH } = Dimensions.get('window');
 
 const HOURS = ['6a','7a','8a','9a','10a','11a','12p','1p','2p','3p','4p','5p','6p','7p','8p','9p'];
 const ACTIVITY = [0.2,0.5,0.8,0.6,0.4,0.5,0.9,0.7,0.8,0.5,0.4,0.6,1.0,0.9,0.8,0.6];
+const DAILY_GOAL = 500;
 
 // Simulated surge zones around Addis Ababa
 const SURGE_ZONES = [
@@ -176,6 +177,14 @@ export default function HomeScreen({ navigation }) {
       if (nowOnline) {
         startBackgroundTracking().catch(() => {});
         showBanner();
+        if (location && mapRef.current) {
+          mapRef.current.animateToRegion({
+            latitude: location.latitude,
+            longitude: location.longitude,
+            latitudeDelta: 0.04,
+            longitudeDelta: 0.02,
+          }, 800);
+        }
         setSurgeZones(SURGE_ZONES);
         const surgeRes = await driverAPI.getSurge(driver?.city || 'Addis Ababa').catch(() => null);
         if (surgeRes?.data?.data?.isSurge) {
@@ -221,6 +230,11 @@ export default function HomeScreen({ navigation }) {
       </View>
     );
   }
+
+  const streakCount = driver?.deliveryStreak ?? 0;
+  const ratingVal = driver?.rating ?? null;
+  const earned = todayEarnings?.totalEarnings ?? 0;
+  const goalPct = Math.min(100, (earned / DAILY_GOAL) * 100);
 
   const mapHeight = SH * 0.46;
 
@@ -324,28 +338,60 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
+        {/* ── Rating + Streak row ── */}
+        {(ratingVal !== null || streakCount >= 3) && (
+          <View style={styles.driverInfoRow}>
+            {ratingVal !== null && (
+              <View style={styles.ratingChip}>
+                <Text style={styles.chipIcon}>⭐</Text>
+                <Text style={styles.chipVal}>{ratingVal.toFixed(1)}</Text>
+                <Text style={styles.chipLabel}>Rating</Text>
+              </View>
+            )}
+            {streakCount >= 3 && (
+              <View style={styles.streakChip}>
+                <Text style={styles.chipIcon}>🔥</Text>
+                <Text style={styles.chipVal}>{streakCount}</Text>
+                <Text style={styles.chipLabel}>Streak</Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {driver?.status === 'PENDING' && (
           <View style={styles.pendingCard}>
             <Text style={styles.pendingText}>⏳ Application under review — you'll be notified once approved.</Text>
           </View>
         )}
 
-        {/* ── Today's earnings ── */}
+        {/* ── Today's earnings + goal tracker ── */}
         {todayEarnings && (
-          <View style={styles.earningsRow}>
-            <View style={styles.earningsStat}>
-              <Text style={styles.earningsVal}>ETB {todayEarnings.totalEarnings?.toFixed(0) || '0'}</Text>
-              <Text style={styles.earningsLabel}>Today's earnings</Text>
+          <View style={styles.earningsCard}>
+            <View style={styles.earningsRow}>
+              <View style={styles.earningsStat}>
+                <Text style={styles.earningsVal}>ETB {todayEarnings.totalEarnings?.toFixed(0) || '0'}</Text>
+                <Text style={styles.earningsLabel}>Today's earnings</Text>
+              </View>
+              <View style={styles.earningsDivider} />
+              <View style={styles.earningsStat}>
+                <Text style={styles.earningsVal}>{todayEarnings.totalDeliveries || 0}</Text>
+                <Text style={styles.earningsLabel}>Trips</Text>
+              </View>
+              <View style={styles.earningsDivider} />
+              <View style={styles.earningsStat}>
+                <Text style={styles.earningsVal}>ETB {todayEarnings.avgPerTrip?.toFixed(0) || '0'}</Text>
+                <Text style={styles.earningsLabel}>Avg / Trip</Text>
+              </View>
             </View>
-            <View style={styles.earningsDivider} />
-            <View style={styles.earningsStat}>
-              <Text style={styles.earningsVal}>{todayEarnings.totalDeliveries || 0}</Text>
-              <Text style={styles.earningsLabel}>Trips</Text>
-            </View>
-            <View style={styles.earningsDivider} />
-            <View style={styles.earningsStat}>
-              <Text style={styles.earningsVal}>ETB {todayEarnings.avgPerTrip?.toFixed(0) || '0'}</Text>
-              <Text style={styles.earningsLabel}>Avg / Trip</Text>
+            <View style={styles.goalSection}>
+              <View style={styles.goalHeader}>
+                <Text style={styles.goalLabel}>Daily Goal · ETB {DAILY_GOAL}</Text>
+                <Text style={styles.goalPct}>{Math.round(goalPct)}%</Text>
+              </View>
+              <View style={styles.goalTrack}>
+                <View style={[styles.goalFill, { width: `${goalPct}%` }]} />
+              </View>
+              {goalPct >= 100 && <Text style={styles.goalComplete}>🎉 Daily goal reached!</Text>}
             </View>
           </View>
         )}
@@ -518,14 +564,43 @@ const styles = StyleSheet.create({
   pendingCard: { backgroundColor: '#FEF3C7', borderRadius: 12, padding: 14, marginBottom: 16 },
   pendingText: { color: '#92400E', fontSize: 13 },
 
+  earningsCard: {
+    backgroundColor: '#F9FAFB', borderRadius: 14, marginBottom: 16, overflow: 'hidden',
+  },
   earningsRow: {
-    flexDirection: 'row', backgroundColor: '#F9FAFB',
-    borderRadius: 14, padding: 14, marginBottom: 16, alignItems: 'center',
+    flexDirection: 'row', padding: 14, alignItems: 'center',
   },
   earningsStat: { flex: 1, alignItems: 'center' },
   earningsVal: { fontSize: 17, fontWeight: '800', color: COLORS.primary },
   earningsLabel: { fontSize: 10, color: '#6B7280', marginTop: 2 },
   earningsDivider: { width: 1, height: 28, backgroundColor: '#E5E7EB' },
+  goalSection: {
+    borderTopWidth: 1, borderTopColor: '#E5E7EB',
+    paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12,
+  },
+  goalHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  goalLabel: { fontSize: 11, color: '#6B7280', fontWeight: '600' },
+  goalPct: { fontSize: 11, color: COLORS.primary, fontWeight: '700' },
+  goalTrack: { height: 6, backgroundColor: '#E5E7EB', borderRadius: 3, overflow: 'hidden' },
+  goalFill: { height: '100%', backgroundColor: COLORS.primary, borderRadius: 3 },
+  goalComplete: { fontSize: 12, color: COLORS.primary, fontWeight: '600', marginTop: 6, textAlign: 'center' },
+
+  driverInfoRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+  ratingChip: {
+    flex: 1, backgroundColor: '#FFFBEB', borderRadius: 12,
+    paddingVertical: 10, paddingHorizontal: 14,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderWidth: 1, borderColor: '#FDE68A',
+  },
+  streakChip: {
+    flex: 1, backgroundColor: '#FFF7ED', borderRadius: 12,
+    paddingVertical: 10, paddingHorizontal: 14,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderWidth: 1, borderColor: '#FED7AA',
+  },
+  chipIcon: { fontSize: 14 },
+  chipVal: { fontSize: 16, fontWeight: '800', color: '#92400E' },
+  chipLabel: { fontSize: 11, color: '#B45309' },
 
   tipCard: {
     flexDirection: 'row', alignItems: 'center',
