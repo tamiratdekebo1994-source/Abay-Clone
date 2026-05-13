@@ -275,12 +275,16 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.chart}>
             {HOURS.map((h, i) => {
               const isCurrent = i === currentHourIdx;
-              const barH = Math.max(8, ACTIVITY[i] * 64);
+              const fillH = Math.max(4, ACTIVITY[i] * 72);
               return (
                 <View key={h} style={styles.barWrap}>
-                  <View style={[styles.bar, { height: barH },
-                    isCurrent ? styles.barActive : styles.barInactive]} />
-                  {(i % 3 === 0) && <Text style={[styles.barLabel, isCurrent && styles.barLabelActive]}>{h}</Text>}
+                  <View style={styles.barTrack}>
+                    <View style={[styles.barFill, { height: fillH },
+                      isCurrent ? styles.barActive : styles.barInactive]} />
+                  </View>
+                  {(i % 4 === 0) && (
+                    <Text style={[styles.barLabel, isCurrent && styles.barLabelActive]}>{h}</Text>
+                  )}
                 </View>
               );
             })}
@@ -362,11 +366,18 @@ const styles = StyleSheet.create({
   chartTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
   chartChev: { fontSize: 20, color: '#9CA3AF' },
   chartSub: { fontSize: 12, color: '#6B7280', marginTop: 2, marginBottom: 14 },
-  chart: { flexDirection: 'row', alignItems: 'flex-end', height: 80, gap: 2 },
+  chart: { flexDirection: 'row', alignItems: 'flex-end', height: 96, paddingTop: 4 },
   barWrap: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
-  bar: { width: '80%', borderRadius: 3 },
+  barTrack: {
+    width: 5, height: 72,
+    backgroundColor: '#EAECEF',
+    borderRadius: 3,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+  },
+  barFill: { width: '100%', borderRadius: 3 },
   barActive: { backgroundColor: COLORS.primary },
-  barInactive: { backgroundColor: '#D1D5DB' },
-  barLabel: { fontSize: 9, color: '#9CA3AF', marginTop: 4 },
+  barInactive: { backgroundColor: '#C9CDD4' },
+  barLabel: { fontSize: 9, color: '#9CA3AF', marginTop: 5 },
   barLabelActive: { color: COLORS.primary, fontWeight: '700' },
 });
