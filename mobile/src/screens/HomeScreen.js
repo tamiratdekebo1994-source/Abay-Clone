@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   ScrollView, Alert, RefreshControl, ActivityIndicator,
-  Platform, Animated, Dimensions,
+  Platform, Animated, Dimensions, Modal,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { io } from 'socket.io-client';
@@ -18,7 +18,6 @@ import { startBackgroundTracking, stopBackgroundTracking, getCurrentLocation } f
 
 const { height: SH } = Dimensions.get('window');
 
-// Simulated hourly activity data (6am–9pm)
 const HOURS = ['6a','7a','8a','9a','10a','11a','12p','1p','2p','3p','4p','5p','6p','7p','8p','9p'];
 const ACTIVITY = [0.2,0.5,0.8,0.6,0.4,0.5,0.9,0.7,0.8,0.5,0.4,0.6,1.0,0.9,0.8,0.6];
 
@@ -35,10 +34,16 @@ export default function HomeScreen({ navigation }) {
   const [activeOrder, setActiveOrder] = useState(null);
   const [todayEarnings, setTodayEarnings] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [offlineLoading, setOfflineLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [goOfflineSheet, setGoOfflineSheet] = useState(false);
+  const [showOnlineBanner, setShowOnlineBanner] = useState(false);
+
   const mapRef = useRef(null);
   const socketRef = useRef(null);
   const isOnlineRef = useRef(driver?.status === 'ONLINE');
+  const bannerAnim = useRef(new Animated.Value(0)).current;
+  const sheetAnim = useRef(new Animated.Value(300)).current;
 
   const currentHour = new Date().getHours();
   const currentHourIdx = Math.max(0, Math.min(currentHour - 6, HOURS.length - 1));
@@ -105,7 +110,27 @@ export default function HomeScreen({ navigation }) {
     else setNearbyOrders([]);
   }, [isOnline, location]);
 
-  const toggleOnline = async () => {
+  const showBanner = () => {
+    setShowOnlineBanner(true);
+    Animated.sequence([
+      Animated.timing(bannerAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
+      Animated.delay(2400),
+      Animated.timing(bannerAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+    ]).start(() => setShowOnlineBanner(false));
+  };
+
+  const openGoOfflineSheet = () => {
+    setGoOfflineSheet(true);
+    Animated.spring(sheetAnim, { toValue: 0, useNativeDriver: true, bounciness: 4 }).start();
+  };
+
+  const closeGoOfflineSheet = () => {
+    Animated.timing(sheetAnim, { toValue: 300, duration: 220, useNativeDriver: true }).start(() =>
+      setGoOfflineSheet(false)
+    );
+  };
+
+  const goOnline = async () => {
     if (driver?.status === 'PENDING') {
       Alert.alert('Pending Approval', 'Your driver application is still being reviewed.');
       return;
@@ -118,17 +143,31 @@ export default function HomeScreen({ navigation }) {
       dispatch(updateDriver({ status: data.data.status }));
       if (nowOnline) {
         await startBackgroundTracking();
+        showBanner();
         const surgeRes = await driverAPI.getSurge(driver?.city || 'Addis Ababa').catch(() => null);
         if (surgeRes?.data?.data?.isSurge) {
           Alert.alert('🔥 Surge Active', `${surgeRes.data.data.multiplier}x earnings now!`);
         }
-      } else {
-        await stopBackgroundTracking();
       }
     } catch {
       Alert.alert('Error', 'Failed to update status');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const confirmGoOffline = async () => {
+    closeGoOfflineSheet();
+    try {
+      setOfflineLoading(true);
+      const { data } = await driverAPI.toggleOnline();
+      setIsOnline(data.data.status === 'ONLINE');
+      dispatch(updateDriver({ status: data.data.status }));
+      await stopBackgroundTracking();
+    } catch {
+      Alert.alert('Error', 'Failed to go offline');
+    } finally {
+      setOfflineLoading(false);
     }
   };
 
@@ -139,7 +178,6 @@ export default function HomeScreen({ navigation }) {
     setRefreshing(false);
   };
 
-  // Admin view
   if (user?.role === 'ADMIN') {
     return (
       <View style={[styles.root, { alignItems: 'center', justifyContent: 'center', padding: 32 }]}>
@@ -152,7 +190,6 @@ export default function HomeScreen({ navigation }) {
   }
 
   const mapHeight = SH * 0.46;
-  const earnings = todayEarnings;
 
   return (
     <View style={styles.root}>
@@ -179,7 +216,6 @@ export default function HomeScreen({ navigation }) {
           ))}
         </MapView>
 
-        {/* Status badge */}
         <View style={[styles.statusBadge, { top: 16 + insets.top },
           isOnline ? styles.onlineBadge : styles.offlineBadge]}>
           <View style={[styles.statusDot, { backgroundColor: isOnline ? '#22C55E' : '#9CA3AF' }]} />
@@ -194,8 +230,18 @@ export default function HomeScreen({ navigation }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Drag handle */}
         <View style={styles.dragHandle} />
+
+        {/* ── You're Online banner ── */}
+        {showOnlineBanner && (
+          <Animated.View style={[styles.onlineBanner, {
+            opacity: bannerAnim,
+            transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }],
+          }]}>
+            <View style={styles.onlineBannerDot} />
+            <Text style={styles.onlineBannerText}>You're online! Offers will appear here.</Text>
+          </Animated.View>
+        )}
 
         {/* Active order banner */}
         {activeOrder && (
@@ -212,33 +258,37 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
-        {/* SPARK NOW / GO OFFLINE button */}
+        {/* ── SPARK NOW / GO OFFLINE button ── */}
         {!activeOrder && (
           <TouchableOpacity
-            style={[styles.sparkBtn, isOnline && styles.sparkBtnOnline, isLoading && { opacity: 0.7 }]}
-            onPress={toggleOnline}
-            disabled={isLoading || driver?.status === 'PENDING' || driver?.status === 'SUSPENDED'}
-            activeOpacity={0.85}
+            style={[
+              styles.sparkBtn,
+              isOnline && styles.sparkBtnOnline,
+              (isLoading || offlineLoading) && { opacity: 0.7 },
+            ]}
+            onPress={isOnline ? openGoOfflineSheet : goOnline}
+            disabled={isLoading || offlineLoading || driver?.status === 'PENDING' || driver?.status === 'SUSPENDED'}
+            activeOpacity={0.88}
           >
-            {isLoading
+            {(isLoading || offlineLoading)
               ? <ActivityIndicator color={COLORS.white} />
-              : <Text style={styles.sparkBtnText}>
-                  {isOnline ? 'GO OFFLINE' : 'SPARK NOW'}
-                </Text>
+              : (
+                <View style={styles.sparkBtnInner}>
+                  <Text style={styles.sparkBtnIcon}>{isOnline ? '⏸' : '⚡'}</Text>
+                  <Text style={styles.sparkBtnText}>{isOnline ? 'GO OFFLINE' : 'SPARK NOW'}</Text>
+                </View>
+              )
             }
           </TouchableOpacity>
         )}
 
-        {/* Pending warning */}
         {driver?.status === 'PENDING' && (
           <View style={styles.pendingCard}>
             <Text style={styles.pendingText}>⏳ Application under review — you'll be notified once approved.</Text>
           </View>
         )}
 
-        {/* Today earnings summary */}
-
-        {/* Location tip */}
+        {/* Location tip (offline) */}
         {!isOnline && (
           <TouchableOpacity style={styles.tipCard}>
             <View style={styles.tipIconWrap}>
@@ -252,16 +302,31 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
-        {/* Nearby orders when online */}
+        {/* ── Offer cards (online) ── */}
         {isOnline && !activeOrder && nearbyOrders.length > 0 && (
-          <View style={styles.ordersSection}>
-            <Text style={styles.sectionTitle}>📍 Nearby Requests ({nearbyOrders.length})</Text>
+          <View style={styles.offersSection}>
+            <View style={styles.offersHeader}>
+              <View style={styles.offersPulse} />
+              <Text style={styles.offersTitle}>New offers nearby</Text>
+              <View style={styles.offersBadge}>
+                <Text style={styles.offersBadgeText}>{nearbyOrders.length}</Text>
+              </View>
+            </View>
             {nearbyOrders.map((order) => (
               <OrderOfferCard key={order.id} order={order}
                 onAccept={() => navigation.navigate('ActiveDelivery', { orderId: order.id, autoAccept: true })}
                 onExpire={() => setNearbyOrders((prev) => prev.filter((o) => o.id !== order.id))}
               />
             ))}
+          </View>
+        )}
+
+        {/* ── Waiting for offers (online, no offers) ── */}
+        {isOnline && !activeOrder && nearbyOrders.length === 0 && !showOnlineBanner && (
+          <View style={styles.waitingCard}>
+            <Text style={styles.waitingEmoji}>📡</Text>
+            <Text style={styles.waitingTitle}>Looking for offers</Text>
+            <Text style={styles.waitingBody}>Stay in a busy area to receive more delivery offers.</Text>
           </View>
         )}
 
@@ -291,6 +356,43 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
       </ScrollView>
+
+      {/* ── Go Offline Confirmation Sheet ── */}
+      <Modal visible={goOfflineSheet} transparent animationType="none" onRequestClose={closeGoOfflineSheet}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={closeGoOfflineSheet}>
+          <Animated.View
+            style={[styles.goOfflineSheet, { transform: [{ translateY: sheetAnim }] }]}
+          >
+            <TouchableOpacity activeOpacity={1}>
+              <View style={styles.goOfflineHandle} />
+
+              <Text style={styles.goOfflineEmoji}>⏸</Text>
+              <Text style={styles.goOfflineTitle}>Stop receiving offers?</Text>
+              <Text style={styles.goOfflineSub}>
+                You won't receive new delivery offers while you're offline.
+              </Text>
+
+              <TouchableOpacity
+                style={styles.goOfflineBtn}
+                onPress={confirmGoOffline}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.goOfflineBtnText}>Go Offline</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.keepEarningBtn}
+                onPress={closeGoOfflineSheet}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.keepEarningBtnText}>Keep Earning</Text>
+              </TouchableOpacity>
+
+              <View style={{ height: 8 }} />
+            </TouchableOpacity>
+          </Animated.View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -314,6 +416,16 @@ const styles = StyleSheet.create({
   sheetContent: { paddingHorizontal: 20, paddingBottom: 32 },
   dragHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB', alignSelf: 'center', marginTop: 10, marginBottom: 16 },
 
+  // You're Online banner
+  onlineBanner: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#DCFCE7', borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 12,
+    marginBottom: 14, gap: 10,
+  },
+  onlineBannerDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#16A34A' },
+  onlineBannerText: { fontSize: 14, fontWeight: '600', color: '#15803D', flex: 1 },
+
   activeBanner: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: COLORS.primary, borderRadius: 14,
@@ -324,26 +436,24 @@ const styles = StyleSheet.create({
   activeBannerAddr: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 },
   activeBannerChev: { color: COLORS.accent, fontSize: 24 },
 
+  // SPARK NOW / GO OFFLINE button
   sparkBtn: {
     backgroundColor: COLORS.primary, borderRadius: 50,
-    paddingVertical: 20, alignItems: 'center', marginBottom: 20,
+    paddingVertical: 19, alignItems: 'center', marginBottom: 20,
     shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35, shadowRadius: 12, elevation: 8,
+    shadowOpacity: 0.35, shadowRadius: 14, elevation: 8,
   },
-  sparkBtnOnline: { backgroundColor: '#374151' },
+  sparkBtnOnline: {
+    backgroundColor: '#1F2937',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+  },
+  sparkBtnInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  sparkBtnIcon: { fontSize: 18 },
   sparkBtnText: { color: COLORS.white, fontSize: 17, fontWeight: '900', letterSpacing: 1.5 },
 
   pendingCard: { backgroundColor: '#FEF3C7', borderRadius: 12, padding: 14, marginBottom: 16 },
   pendingText: { color: '#92400E', fontSize: 13 },
-
-  earningsRow: {
-    flexDirection: 'row', backgroundColor: '#F9FAFB',
-    borderRadius: 14, padding: 16, marginBottom: 16, alignItems: 'center',
-  },
-  earningsStat: { flex: 1, alignItems: 'center' },
-  earningsVal: { fontSize: 18, fontWeight: '800', color: COLORS.primary },
-  earningsLabel: { fontSize: 11, color: '#6B7280', marginTop: 2 },
-  earningsDivider: { width: 1, height: 32, backgroundColor: '#E5E7EB' },
 
   tipCard: {
     flexDirection: 'row', alignItems: 'center',
@@ -356,12 +466,27 @@ const styles = StyleSheet.create({
   tipBody: { fontSize: 13, color: '#6B7280', lineHeight: 18 },
   tipChev: { fontSize: 22, color: '#9CA3AF' },
 
-  ordersSection: { marginBottom: 16 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 12 },
-
-  chartSection: {
-    backgroundColor: '#F9FAFB', borderRadius: 14, padding: 16, marginBottom: 8,
+  // Offers section
+  offersSection: { marginBottom: 16 },
+  offersHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 },
+  offersPulse: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.primary },
+  offersTitle: { fontSize: 15, fontWeight: '700', color: '#111827', flex: 1 },
+  offersBadge: {
+    backgroundColor: COLORS.primary, borderRadius: 10,
+    paddingHorizontal: 8, paddingVertical: 2,
   },
+  offersBadgeText: { color: COLORS.white, fontSize: 12, fontWeight: '700' },
+
+  // Waiting card
+  waitingCard: {
+    backgroundColor: '#F9FAFB', borderRadius: 14,
+    padding: 20, marginBottom: 16, alignItems: 'center',
+  },
+  waitingEmoji: { fontSize: 32, marginBottom: 10 },
+  waitingTitle: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 4 },
+  waitingBody: { fontSize: 13, color: '#6B7280', textAlign: 'center', lineHeight: 19 },
+
+  chartSection: { backgroundColor: '#F9FAFB', borderRadius: 14, padding: 16, marginBottom: 8 },
   chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   chartTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
   chartChev: { fontSize: 20, color: '#9CA3AF' },
@@ -370,14 +495,42 @@ const styles = StyleSheet.create({
   barWrap: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
   barTrack: {
     width: 5, height: 72,
-    backgroundColor: '#EAECEF',
-    borderRadius: 3,
-    justifyContent: 'flex-end',
-    overflow: 'hidden',
+    backgroundColor: '#EAECEF', borderRadius: 3,
+    justifyContent: 'flex-end', overflow: 'hidden',
   },
   barFill: { width: '100%', borderRadius: 3 },
   barActive: { backgroundColor: COLORS.primary },
   barInactive: { backgroundColor: '#C9CDD4' },
   barLabel: { fontSize: 9, color: '#9CA3AF', marginTop: 5 },
   barLabelActive: { color: COLORS.primary, fontWeight: '700' },
+
+  // Go Offline Modal
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  goOfflineSheet: {
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingHorizontal: 24, paddingTop: 12, paddingBottom: 32,
+  },
+  goOfflineHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB', alignSelf: 'center', marginBottom: 24 },
+  goOfflineEmoji: { fontSize: 36, textAlign: 'center', marginBottom: 12 },
+  goOfflineTitle: { fontSize: 22, fontWeight: '800', color: '#111827', textAlign: 'center', marginBottom: 8 },
+  goOfflineSub: { fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 21, marginBottom: 28 },
+  goOfflineBtn: {
+    borderRadius: 50, paddingVertical: 17,
+    alignItems: 'center', marginBottom: 12,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1.5, borderColor: '#E5E7EB',
+  },
+  goOfflineBtnText: { fontSize: 16, fontWeight: '700', color: '#374151', letterSpacing: 0.3 },
+  keepEarningBtn: {
+    borderRadius: 50, paddingVertical: 17,
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 10, elevation: 6,
+  },
+  keepEarningBtnText: { fontSize: 16, fontWeight: '900', color: COLORS.white, letterSpacing: 0.5 },
 });
