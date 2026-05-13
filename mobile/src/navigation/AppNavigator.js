@@ -139,6 +139,7 @@ function MainTabs() {
         name="More"
         component={MoreScreen}
         options={{
+          headerShown: false,
           tabBarLabel: 'More',
           tabBarIcon: ({ focused }) => (
             <View style={{ alignItems: 'center', justifyContent: 'center' }}>
