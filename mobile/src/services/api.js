@@ -87,6 +87,14 @@ export const uploadAPI = {
       transformRequest: (data) => data,
     });
   },
+  avatar: (uri) => {
+    const formData = new FormData();
+    formData.append('file', { uri, type: 'image/jpeg', name: 'avatar.jpg' });
+    return api.post('/upload/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      transformRequest: (data) => data,
+    });
+  },
 };
 
 // Payments

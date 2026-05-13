@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, Alert, Image, Switch,
+  TouchableOpacity, Alert, Image, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import { useSelector, useDispatch } from 'react-redux';
-import { logout } from '../store/authStore';
+import { logout, updateDriver } from '../store/authStore';
 import { toggleTheme } from '../store/settingsStore';
+import { uploadAPI } from '../services/api';
 import { COLORS } from '../utils/constants';
 import { getColors } from '../utils/theme';
 import { t, setLanguage, getLanguage } from '../utils/i18n';
@@ -41,7 +43,33 @@ export default function MoreScreen({ navigation }) {
   const theme = useSelector((s) => s.settings.theme);
   const C = getColors(theme);
   const [lang, setLang] = useState(getLanguage());
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const isDark = theme === 'dark';
+
+  const pickPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Allow photo access to update your profile picture.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled) return;
+    const uri = result.assets[0].uri;
+    try {
+      setUploadingPhoto(true);
+      const { data } = await uploadAPI.avatar(uri);
+      dispatch(updateDriver({ profilePhotoUrl: data.data.avatarUrl }));
+    } catch {
+      Alert.alert('Upload failed', 'Could not update your profile photo. Try again.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   const handleItem = (item) => {
     if (item.screen) {
@@ -93,7 +121,7 @@ export default function MoreScreen({ navigation }) {
       {/* Header */}
       <SafeAreaView style={S.header} edges={['top']}>
         <View style={S.profileRow}>
-          <View style={S.avatarWrap}>
+          <TouchableOpacity style={S.avatarWrap} onPress={pickPhoto} activeOpacity={0.8}>
             {driver?.profilePhotoUrl ? (
               <Image source={{ uri: driver.profilePhotoUrl }} style={S.avatar} />
             ) : (
@@ -101,7 +129,13 @@ export default function MoreScreen({ navigation }) {
                 <Text style={S.avatarInitials}>{initials}</Text>
               </View>
             )}
-          </View>
+            <View style={S.avatarEditBadge}>
+              {uploadingPhoto
+                ? <ActivityIndicator size="small" color={COLORS.white} />
+                : <Text style={S.avatarEditIcon}>📷</Text>
+              }
+            </View>
+          </TouchableOpacity>
           <View style={S.profileInfo}>
             <Text style={S.profileName}>{user?.fullName?.toUpperCase() || 'DRIVER'}</Text>
             <Text style={S.profilePhone}>{user?.phone}</Text>
@@ -162,8 +196,16 @@ const S = StyleSheet.create({
 
   header: { backgroundColor: COLORS.primary, paddingBottom: 0 },
   profileRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20 },
-  avatarWrap: { marginRight: 16 },
+  avatarWrap: { marginRight: 16, position: 'relative' },
   avatar: { width: 72, height: 72, borderRadius: 36, borderWidth: 3, borderColor: 'rgba(255,255,255,0.4)' },
+  avatarEditBadge: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: COLORS.primary,
+    borderWidth: 2, borderColor: COLORS.white,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  avatarEditIcon: { fontSize: 11 },
   avatarFallback: {
     width: 72, height: 72, borderRadius: 36,
     backgroundColor: 'rgba(255,255,255,0.2)',
