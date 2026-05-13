@@ -15,6 +15,7 @@ import { COLORS, ORDER_STATUS_LABELS, SOCKET_URL } from '../utils/constants';
 import { getColors } from '../utils/theme';
 import OrderOfferCard from '../components/OrderOfferCard';
 import { startBackgroundTracking, stopBackgroundTracking, getCurrentLocation } from '../services/locationService';
+import * as Notifications from 'expo-notifications';
 
 const { height: SH } = Dimensions.get('window');
 
@@ -72,11 +73,15 @@ export default function HomeScreen({ navigation }) {
   const [showOnlineBanner, setShowOnlineBanner] = useState(false);
   const [surgeZones, setSurgeZones] = useState([]);
 
+  const [scrollY, setScrollY] = useState(0);
+
   const mapRef = useRef(null);
+  const scrollRef = useRef(null);
   const socketRef = useRef(null);
   const isOnlineRef = useRef(driver?.status === 'ONLINE');
   const bannerAnim = useRef(new Animated.Value(0)).current;
   const sheetAnim = useRef(new Animated.Value(300)).current;
+  const floatAnim = useRef(new Animated.Value(0)).current;
 
   const currentHour = new Date().getHours();
   const currentHourIdx = Math.max(0, Math.min(currentHour - 6, HOURS.length - 1));
@@ -88,6 +93,15 @@ export default function HomeScreen({ navigation }) {
   }, []);
 
   useEffect(() => { isOnlineRef.current = isOnline; }, [isOnline]);
+
+  const showFloatPill = isOnline && nearbyOrders.length > 0 && scrollY > 220;
+  useEffect(() => {
+    Animated.spring(floatAnim, {
+      toValue: showFloatPill ? 1 : 0,
+      useNativeDriver: true,
+      bounciness: 6,
+    }).start();
+  }, [showFloatPill]);
 
   const connectSocket = async () => {
     if (user?.role !== 'DRIVER') return;
@@ -101,6 +115,14 @@ export default function HomeScreen({ navigation }) {
             if (prev.find((o) => o.orderId === order.orderId || o.id === order.orderId)) return prev;
             return [order, ...prev];
           });
+          Notifications.scheduleNotificationAsync({
+            content: {
+              title: '⚡ New delivery offer!',
+              body: `ETB ${order.driverFee?.toFixed(2)} · ${order.distanceKm?.toFixed(1)} km away`,
+              sound: true,
+            },
+            trigger: null,
+          }).catch(() => {});
         }
       });
       socket.on('driver_assigned', ({ orderId }) => setNearbyOrders((prev) => prev.filter((o) => o.id !== orderId)));
@@ -264,11 +286,19 @@ export default function HomeScreen({ navigation }) {
             />
           ))}
           {nearbyOrders.map((order) => (
-            <Marker key={order.id}
+            <Marker
+              key={order.id}
               coordinate={{ latitude: order.pickupLat, longitude: order.pickupLng }}
-              title={`Order ${order.orderNumber}`}
-              pinColor={COLORS.accent}
-            />
+              title={order.store?.storeName || `Order ${order.orderNumber}`}
+              description={`ETB ${order.driverFee?.toFixed(2)} · ${order.distanceKm?.toFixed(1)} km`}
+            >
+              <View style={styles.storePin}>
+                <Text style={styles.storePinText}>🏪</Text>
+                <View style={styles.storePinBubble}>
+                  <Text style={styles.storePinPay}>ETB {order.driverFee?.toFixed(0)}</Text>
+                </View>
+              </View>
+            </Marker>
           ))}
         </MapView>
 
@@ -281,10 +311,13 @@ export default function HomeScreen({ navigation }) {
 
       {/* ── Bottom Sheet ── */}
       <ScrollView
+        ref={scrollRef}
         style={styles.sheet}
         contentContainerStyle={styles.sheetContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
         showsVerticalScrollIndicator={false}
+        onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={60}
       >
         <View style={styles.dragHandle} />
 
@@ -467,6 +500,27 @@ export default function HomeScreen({ navigation }) {
       </ScrollView>
 
       {/* ── Go Offline Confirmation Sheet ── */}
+      {/* ── Floating offer pill (visible when scrolled past offers) ── */}
+      <Animated.View
+        pointerEvents={showFloatPill ? 'box-none' : 'none'}
+        style={[styles.floatPill, {
+          opacity: floatAnim,
+          transform: [{ translateY: floatAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }],
+        }]}
+      >
+        <TouchableOpacity
+          style={styles.floatPillBtn}
+          onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+          activeOpacity={0.85}
+        >
+          <View style={styles.floatPillDot} />
+          <Text style={styles.floatPillText}>
+            ⚡ {nearbyOrders.length} new offer{nearbyOrders.length !== 1 ? 's' : ''}
+          </Text>
+          <Text style={styles.floatPillArrow}>↑</Text>
+        </TouchableOpacity>
+      </Animated.View>
+
       <Modal visible={goOfflineSheet} transparent animationType="none" onRequestClose={closeGoOfflineSheet}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={closeGoOfflineSheet}>
           <Animated.View
@@ -601,6 +655,31 @@ const styles = StyleSheet.create({
   chipIcon: { fontSize: 14 },
   chipVal: { fontSize: 16, fontWeight: '800', color: '#92400E' },
   chipLabel: { fontSize: 11, color: '#B45309' },
+
+  storePin: { alignItems: 'center' },
+  storePinText: { fontSize: 22 },
+  storePinBubble: {
+    backgroundColor: '#1F2937', borderRadius: 8,
+    paddingHorizontal: 6, paddingVertical: 2, marginTop: 2,
+  },
+  storePinPay: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
+
+  floatPill: {
+    position: 'absolute',
+    bottom: 16,
+    alignSelf: 'center',
+    zIndex: 99,
+  },
+  floatPillBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#111827',
+    borderRadius: 30, paddingHorizontal: 20, paddingVertical: 12,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 10, elevation: 10,
+  },
+  floatPillDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ADE80' },
+  floatPillText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  floatPillArrow: { color: '#9CA3AF', fontSize: 16, fontWeight: '700' },
 
   tipCard: {
     flexDirection: 'row', alignItems: 'center',
