@@ -57,6 +57,7 @@ async function registerPushToken() {
     if (finalStatus !== 'granted') return;
 
     const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+    if (!projectId) return;
     const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
     await driverAPI.registerPushToken(token);
   } catch (err) {
