@@ -142,7 +142,7 @@ export default function HomeScreen({ navigation }) {
       setIsOnline(nowOnline);
       dispatch(updateDriver({ status: data.data.status }));
       if (nowOnline) {
-        await startBackgroundTracking();
+        startBackgroundTracking().catch(() => {});
         showBanner();
         const surgeRes = await driverAPI.getSurge(driver?.city || 'Addis Ababa').catch(() => null);
         if (surgeRes?.data?.data?.isSurge) {
