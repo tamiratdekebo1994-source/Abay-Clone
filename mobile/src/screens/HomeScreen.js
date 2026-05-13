@@ -4,7 +4,7 @@ import {
   ScrollView, Alert, RefreshControl, ActivityIndicator,
   Platform, Animated, Dimensions, Modal,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, Polygon, PROVIDER_GOOGLE } from 'react-native-maps';
 import { io } from 'socket.io-client';
 import * as SecureStore from 'expo-secure-store';
 import { useSelector, useDispatch } from 'react-redux';
@@ -20,6 +20,37 @@ const { height: SH } = Dimensions.get('window');
 
 const HOURS = ['6a','7a','8a','9a','10a','11a','12p','1p','2p','3p','4p','5p','6p','7p','8p','9p'];
 const ACTIVITY = [0.2,0.5,0.8,0.6,0.4,0.5,0.9,0.7,0.8,0.5,0.4,0.6,1.0,0.9,0.8,0.6];
+
+// Simulated surge zones around Addis Ababa
+const SURGE_ZONES = [
+  {
+    id: 'bole', label: 'Bole', multiplier: 1.8, color: '#EF444420', stroke: '#EF4444',
+    coords: [
+      { latitude: 9.0120, longitude: 38.7900 },
+      { latitude: 9.0200, longitude: 38.8050 },
+      { latitude: 9.0050, longitude: 38.8100 },
+      { latitude: 8.9980, longitude: 38.7950 },
+    ],
+  },
+  {
+    id: 'piazza', label: 'Piazza', multiplier: 1.5, color: '#F59E0B18', stroke: '#F59E0B',
+    coords: [
+      { latitude: 9.0380, longitude: 38.7480 },
+      { latitude: 9.0450, longitude: 38.7620 },
+      { latitude: 9.0310, longitude: 38.7680 },
+      { latitude: 9.0250, longitude: 38.7540 },
+    ],
+  },
+  {
+    id: 'megenagna', label: 'Megenagna', multiplier: 1.3, color: '#F59E0B12', stroke: '#F59E0B',
+    coords: [
+      { latitude: 9.0250, longitude: 38.7850 },
+      { latitude: 9.0320, longitude: 38.7980 },
+      { latitude: 9.0180, longitude: 38.8020 },
+      { latitude: 9.0120, longitude: 38.7890 },
+    ],
+  },
+];
 
 export default function HomeScreen({ navigation }) {
   const dispatch = useDispatch();
@@ -38,6 +69,7 @@ export default function HomeScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [goOfflineSheet, setGoOfflineSheet] = useState(false);
   const [showOnlineBanner, setShowOnlineBanner] = useState(false);
+  const [surgeZones, setSurgeZones] = useState([]);
 
   const mapRef = useRef(null);
   const socketRef = useRef(null);
@@ -144,6 +176,7 @@ export default function HomeScreen({ navigation }) {
       if (nowOnline) {
         startBackgroundTracking().catch(() => {});
         showBanner();
+        setSurgeZones(SURGE_ZONES);
         const surgeRes = await driverAPI.getSurge(driver?.city || 'Addis Ababa').catch(() => null);
         if (surgeRes?.data?.data?.isSurge) {
           Alert.alert('🔥 Surge Active', `${surgeRes.data.data.multiplier}x earnings now!`);
@@ -207,6 +240,15 @@ export default function HomeScreen({ navigation }) {
             latitudeDelta: 0.0922, longitudeDelta: 0.0421,
           }}
         >
+          {surgeZones.map((zone) => (
+            <Polygon
+              key={zone.id}
+              coordinates={zone.coords}
+              fillColor={zone.color}
+              strokeColor={zone.stroke}
+              strokeWidth={1.5}
+            />
+          ))}
           {nearbyOrders.map((order) => (
             <Marker key={order.id}
               coordinate={{ latitude: order.pickupLat, longitude: order.pickupLng }}
@@ -288,6 +330,26 @@ export default function HomeScreen({ navigation }) {
           </View>
         )}
 
+        {/* ── Today's earnings ── */}
+        {todayEarnings && (
+          <View style={styles.earningsRow}>
+            <View style={styles.earningsStat}>
+              <Text style={styles.earningsVal}>ETB {todayEarnings.totalEarnings?.toFixed(0) || '0'}</Text>
+              <Text style={styles.earningsLabel}>Today's earnings</Text>
+            </View>
+            <View style={styles.earningsDivider} />
+            <View style={styles.earningsStat}>
+              <Text style={styles.earningsVal}>{todayEarnings.totalDeliveries || 0}</Text>
+              <Text style={styles.earningsLabel}>Trips</Text>
+            </View>
+            <View style={styles.earningsDivider} />
+            <View style={styles.earningsStat}>
+              <Text style={styles.earningsVal}>ETB {todayEarnings.avgPerTrip?.toFixed(0) || '0'}</Text>
+              <Text style={styles.earningsLabel}>Avg / Trip</Text>
+            </View>
+          </View>
+        )}
+
         {/* Location tip (offline) */}
         {!isOnline && (
           <TouchableOpacity style={styles.tipCard}>
@@ -315,6 +377,7 @@ export default function HomeScreen({ navigation }) {
             {nearbyOrders.map((order) => (
               <OrderOfferCard key={order.id} order={order}
                 onAccept={() => navigation.navigate('ActiveDelivery', { orderId: order.id, autoAccept: true })}
+                onDecline={() => setNearbyOrders((prev) => prev.filter((o) => o.id !== order.id))}
                 onExpire={() => setNearbyOrders((prev) => prev.filter((o) => o.id !== order.id))}
               />
             ))}
@@ -454,6 +517,15 @@ const styles = StyleSheet.create({
 
   pendingCard: { backgroundColor: '#FEF3C7', borderRadius: 12, padding: 14, marginBottom: 16 },
   pendingText: { color: '#92400E', fontSize: 13 },
+
+  earningsRow: {
+    flexDirection: 'row', backgroundColor: '#F9FAFB',
+    borderRadius: 14, padding: 14, marginBottom: 16, alignItems: 'center',
+  },
+  earningsStat: { flex: 1, alignItems: 'center' },
+  earningsVal: { fontSize: 17, fontWeight: '800', color: COLORS.primary },
+  earningsLabel: { fontSize: 10, color: '#6B7280', marginTop: 2 },
+  earningsDivider: { width: 1, height: 28, backgroundColor: '#E5E7EB' },
 
   tipCard: {
     flexDirection: 'row', alignItems: 'center',
