@@ -5,11 +5,11 @@
  * This file takes precedence over app.json for any overlapping fields.
  */
 const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY || '';
-// Dev API server — set to your machine's local IP (e.g. http://192.168.1.100:5000)
-const apiBaseUrl = process.env.API_BASE_URL || 'http://192.168.1.100:5000';
-// EAS project ID — get from `eas init` or https://expo.dev/accounts/<username>/projects
+const apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:5000';
 const easProjectId = process.env.EAS_PROJECT_ID || '';
 const sentryDsn = process.env.SENTRY_DSN || '';
+const googleServicesJson = process.env.GOOGLE_SERVICES_JSON || './google-services.json';
+const googleServicesPlist = process.env.GOOGLE_SERVICES_PLIST || './GoogleService-Info.plist';
 
 // Firebase Web App config — from Firebase Console → Project Settings → Your Apps
 const firebase = {
@@ -25,6 +25,7 @@ module.exports = ({ config }) => ({
   ...config,
   ios: {
     ...config.ios,
+    googleServicesFile: googleServicesPlist,
     config: {
       ...config.ios?.config,
       googleMapsApiKey,
@@ -32,10 +33,10 @@ module.exports = ({ config }) => ({
   },
   android: {
     ...config.android,
+    googleServicesFile: googleServicesJson,
     config: {
       googleMaps: { apiKey: googleMapsApiKey },
     },
-    ...(process.env.GOOGLE_SERVICES_JSON && { googleServicesFile: process.env.GOOGLE_SERVICES_JSON }),
   },
   extra: {
     ...config.extra,

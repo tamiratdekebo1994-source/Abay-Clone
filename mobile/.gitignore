@@ -1,0 +1,4 @@
+
+# Firebase native config (contains project credentials)
+google-services.json
+GoogleService-Info.plist
