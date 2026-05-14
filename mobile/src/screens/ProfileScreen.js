@@ -1,214 +1,414 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  TextInput, Alert, ActivityIndicator, Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import { useSelector, useDispatch } from 'react-redux';
-import { logout } from '../store/authStore';
-import { toggleTheme } from '../store/settingsStore';
+import { loadUser, updateDriver } from '../store/authStore';
+import { authAPI, uploadAPI } from '../services/api';
 import { COLORS, VEHICLE_TYPES } from '../utils/constants';
-import { getColors } from '../utils/theme';
-import { t, setLanguage, getLanguage } from '../utils/i18n';
+
+const VEHICLE_ICONS = {
+  MOTORCYCLE: '🏍️',
+  BAJAJ:      '🛺',
+  CAR:        '🚗',
+  VAN:        '🚐',
+  TRUCK:      '🚛',
+};
+
+const STATUS_COLORS = {
+  APPROVED:  '#16A34A',
+  ONLINE:    '#16A34A',
+  PENDING:   '#D97706',
+  SUSPENDED: '#DC2626',
+  OFFLINE:   '#6B7280',
+};
 
 export default function ProfileScreen({ navigation }) {
   const dispatch = useDispatch();
-  const { user, driver } = useSelector((state) => state.auth);
-  const theme = useSelector((state) => state.settings.theme);
-  const C = getColors(theme);
-  const [lang, setLang] = useState(getLanguage());
-  const [vehicleExpanded, setVehicleExpanded] = useState(false);
+  const { user, driver } = useSelector((s) => s.auth);
 
-  const handleLogout = () => {
-    Alert.alert(t('logout'), t('confirm') + '?', [
-      { text: t('cancel'), style: 'cancel' },
-      { text: t('logout'), style: 'destructive', onPress: () => dispatch(logout()) },
-    ]);
+  const [editing, setEditing] = useState(false);
+  const [fullName, setFullName] = useState(user?.fullName || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const initials = user?.fullName
+    ? user.fullName.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
+    : '?';
+
+  const vehicleLabel = VEHICLE_TYPES.find((v) => v.value === driver?.vehicleType)?.label
+    || driver?.vehicleType || '—';
+  const vehicleIcon = VEHICLE_ICONS[driver?.vehicleType] || '🚗';
+
+  const statusColor = STATUS_COLORS[driver?.status] || '#6B7280';
+
+  const pickPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Allow photo access to update your profile picture.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled) return;
+    try {
+      setUploadingPhoto(true);
+      const { data } = await uploadAPI.avatar(result.assets[0].uri);
+      dispatch(updateDriver({ profilePhotoUrl: data.data.avatarUrl }));
+    } catch {
+      Alert.alert('Upload failed', 'Could not update your profile photo. Try again.');
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
-  const toggleLanguage = () => {
-    const newLang = lang === 'am' ? 'en' : 'am';
-    setLanguage(newLang);
-    setLang(newLang);
+  const handleSave = async () => {
+    if (!fullName.trim()) {
+      Alert.alert('Name is required'); return;
+    }
+    setSaving(true);
+    try {
+      await authAPI.updateProfile({ fullName: fullName.trim(), email: email.trim() || undefined });
+      await dispatch(loadUser());
+      setEditing(false);
+    } catch (err) {
+      Alert.alert('Error', err.response?.data?.message || 'Failed to save changes');
+    } finally {
+      setSaving(false);
+    }
   };
-
-  const getStatusColor = (status) => {
-    const colors = {
-      APPROVED: COLORS.success, ONLINE: COLORS.online,
-      PENDING: COLORS.warning, SUSPENDED: COLORS.error, OFFLINE: COLORS.gray,
-    };
-    return colors[status] || COLORS.gray;
-  };
-
-  const S = getStyles(C, theme);
 
   return (
-    <View style={S.container}>
-      <ScrollView contentContainerStyle={S.contentContainer}>
+    <View style={S.root}>
+      {/* ── Green header ── */}
+      <SafeAreaView style={S.header} edges={['top']}>
+        <View style={S.headerRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={S.backBtn}>
+            <Text style={S.backIcon}>‹</Text>
+          </TouchableOpacity>
+          <Text style={S.headerTitle}>My Account</Text>
+          <TouchableOpacity
+            onPress={() => {
+              if (editing) {
+                setFullName(user?.fullName || '');
+                setEmail(user?.email || '');
+                setEditing(false);
+              } else {
+                setEditing(true);
+              }
+            }}
+            style={S.editBtn}
+          >
+            <Text style={S.editBtnText}>{editing ? 'Cancel' : 'Edit'}</Text>
+          </TouchableOpacity>
+        </View>
 
-        {/* Profile Header */}
-        <View style={S.header}>
-          <View style={S.avatar}>
-            <Text style={S.avatarText}>{user?.fullName?.charAt(0) || 'A'}</Text>
-          </View>
-          <Text style={S.name}>{user?.fullName}</Text>
-          <Text style={S.phone}>{user?.phone}</Text>
-          {driver && (
-            <View style={[S.statusBadge, { backgroundColor: getStatusColor(driver.status) }]}>
-              <Text style={S.statusBadgeText}>{driver.status}</Text>
+        {/* ── Avatar ── */}
+        <TouchableOpacity style={S.avatarWrap} onPress={pickPhoto} activeOpacity={0.8}>
+          {driver?.profilePhotoUrl ? (
+            <Image source={{ uri: driver.profilePhotoUrl }} style={S.avatar} />
+          ) : (
+            <View style={S.avatarFallback}>
+              <Text style={S.avatarInitials}>{initials}</Text>
             </View>
+          )}
+          <View style={S.avatarEditBadge}>
+            {uploadingPhoto
+              ? <ActivityIndicator size="small" color={COLORS.white} />
+              : <Text style={S.avatarEditIcon}>📷</Text>
+            }
+          </View>
+        </TouchableOpacity>
+
+        {/* ── Driver status badge ── */}
+        {driver?.status && (
+          <View style={[S.statusBadge, { backgroundColor: statusColor + '33', borderColor: statusColor + '66' }]}>
+            <View style={[S.statusDot, { backgroundColor: statusColor }]} />
+            <Text style={[S.statusText, { color: statusColor === '#6B7280' ? 'rgba(255,255,255,0.7)' : COLORS.white }]}>
+              {driver.status}
+            </Text>
+          </View>
+        )}
+      </SafeAreaView>
+
+      <ScrollView style={S.scroll} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+
+        {/* ── Stats strip ── */}
+        {driver && (
+          <View style={S.statsRow}>
+            <View style={S.statCell}>
+              <Text style={S.statVal}>{driver.totalDeliveries ?? 0}</Text>
+              <Text style={S.statKey}>Trips</Text>
+            </View>
+            <View style={S.statLine} />
+            <View style={S.statCell}>
+              {driver.rating != null
+                ? <Text style={S.statVal}>⭐ {driver.rating.toFixed(1)}</Text>
+                : <Text style={S.statVal}>—</Text>
+              }
+              <Text style={S.statKey}>Rating</Text>
+            </View>
+            <View style={S.statLine} />
+            <View style={S.statCell}>
+              <Text style={S.statVal}>
+                {(driver.deliveryStreak ?? 0) >= 3 ? `🔥 ${driver.deliveryStreak}` : driver.deliveryStreak ?? 0}
+              </Text>
+              <Text style={S.statKey}>Streak</Text>
+            </View>
+            <View style={S.statLine} />
+            <View style={S.statCell}>
+              <Text style={S.statVal}>ETB {driver.totalEarnings?.toFixed(0) ?? '0'}</Text>
+              <Text style={S.statKey}>Earned</Text>
+            </View>
+          </View>
+        )}
+
+        {/* ── Personal info ── */}
+        <View style={S.section}>
+          <Text style={S.sectionTitle}>Personal Info</Text>
+          <View style={S.card}>
+            <InfoField
+              icon="👤"
+              label="Full Name"
+              value={editing ? fullName : user?.fullName}
+              editing={editing}
+              onChangeText={setFullName}
+            />
+            <InfoField
+              icon="📱"
+              label="Phone"
+              value={user?.phone}
+              editing={false}
+            />
+            <InfoField
+              icon="✉️"
+              label="Email"
+              value={editing ? email : (user?.email || '—')}
+              editing={editing}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              last
+            />
+          </View>
+
+          {editing && (
+            <TouchableOpacity
+              style={[S.saveBtn, saving && { opacity: 0.6 }]}
+              onPress={handleSave}
+              disabled={saving}
+              activeOpacity={0.85}
+            >
+              {saving
+                ? <ActivityIndicator color={COLORS.white} />
+                : <Text style={S.saveBtnText}>Save Changes</Text>
+              }
+            </TouchableOpacity>
           )}
         </View>
 
-        {/* Stats */}
+        {/* ── Vehicle info ── */}
         {driver && (
-          <View style={S.statsRow}>
-            <View style={S.statItem}>
-              <Text style={S.statValue}>{driver.totalDeliveries}</Text>
-              <Text style={S.statLabel}>Deliveries</Text>
-            </View>
-            <View style={S.statDivider} />
-            <View style={S.statItem}>
-              <Text style={S.statValue}>⭐ {driver.rating?.toFixed(1)}</Text>
-              <Text style={S.statLabel}>Rating</Text>
-            </View>
-            <View style={S.statDivider} />
-            <View style={S.statItem}>
-              <Text style={S.statValue}>ETB {driver.totalEarnings?.toFixed(0)}</Text>
-              <Text style={S.statLabel}>Total Earned</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Vehicle Info — collapsible */}
-        {driver && (
-          <View style={S.menu}>
-            <TouchableOpacity style={S.menuItem} onPress={() => setVehicleExpanded(!vehicleExpanded)}>
-              <Text style={S.menuIcon}>🚗</Text>
-              <Text style={[S.menuLabel, { flex: 1 }]}>Vehicle Information</Text>
-              <Text style={S.menuArrow}>{vehicleExpanded ? '⌄' : '›'}</Text>
-            </TouchableOpacity>
-            {vehicleExpanded && (
-              <View style={S.vehicleDetails}>
-                <InfoRow label="Type" value={VEHICLE_TYPES.find((v) => v.value === driver.vehicleType)?.label || driver.vehicleType} C={C} />
-                <InfoRow label="Plate" value={driver.vehiclePlate} C={C} />
-                <InfoRow label="Model" value={driver.vehicleModel} C={C} />
-                <InfoRow label="Color" value={driver.vehicleColor} C={C} />
-                <InfoRow label="Year" value={String(driver.vehicleYear)} C={C} />
-                <InfoRow label="License" value={driver.licenseNumber} C={C} />
+          <View style={S.section}>
+            <Text style={S.sectionTitle}>Vehicle</Text>
+            <View style={S.vehicleCard}>
+              <View style={S.vehicleIconBox}>
+                <Text style={S.vehicleIconText}>{vehicleIcon}</Text>
               </View>
-            )}
+              <View style={{ flex: 1 }}>
+                <Text style={S.vehicleType}>{vehicleLabel}</Text>
+                <Text style={S.vehiclePlate}>{driver.vehiclePlate}</Text>
+              </View>
+            </View>
+
+            <View style={S.card}>
+              <VehicleRow label="Make / Model" value={`${driver.vehicleMake || ''} ${driver.vehicleModel || ''}`.trim() || '—'} />
+              <VehicleRow label="Color" value={driver.vehicleColor || '—'} />
+              <VehicleRow label="Year" value={driver.vehicleYear ? String(driver.vehicleYear) : '—'} />
+              <VehicleRow label="License #" value={driver.licenseNumber || '—'} />
+              <VehicleRow
+                label="License Expiry"
+                value={driver.licenseExpiry
+                  ? new Date(driver.licenseExpiry).toLocaleDateString('en-ET', { year: 'numeric', month: 'short', day: 'numeric' })
+                  : '—'}
+                last
+              />
+            </View>
           </View>
         )}
 
-        {/* Menu Items */}
-        <View style={S.menu}>
-          <MenuButton icon="📜" label={`${t('deliveryHistory', lang)} / Delivery History`} onPress={() => navigation.navigate('Orders')} C={C} />
-          <MenuButton icon="💰" label={t('earnings', lang)} onPress={() => navigation.navigate('Earnings')} C={C} />
-          <MenuButton icon="🔔" label={t('notifications', lang)} onPress={() => navigation.navigate('Notifications')} C={C} />
-          <MenuButton icon="❓" label={t('helpSupport', lang)} onPress={() => navigation.navigate('HelpSupport')} C={C} />
-
-          {/* Theme Toggle */}
-          <TouchableOpacity style={S.menuItem} onPress={() => dispatch(toggleTheme())}>
-            <Text style={S.menuIcon}>{theme === 'dark' ? '🌙' : '☀️'}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={S.menuLabel}>Theme / ገጽታ</Text>
-              <Text style={S.menuSub}>{theme === 'dark' ? 'Dark Mode — tap for Light' : 'Light Mode — tap for Dark'}</Text>
+        {/* ── City / location ── */}
+        {driver?.city && (
+          <View style={S.section}>
+            <Text style={S.sectionTitle}>Zone</Text>
+            <View style={S.card}>
+              <VehicleRow label="City" value={driver.city} />
+              {driver.homeAddress && <VehicleRow label="Home Address" value={driver.homeAddress} last />}
             </View>
-            <View style={[S.badge, { backgroundColor: theme === 'dark' ? '#333' : COLORS.primary }]}>
-              <Text style={[S.badgeText, { color: COLORS.white }]}>
-                {theme === 'dark' ? '🌙' : '☀️'}
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          {/* Language Toggle */}
-          <TouchableOpacity style={S.menuItem} onPress={toggleLanguage}>
-            <Text style={S.menuIcon}>🌐</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={S.menuLabel}>{t('language', lang)}</Text>
-              <Text style={S.menuSub}>{lang === 'am' ? 'አማርኛ (ቀይ ወደ English)' : 'English (switch to አማርኛ)'}</Text>
-            </View>
-            <View style={[S.badge, { backgroundColor: lang === 'am' ? COLORS.primary : COLORS.accent }]}>
-              <Text style={[S.badgeText, { color: lang === 'am' ? COLORS.white : COLORS.primary }]}>
-                {lang === 'am' ? 'አማ' : 'EN'}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* Logout */}
-        <TouchableOpacity style={S.logoutBtn} onPress={handleLogout}>
-          <Text style={S.logoutText}>🚪 {t('logout', lang)}</Text>
-        </TouchableOpacity>
-
-        <View style={S.footer}>
-          <Text style={S.footerText}>Fetno v1.0.0 • 🇪🇹 Made in Ethiopia</Text>
-        </View>
+          </View>
+        )}
 
       </ScrollView>
     </View>
   );
 }
 
-const InfoRow = ({ label, value, C }) => (
-  <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.grayLight }}>
-    <Text style={{ fontSize: 14, color: C.gray }}>{label}</Text>
-    <Text style={{ fontSize: 14, fontWeight: '600', color: C.text }}>{value}</Text>
-  </View>
-);
+function InfoField({ icon, label, value, editing, onChangeText, keyboardType, last }) {
+  return (
+    <View style={[IF.row, !last && IF.border]}>
+      <Text style={IF.icon}>{icon}</Text>
+      <View style={IF.body}>
+        <Text style={IF.label}>{label}</Text>
+        {editing && onChangeText ? (
+          <TextInput
+            style={IF.input}
+            value={value}
+            onChangeText={onChangeText}
+            keyboardType={keyboardType || 'default'}
+            autoCapitalize="words"
+            placeholderTextColor="#9CA3AF"
+          />
+        ) : (
+          <Text style={IF.value}>{value}</Text>
+        )}
+      </View>
+    </View>
+  );
+}
 
-const MenuButton = ({ icon, label, onPress, C }) => (
-  <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: C.grayLight }} onPress={onPress}>
-    <Text style={{ fontSize: 20, marginRight: 12 }}>{icon}</Text>
-    <Text style={{ fontSize: 15, color: C.text, flex: 1 }}>{label}</Text>
-    <Text style={{ fontSize: 20, color: C.gray }}>›</Text>
-  </TouchableOpacity>
-);
+function VehicleRow({ label, value, last }) {
+  return (
+    <View style={[VR.row, !last && VR.border]}>
+      <Text style={VR.label}>{label}</Text>
+      <Text style={VR.value} numberOfLines={1}>{value}</Text>
+    </View>
+  );
+}
 
-const getStyles = (C, theme) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.background },
-  contentContainer: { paddingBottom: 100 },
-  header: {
-    backgroundColor: C.white, alignItems: 'center',
-    paddingVertical: 40, paddingHorizontal: 24,
+const IF = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 16, paddingVertical: 13 },
+  border: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F3F4F6' },
+  icon: { fontSize: 18, width: 26, marginTop: 1 },
+  body: { flex: 1 },
+  label: { fontSize: 11, color: '#9CA3AF', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3 },
+  value: { fontSize: 15, color: '#111827', fontWeight: '500', marginTop: 2 },
+  input: {
+    fontSize: 15, color: '#111827', fontWeight: '500', marginTop: 2,
+    borderBottomWidth: 1.5, borderBottomColor: COLORS.primary, paddingBottom: 2,
   },
+});
+
+const VR = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13 },
+  border: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F3F4F6' },
+  label: { flex: 1, fontSize: 14, color: '#6B7280', fontWeight: '500' },
+  value: { fontSize: 14, color: '#111827', fontWeight: '600', maxWidth: '55%', textAlign: 'right' },
+});
+
+const S = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#F1F5F9' },
+
+  // Header
+  header: { backgroundColor: COLORS.primary },
+  headerRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4,
+  },
+  backBtn: { width: 36, height: 36, justifyContent: 'center' },
+  backIcon: { fontSize: 32, color: COLORS.white, lineHeight: 36 },
+  headerTitle: { flex: 1, color: COLORS.white, fontSize: 17, fontWeight: '700', textAlign: 'center' },
+  editBtn: { width: 48, alignItems: 'flex-end' },
+  editBtnText: { color: '#FCBF49', fontSize: 15, fontWeight: '700' },
+
+  // Avatar
+  avatarWrap: { alignSelf: 'center', marginTop: 12, marginBottom: 8, position: 'relative' },
   avatar: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center',
-    marginBottom: 12,
+    width: 88, height: 88, borderRadius: 44,
+    borderWidth: 3, borderColor: 'rgba(255,255,255,0.5)',
   },
-  avatarText: { fontSize: 32, fontWeight: '800', color: COLORS.primary },
-  name: { color: C.text, fontSize: 22, fontWeight: '700' },
-  phone: { color: C.gray, fontSize: 15, marginTop: 4 },
-  statusBadge: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 4, borderRadius: 20 },
-  statusBadgeText: { color: COLORS.white, fontSize: 13, fontWeight: '700' },
+  avatarFallback: {
+    width: 88, height: 88, borderRadius: 44,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 3, borderColor: 'rgba(255,255,255,0.5)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  avatarInitials: { color: COLORS.white, fontSize: 30, fontWeight: '800' },
+  avatarEditBadge: {
+    position: 'absolute', bottom: 2, right: 2,
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: COLORS.primary,
+    borderWidth: 2, borderColor: COLORS.white,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  avatarEditIcon: { fontSize: 12 },
+
+  // Status badge
+  statusBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    alignSelf: 'center', marginBottom: 16,
+    borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5,
+  },
+  statusDot: { width: 7, height: 7, borderRadius: 4 },
+  statusText: { fontSize: 12, fontWeight: '700' },
+
+  // Stats
   statsRow: {
-    flexDirection: 'row', backgroundColor: C.white,
-    margin: 16, borderRadius: 12, padding: 16,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
+    flexDirection: 'row', backgroundColor: '#FFFFFF',
+    marginHorizontal: 16, marginTop: 16,
+    borderRadius: 14, paddingVertical: 14,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07, shadowRadius: 6, elevation: 2,
   },
-  statItem: { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: 16, fontWeight: '800', color: COLORS.primary },
-  statLabel: { fontSize: 12, color: C.gray, marginTop: 2 },
-  statDivider: { width: 1, backgroundColor: C.border },
-  menu: {
-    backgroundColor: C.white, margin: 16, marginTop: 0,
-    borderRadius: 12, overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3, elevation: 1,
+  statCell: { flex: 1, alignItems: 'center' },
+  statVal: { fontSize: 14, fontWeight: '800', color: COLORS.primary },
+  statKey: { fontSize: 10, color: '#9CA3AF', fontWeight: '600',
+    textTransform: 'uppercase', letterSpacing: 0.3, marginTop: 2 },
+  statLine: { width: 1, backgroundColor: '#F3F4F6' },
+
+  // Sections
+  scroll: { flex: 1 },
+  section: { marginHorizontal: 16, marginTop: 20 },
+  sectionTitle: {
+    fontSize: 11, fontWeight: '700', color: '#9CA3AF',
+    textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8, marginLeft: 4,
   },
-  menuItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: C.grayLight },
-  menuIcon: { fontSize: 20, marginRight: 12 },
-  menuLabel: { fontSize: 15, color: C.text },
-  menuSub: { fontSize: 11, color: C.gray, marginTop: 1 },
-  menuArrow: { fontSize: 20, color: C.gray },
-  vehicleDetails: { paddingHorizontal: 16, paddingBottom: 8 },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  badgeText: { fontSize: 12, fontWeight: '700' },
-  logoutBtn: {
-    margin: 16, backgroundColor: theme === 'dark' ? '#2A1A1A' : '#FEE2E2',
-    borderRadius: 12, padding: 16, alignItems: 'center',
+  card: {
+    backgroundColor: '#FFFFFF', borderRadius: 14, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
   },
-  logoutText: { color: COLORS.error, fontSize: 16, fontWeight: '700' },
-  footer: { alignItems: 'center', paddingVertical: 24 },
-  footerText: { color: C.gray, fontSize: 12 },
+
+  // Save button
+  saveBtn: {
+    backgroundColor: COLORS.primary, borderRadius: 50,
+    paddingVertical: 15, alignItems: 'center', marginTop: 12,
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 8, elevation: 5,
+  },
+  saveBtnText: { color: COLORS.white, fontSize: 15, fontWeight: '800' },
+
+  // Vehicle card
+  vehicleCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: '#FFFFFF', borderRadius: 14, padding: 16, marginBottom: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+  },
+  vehicleIconBox: {
+    width: 52, height: 52, borderRadius: 14,
+    backgroundColor: '#F0FDF4', alignItems: 'center', justifyContent: 'center',
+  },
+  vehicleIconText: { fontSize: 26 },
+  vehicleType: { fontSize: 15, fontWeight: '700', color: '#111827' },
+  vehiclePlate: {
+    fontSize: 13, fontWeight: '700', color: COLORS.primary,
+    marginTop: 3, letterSpacing: 1,
+  },
 });

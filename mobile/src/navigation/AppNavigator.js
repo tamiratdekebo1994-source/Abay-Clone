@@ -258,6 +258,11 @@ export default function AppNavigator() {
             component={OrderDetailScreen}
             options={{ title: 'Order Details', headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
           />
+          <Stack.Screen
+            name="Profile"
+            component={ProfileScreen}
+            options={{ headerShown: false }}
+          />
         </Stack.Navigator>
       ) : (
         <AuthStack />

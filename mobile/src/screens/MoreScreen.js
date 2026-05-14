@@ -77,14 +77,14 @@ export default function MoreScreen({ navigation }) {
       return;
     }
     if (item.id === 'account') {
-      Alert.alert('Account', `Name: ${user?.fullName}\nPhone: ${user?.phone}\nRole: ${user?.role}`);
+      navigation.navigate('Profile');
       return;
     }
     if (item.id === 'settings') {
       showSettings();
       return;
     }
-    Alert.alert(item.label, 'Coming soon / 近日公開');
+    Alert.alert(item.label, 'Coming soon');
   };
 
   const showSettings = () => {
@@ -158,6 +158,37 @@ export default function MoreScreen({ navigation }) {
           <Text style={S.navAppText}>Select my default navigation app</Text>
           <Text style={S.chevron}>›</Text>
         </TouchableOpacity>
+
+        {/* ── Driver stats strip ── */}
+        {driver && (
+          <View style={S.statsStrip}>
+            <View style={S.statCell}>
+              <Text style={S.statVal}>{driver.totalDeliveries ?? 0}</Text>
+              <Text style={S.statKey}>Trips</Text>
+            </View>
+            <View style={S.statLine} />
+            <View style={S.statCell}>
+              {driver.rating != null ? (
+                <Text style={S.statVal}>⭐ {driver.rating.toFixed(1)}</Text>
+              ) : (
+                <Text style={S.statVal}>—</Text>
+              )}
+              <Text style={S.statKey}>Rating</Text>
+            </View>
+            <View style={S.statLine} />
+            <View style={S.statCell}>
+              <Text style={S.statVal}>
+                {(driver.deliveryStreak ?? 0) >= 3 ? `🔥 ${driver.deliveryStreak}` : driver.deliveryStreak ?? 0}
+              </Text>
+              <Text style={S.statKey}>Day Streak</Text>
+            </View>
+            <View style={S.statLine} />
+            <View style={S.statCell}>
+              <Text style={S.statVal}>ETB {driver.totalEarnings?.toFixed(0) ?? '0'}</Text>
+              <Text style={S.statKey}>Earned</Text>
+            </View>
+          </View>
+        )}
       </SafeAreaView>
 
       {/* Menu */}
@@ -232,6 +263,16 @@ const S = StyleSheet.create({
   },
   navAppIcon: { fontSize: 20, marginRight: 12 },
   navAppText: { flex: 1, color: COLORS.white, fontSize: 14, fontWeight: '600' },
+
+  statsStrip: {
+    flexDirection: 'row', marginHorizontal: 16, marginBottom: 16,
+    backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 14, paddingVertical: 14,
+  },
+  statCell: { flex: 1, alignItems: 'center' },
+  statVal: { color: COLORS.white, fontSize: 14, fontWeight: '800' },
+  statKey: { color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '600',
+    textTransform: 'uppercase', letterSpacing: 0.3, marginTop: 2 },
+  statLine: { width: 1, backgroundColor: 'rgba(255,255,255,0.15)' },
 
   scroll: { flex: 1, paddingTop: 16 },
 
