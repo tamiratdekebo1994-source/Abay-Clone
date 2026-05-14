@@ -3,6 +3,7 @@ import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, ActivityIndicator, RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { orderAPI } from '../services/api';
 import { COLORS, ORDER_STATUS_LABELS } from '../utils/constants';
@@ -185,6 +186,11 @@ export default function OrdersScreen({ navigation }) {
 
   return (
     <View style={S.container}>
+      {/* ── Green header ── */}
+      <SafeAreaView style={S.header} edges={['top']}>
+        <Text style={S.headerTitle}>Trips</Text>
+      </SafeAreaView>
+
       {/* ── Filter pills ── */}
       <View style={S.filters}>
         {FILTERS.map((f) => (
@@ -236,6 +242,13 @@ export default function OrdersScreen({ navigation }) {
 const getStyles = (C) => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  // Header
+  header: { backgroundColor: COLORS.primary },
+  headerTitle: {
+    color: COLORS.white, fontSize: 20, fontWeight: '800',
+    paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14,
+  },
 
   // Filters
   filters: {

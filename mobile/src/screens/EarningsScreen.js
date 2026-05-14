@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, ActivityIndicator, RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { driverAPI } from '../services/api';
 import { COLORS } from '../utils/constants';
@@ -96,8 +97,9 @@ export default function EarningsScreen() {
         />
       }
     >
-      {/* ── Weekly bar chart (on green header) ── */}
-      <View style={S.chartSection}>
+      {/* ── Green header + weekly bar chart ── */}
+      <SafeAreaView style={S.chartSection} edges={['top']}>
+        <Text style={S.earningsTitle}>Earnings</Text>
         <View style={S.chartRow}>
           {DAYS.map((day, i) => (
             <View key={day} style={S.barCol}>
@@ -114,7 +116,7 @@ export default function EarningsScreen() {
             </View>
           ))}
         </View>
-      </View>
+      </SafeAreaView>
 
       {/* ── Current week dark card ── */}
       <View style={S.weekCard}>
@@ -179,12 +181,15 @@ const getStyles = (C) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.background },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.background },
 
-  // Chart
+  // Chart / header
   chartSection: {
     backgroundColor: COLORS.primary,
     paddingHorizontal: 12,
-    paddingTop: 4,
     paddingBottom: 12,
+  },
+  earningsTitle: {
+    color: COLORS.white, fontSize: 20, fontWeight: '800',
+    paddingHorizontal: 8, paddingTop: 10, paddingBottom: 8,
   },
   chartRow: { flexDirection: 'row', alignItems: 'flex-end', height: BAR_MAX_H + 24 },
   barCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },

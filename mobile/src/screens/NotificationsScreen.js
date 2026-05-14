@@ -3,6 +3,7 @@ import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, ActivityIndicator, RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { notificationAPI } from '../services/api';
 import { COLORS } from '../utils/constants';
@@ -96,11 +97,23 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.container}>
-      {unreadCount > 0 && (
-        <TouchableOpacity style={styles.markAllBtn} onPress={handleMarkAllRead}>
-          <Text style={styles.markAllText}>✓ Mark all as read ({unreadCount})</Text>
-        </TouchableOpacity>
-      )}
+      {/* ── Green header ── */}
+      <SafeAreaView style={styles.header} edges={['top']}>
+        <View style={styles.headerRow}>
+          <Text style={styles.headerTitle}>Notifications</Text>
+          {unreadCount > 0 && (
+            <TouchableOpacity onPress={handleMarkAllRead} style={styles.markAllBtn}>
+              <Text style={styles.markAllText}>✓ Mark all read</Text>
+            </TouchableOpacity>
+          )}
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount}</Text>
+            </View>
+          )}
+        </View>
+      </SafeAreaView>
+
       <FlatList
         data={notifications}
         keyExtractor={(item) => item.id}
@@ -124,12 +137,24 @@ export default function NotificationsScreen() {
 const getStyles = (C, theme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.background },
-  markAllBtn: {
-    backgroundColor: COLORS.primary,
-    marginHorizontal: 16, marginTop: 12,
-    borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center',
+
+  // Header
+  header: { backgroundColor: COLORS.primary },
+  headerRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14,
   },
-  markAllText: { color: COLORS.white, fontWeight: '600', fontSize: 14 },
+  headerTitle: { flex: 1, color: COLORS.white, fontSize: 20, fontWeight: '800' },
+  markAllBtn: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 8, paddingVertical: 5, paddingHorizontal: 10, marginRight: 8,
+  },
+  markAllText: { color: COLORS.white, fontWeight: '600', fontSize: 12 },
+  badge: {
+    backgroundColor: COLORS.white, borderRadius: 10,
+    minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5,
+  },
+  badgeText: { color: COLORS.primary, fontSize: 11, fontWeight: '800' },
   item: {
     flexDirection: 'row', alignItems: 'flex-start',
     paddingHorizontal: 16, paddingVertical: 14,

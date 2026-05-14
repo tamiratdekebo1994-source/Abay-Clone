@@ -107,7 +107,7 @@ function MainTabs() {
         name="Trips"
         component={OrdersScreen}
         options={{
-          title: 'Trips',
+          headerShown: false,
           tabBarLabel: 'Trips',
           tabBarIcon: ({ focused }) => (
             <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>🚗</Text>
@@ -118,7 +118,7 @@ function MainTabs() {
         name="Earnings"
         component={EarningsScreen}
         options={{
-          title: 'Earnings',
+          headerShown: false,
           tabBarLabel: 'Earnings',
           tabBarIcon: ({ focused }) => (
             <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>💲</Text>
@@ -129,7 +129,7 @@ function MainTabs() {
         name="Notifications"
         component={NotificationsScreen}
         options={{
-          title: 'Notifications',
+          headerShown: false,
           tabBarLabel: 'Notifications',
           tabBarIcon: ({ focused }) => (
             <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>🔔</Text>
