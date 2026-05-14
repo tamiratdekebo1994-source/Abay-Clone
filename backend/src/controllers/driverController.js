@@ -191,18 +191,18 @@ const getEarnings = async (req, res, next) => {
       orderBy: { createdAt: 'desc' },
     });
 
-    const total = earnings.reduce((sum, e) => sum + e.amount, 0);
-    const deliveries = earnings.length;
+    const totalEarnings = earnings.reduce((sum, e) => sum + e.amount, 0);
+    const totalDeliveries = earnings.length;
 
     res.json({
       success: true,
       data: {
-        total,
-        deliveries,
+        totalEarnings,
+        totalDeliveries,
         earnings,
         currency: 'ETB',
         period,
-        averagePerDelivery: deliveries > 0 ? total / deliveries : 0,
+        avgPerTrip: totalDeliveries > 0 ? totalEarnings / totalDeliveries : 0,
       },
     });
   } catch (error) {

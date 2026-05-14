@@ -74,9 +74,9 @@ export default function EarningsScreen() {
     );
   }
 
-  const totalEarnings = data?.total?.toFixed(2) ?? '0.00';
-  const trips = data?.deliveries ?? 0;
-  const avgPerTrip = trips > 0 ? (data?.total / trips).toFixed(0) : '0';
+  const totalEarnings = data?.totalEarnings?.toFixed(2) ?? '0.00';
+  const trips = data?.totalDeliveries ?? 0;
+  const avgPerTrip = data?.avgPerTrip?.toFixed(0) ?? '0';
 
   // Group past weeks by year
   const byYear = {};

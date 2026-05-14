@@ -332,6 +332,41 @@ const getMe = async (req, res, next) => {
       },
     });
     const { passwordHash, ...safeUser } = user;
+
+    // Compute delivery streak for drivers
+    if (safeUser.driver) {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const recentEarnings = await prisma.earning.findMany({
+        where: { driverId: safeUser.driver.id, createdAt: { gte: thirtyDaysAgo } },
+        select: { createdAt: true },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      const uniqueDays = [...new Set(
+        recentEarnings.map((e) => e.createdAt.toISOString().split('T')[0])
+      )].sort().reverse();
+
+      let streak = 0;
+      const today = new Date();
+      let checkDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+      for (const day of uniqueDays) {
+        const dayStr = checkDate.toISOString().split('T')[0];
+        if (day === dayStr) {
+          streak++;
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else if (day < dayStr) {
+          break;
+        }
+      }
+
+      safeUser.driver.deliveryStreak = streak;
+      // Only expose rating when driver has completed deliveries
+      if (safeUser.driver.totalDeliveries === 0) safeUser.driver.rating = null;
+    }
+
     res.json({ success: true, data: safeUser });
   } catch (error) {
     next(error);
