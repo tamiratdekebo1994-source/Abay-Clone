@@ -6,7 +6,7 @@
  */
 const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY || '';
 const apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:5000';
-const easProjectId = process.env.EAS_PROJECT_ID || '';
+const easProjectId = process.env.EAS_PROJECT_ID || '9ec35099-d353-4072-bbbd-2504bcde96f6';
 const sentryDsn = process.env.SENTRY_DSN || '';
 const googleServicesJson = process.env.GOOGLE_SERVICES_JSON || './google-services.json';
 const googleServicesPlist = process.env.GOOGLE_SERVICES_PLIST || './GoogleService-Info.plist';
