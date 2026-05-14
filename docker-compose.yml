@@ -59,6 +59,7 @@ services:
       AT_API_KEY: ${AT_API_KEY}
       AT_USERNAME: ${AT_USERNAME}
       AT_SENDER_ID: ${AT_SENDER_ID:-Fetno}
+      FIREBASE_SERVICE_ACCOUNT_PATH: /run/secrets/firebase-sa
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
       TELEBIRR_APP_ID: ${TELEBIRR_APP_ID}
       TELEBIRR_APP_KEY: ${TELEBIRR_APP_KEY}
@@ -68,9 +69,10 @@ services:
       AWASH_WEBHOOK_SECRET: ${AWASH_WEBHOOK_SECRET}
       DASHEN_WEBHOOK_SECRET: ${DASHEN_WEBHOOK_SECRET}
     ports:
-      - '5001:5000'
+      - '5000:5000'
     volumes:
       - uploads_data:/app/uploads
+      - ./backend/firebase-service-account.json:/run/secrets/firebase-sa:ro
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:5000/health']
       interval: 30s
