@@ -263,6 +263,11 @@ export default function AppNavigator() {
             component={ProfileScreen}
             options={{ headerShown: false }}
           />
+          <Stack.Screen
+            name="Wallet"
+            component={WalletScreen}
+            options={{ headerShown: false }}
+          />
         </Stack.Navigator>
       ) : (
         <AuthStack />

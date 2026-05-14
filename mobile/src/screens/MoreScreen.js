@@ -31,6 +31,7 @@ const MENU_SECTIONS = [
   },
   {
     items: [
+      { id: 'wallet',     icon: '💰', label: 'Wallet',                  screen: 'Wallet' },
       { id: 'account',    icon: '👤', label: 'Account',                 screen: null },
       { id: 'settings',   icon: '⚙️',  label: 'Settings',               screen: null },
     ],
