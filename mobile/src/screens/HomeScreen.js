@@ -254,7 +254,6 @@ export default function HomeScreen({ navigation }) {
   }
 
   const streakCount = driver?.deliveryStreak ?? 0;
-  const ratingVal = driver?.rating ?? null;
   const earned = todayEarnings?.totalEarnings ?? 0;
   const goalPct = Math.min(100, (earned / DAILY_GOAL) * 100);
 
@@ -371,23 +370,14 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
-        {/* ── Rating + Streak row ── */}
-        {(ratingVal !== null || streakCount >= 3) && (
+        {/* ── Streak badge ── */}
+        {streakCount >= 3 && (
           <View style={styles.driverInfoRow}>
-            {ratingVal !== null && (
-              <View style={styles.ratingChip}>
-                <Text style={styles.chipIcon}>⭐</Text>
-                <Text style={styles.chipVal}>{ratingVal.toFixed(1)}</Text>
-                <Text style={styles.chipLabel}>Rating</Text>
-              </View>
-            )}
-            {streakCount >= 3 && (
-              <View style={styles.streakChip}>
-                <Text style={styles.chipIcon}>🔥</Text>
-                <Text style={styles.chipVal}>{streakCount}</Text>
-                <Text style={styles.chipLabel}>Streak</Text>
-              </View>
-            )}
+            <View style={styles.streakChip}>
+              <Text style={styles.chipIcon}>🔥</Text>
+              <Text style={styles.chipVal}>{streakCount}</Text>
+              <Text style={styles.chipLabel}>Day Streak</Text>
+            </View>
           </View>
         )}
 
@@ -640,12 +630,6 @@ const styles = StyleSheet.create({
   goalComplete: { fontSize: 12, color: COLORS.primary, fontWeight: '600', marginTop: 6, textAlign: 'center' },
 
   driverInfoRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  ratingChip: {
-    flex: 1, backgroundColor: '#FFFBEB', borderRadius: 12,
-    paddingVertical: 10, paddingHorizontal: 14,
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    borderWidth: 1, borderColor: '#FDE68A',
-  },
   streakChip: {
     flex: 1, backgroundColor: '#FFF7ED', borderRadius: 12,
     paddingVertical: 10, paddingHorizontal: 14,
