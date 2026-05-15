@@ -21,7 +21,7 @@ const _getDevBase = () => {
 
   // 2. Explicit override from mobile/.env (only if set and not a placeholder IP)
   const envUrl = Constants.expoConfig?.extra?.apiBaseUrl;
-  const PLACEHOLDER_IPS = ['192.168.1.100', '21.4.0.206', '10.0.0.1'];
+  const PLACEHOLDER_IPS = ['192.168.1.100', '10.0.0.1'];
   if (envUrl && !PLACEHOLDER_IPS.some((p) => envUrl.includes(p))) return envUrl;
 
   // 3. Localhost fallback (works in iOS Simulator / Android Emulator)
@@ -30,13 +30,15 @@ const _getDevBase = () => {
 
 export const DEV_API_BASE = _getDevBase();
 
+const PROD_API_BASE = 'http://21.4.0.28:5000';
+
 export const API_URL = __DEV__
   ? `${DEV_API_BASE}/api`
-  : 'https://api.fetno.et/api';
+  : `${PROD_API_BASE}/api`;
 
 export const SOCKET_URL = __DEV__
   ? DEV_API_BASE
-  : 'https://api.fetno.et';
+  : PROD_API_BASE;
 
 // Google Maps API key — injected at build time via app.config.js from GOOGLE_MAPS_API_KEY env var
 // See: mobile/.env.example
