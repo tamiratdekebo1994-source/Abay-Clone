@@ -25,7 +25,8 @@
         "NSPhotoLibraryUsageDescription": "Fetno needs photo library access to upload documents.",
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
-        }
+        },
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
