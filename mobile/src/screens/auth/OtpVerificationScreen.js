@@ -109,7 +109,7 @@ export default function OtpVerificationScreen({ navigation, route }) {
               <Text style={S.iconEmoji}>📲</Text>
             </View>
             <Text style={S.headerTitle}>Verify your number</Text>
-            <Text style={S.headerSub}>Code sent to</Text>
+            <Text style={S.headerSub}>ET Spark sent a code to</Text>
             <View style={S.phonePill}>
               <Text style={S.phonePillText}>{maskPhone(phone)}</Text>
             </View>

@@ -6,7 +6,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../../utils/constants';
 
 const { width: W, height: H } = Dimensions.get('window');
-const HERO_H = H * 0.56;
 
 export default function WelcomeScreen({ navigation }) {
   const goToPhone = () => navigation.navigate('PhoneEntry');
@@ -15,26 +14,26 @@ export default function WelcomeScreen({ navigation }) {
     <View style={S.root}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
-      {/* ── Hero ─────────────────────────────────────────── */}
-      <View style={[S.hero, { height: HERO_H }]}>
+      {/* ── Hero ── */}
+      <View style={S.hero}>
         <SafeAreaView edges={['top']} style={S.heroSafe}>
 
-          {/* Decorative bubbles */}
           <View style={S.bubble1} />
           <View style={S.bubble2} />
           <View style={S.bubble3} />
 
-          {/* Logo */}
           <View style={S.centerContent}>
+            {/* Logo */}
             <View style={S.logoRing}>
               <View style={S.logoCore}>
-                <Text style={S.logoLetter}>F</Text>
+                <Text style={S.logoET}>ET</Text>
+                <Text style={S.logoSpark}>⚡</Text>
               </View>
             </View>
 
-            <Text style={S.brandName}>Fetno</Text>
-            <Text style={S.brandNameAm}>ፈጠኖ</Text>
-            <Text style={S.brandSlogan}>Ethiopia's Delivery Platform</Text>
+            <Text style={S.brandName}>ET Spark</Text>
+            <Text style={S.brandNameAm}>ኢቲ ስፓርክ</Text>
+            <Text style={S.brandSlogan}>Ethiopia's Fastest Delivery Network</Text>
           </View>
 
           {/* Stats strip */}
@@ -57,14 +56,9 @@ export default function WelcomeScreen({ navigation }) {
         </SafeAreaView>
       </View>
 
-      {/* ── Bottom card ──────────────────────────────────── */}
+      {/* ── Bottom card ── */}
       <View style={S.card}>
         <View style={S.cardHandle} />
-
-        <Text style={S.cardTitle}>Fast, Reliable Delivery</Text>
-        <Text style={S.cardSub}>
-          Connect with drivers across Ethiopia and grow your business — today.
-        </Text>
 
         {/* Ethiopian flag strip */}
         <View style={S.flagStrip}>
@@ -73,23 +67,33 @@ export default function WelcomeScreen({ navigation }) {
           <View style={[S.flagBlock, { backgroundColor: '#DA121A' }]} />
         </View>
 
+        <Text style={S.cardTitle}>Fast, Reliable Delivery</Text>
+        <Text style={S.cardSub}>
+          Join ET Spark and connect with customers across Ethiopia.{'\n'}
+          Earn more, deliver faster.
+        </Text>
+
         <TouchableOpacity style={S.btnMain} onPress={goToPhone} activeOpacity={0.85}>
           <Text style={S.btnMainText}>Get Started  →</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={S.btnGhost} onPress={goToPhone} activeOpacity={0.85}>
-          <Text style={S.btnGhostText}>Already have an account?  <Text style={S.btnGhostBold}>Sign In</Text></Text>
+          <Text style={S.btnGhostText}>
+            Already a driver?{'  '}
+            <Text style={S.btnGhostBold}>Sign In</Text>
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
+const HERO_H = H * 0.57;
+
 const S = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.primary },
 
-  /* ── Hero ── */
-  hero: { backgroundColor: COLORS.primary, overflow: 'hidden' },
+  hero: { height: HERO_H, backgroundColor: COLORS.primary, overflow: 'hidden' },
   heroSafe: { flex: 1 },
 
   bubble1: {
@@ -106,41 +110,46 @@ const S = StyleSheet.create({
   },
   bubble3: {
     position: 'absolute',
-    width: W * 0.28, height: W * 0.28, borderRadius: W * 0.14,
+    width: W * 0.3, height: W * 0.3, borderRadius: W * 0.15,
     backgroundColor: 'rgba(252,191,73,0.1)',
-    top: W * 0.28, left: W * 0.08,
+    top: W * 0.28, left: W * 0.06,
   },
 
   centerContent: {
-    flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 16,
+    flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 12,
   },
 
   logoRing: {
-    width: 104, height: 104, borderRadius: 52,
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)',
+    width: 110, height: 110, borderRadius: 55,
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center', justifyContent: 'center',
     marginBottom: 20,
   },
   logoCore: {
-    width: 84, height: 84, borderRadius: 42,
+    width: 88, height: 88, borderRadius: 44,
     backgroundColor: COLORS.accent,
     alignItems: 'center', justifyContent: 'center',
+    flexDirection: 'row',
   },
-  logoLetter: {
-    fontSize: 38, fontWeight: '900', color: COLORS.primary, letterSpacing: -1,
+  logoET: {
+    fontSize: 26, fontWeight: '900', color: COLORS.primary, letterSpacing: -1,
+  },
+  logoSpark: {
+    fontSize: 20, marginLeft: 1, marginTop: -4,
   },
 
   brandName: {
-    fontSize: 46, fontWeight: '900', color: COLORS.white,
+    fontSize: 44, fontWeight: '900', color: COLORS.white,
     letterSpacing: 0.5, marginBottom: 4,
   },
   brandNameAm: {
-    fontSize: 17, fontWeight: '700', color: 'rgba(255,255,255,0.55)',
+    fontSize: 16, fontWeight: '700', color: 'rgba(255,255,255,0.55)',
     marginBottom: 10,
   },
   brandSlogan: {
-    fontSize: 12, color: 'rgba(255,255,255,0.45)',
-    letterSpacing: 1.8, textTransform: 'uppercase', fontWeight: '600',
+    fontSize: 11, color: 'rgba(255,255,255,0.45)',
+    letterSpacing: 1.6, textTransform: 'uppercase', fontWeight: '600',
+    textAlign: 'center', paddingHorizontal: 20,
   },
 
   statsStrip: {
@@ -158,12 +167,11 @@ const S = StyleSheet.create({
   },
   statSep: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.12)' },
 
-  /* ── Card ── */
   card: {
     flex: 1,
     backgroundColor: COLORS.white,
     borderTopLeftRadius: 32, borderTopRightRadius: 32,
-    paddingHorizontal: 28, paddingTop: 16, paddingBottom: 16,
+    paddingHorizontal: 28, paddingTop: 16, paddingBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -6 },
     shadowOpacity: 0.1, shadowRadius: 20, elevation: 16,
@@ -171,21 +179,22 @@ const S = StyleSheet.create({
   cardHandle: {
     width: 44, height: 5, borderRadius: 3,
     backgroundColor: COLORS.grayLight,
-    alignSelf: 'center', marginBottom: 22,
+    alignSelf: 'center', marginBottom: 18,
   },
+
+  flagStrip: {
+    flexDirection: 'row', height: 4, borderRadius: 2,
+    overflow: 'hidden', marginBottom: 20,
+  },
+  flagBlock: { flex: 1 },
+
   cardTitle: {
     fontSize: 24, fontWeight: '800', color: COLORS.black,
     marginBottom: 8, letterSpacing: -0.3,
   },
   cardSub: {
-    fontSize: 14, color: COLORS.gray, lineHeight: 21, marginBottom: 18,
+    fontSize: 14, color: COLORS.gray, lineHeight: 22, marginBottom: 24,
   },
-
-  flagStrip: {
-    flexDirection: 'row', height: 4, borderRadius: 2,
-    overflow: 'hidden', marginBottom: 24,
-  },
-  flagBlock: { flex: 1 },
 
   btnMain: {
     backgroundColor: COLORS.primary, borderRadius: 16,

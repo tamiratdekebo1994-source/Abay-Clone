@@ -190,7 +190,7 @@ export default function AppNavigator() {
   if (isLoading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary }}>
-        <Text style={{ color: COLORS.white, fontSize: 32, fontWeight: '900' }}>Fetno</Text>
+        <View style={{ alignItems: "center" }}><Text style={{ color: COLORS.accent, fontSize: 42, fontWeight: "900", letterSpacing: 1 }}>ET</Text><Text style={{ color: COLORS.white, fontSize: 28, fontWeight: "900", letterSpacing: 2 }}>SPARK</Text></View>
         <ActivityIndicator color={COLORS.accent} style={{ marginTop: 24 }} />
       </View>
     );
@@ -203,7 +203,7 @@ export default function AppNavigator() {
           <Text style={{ fontSize: 48, marginBottom: 16 }}>🏪</Text>
           <Text style={{ color: COLORS.white, fontSize: 22, fontWeight: '800', textAlign: 'center' }}>Store Account</Text>
           <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, textAlign: 'center', marginTop: 8 }}>
-            This app is for Fetno drivers.{'\n'}Use the web dashboard for store access.
+            This app is for ET Spark drivers.{'\n'}Use the web dashboard for store access.
           </Text>
           <TouchableOpacity
             style={{ marginTop: 32, backgroundColor: COLORS.accent, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 32 }}
