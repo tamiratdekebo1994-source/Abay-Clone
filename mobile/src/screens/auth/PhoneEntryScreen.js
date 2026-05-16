@@ -10,8 +10,14 @@ import { useDispatch } from 'react-redux';
 import { loadUser } from '../../store/authStore';
 import { COLORS, DEV_API_BASE, API_URL } from '../../utils/constants';
 
+const TABS = [
+  { key: 'signin', label: 'Sign In' },
+  { key: 'signup', label: 'Sign Up' },
+];
+
 export default function PhoneEntryScreen({ navigation }) {
   const dispatch = useDispatch();
+  const [tab, setTab] = useState('signin');
   const [digits, setDigits] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
@@ -28,9 +34,8 @@ export default function PhoneEntryScreen({ navigation }) {
     if (!phoneReady) { setError('Enter a valid 9-digit number.'); return; }
     setLoading(true);
     setError('');
+    const purpose = tab === 'signup' ? 'REGISTER' : 'LOGIN';
     try {
-      // Try LOGIN first; if user not found, switch to REGISTER flow
-      let purpose = 'LOGIN';
       let res = await fetch(API_URL + '/auth/otp/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -38,13 +43,13 @@ export default function PhoneEntryScreen({ navigation }) {
       });
       let data = await res.json();
 
-      if (!res.ok && res.status === 404) {
-        // New user — send REGISTER OTP instead
-        purpose = 'REGISTER';
+      // Auto-switch: new user tried Sign In → redirect to Sign Up
+      if (!res.ok && res.status === 404 && purpose === 'LOGIN') {
+        setTab('signup');
         res = await fetch(API_URL + '/auth/otp/request', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: fullPhone, purpose }),
+          body: JSON.stringify({ phone: fullPhone, purpose: 'REGISTER' }),
         });
         data = await res.json();
       }
@@ -56,8 +61,8 @@ export default function PhoneEntryScreen({ navigation }) {
 
       navigation.navigate('OtpVerification', {
         phone: fullPhone,
-        purpose,
-        devCode: data.data && data.data.devCode,
+        purpose: tab === 'signup' ? 'REGISTER' : 'LOGIN',
+        devCode: data.data?.devCode,
       });
     } catch {
       setError('Network error. Check your connection and try again.');
@@ -95,30 +100,64 @@ export default function PhoneEntryScreen({ navigation }) {
     }
   };
 
+  const isSignUp = tab === 'signup';
+
   return (
     <SafeAreaView style={S.safe} edges={['top', 'bottom']}>
       <KeyboardAvoidingView style={S.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <ScrollView contentContainerStyle={S.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-
+        <ScrollView
+          contentContainerStyle={S.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           {/* Back */}
-          <TouchableOpacity style={S.backBtn} onPress={() => navigation.canGoBack() && navigation.goBack()}>
+          <TouchableOpacity
+            style={S.backBtn}
+            onPress={() => navigation.canGoBack() && navigation.goBack()}
+          >
             <Text style={S.backArrow}>←</Text>
           </TouchableOpacity>
 
           {/* Icon */}
           <View style={S.iconWrap}>
             <View style={S.iconCircle}>
-              <Text style={S.iconEmoji}>{showAdmin ? '🔐' : '📱'}</Text>
+              <Text style={S.iconEmoji}>{showAdmin ? '🔐' : isSignUp ? '👤' : '📱'}</Text>
             </View>
           </View>
 
-          {/* Title */}
-          <Text style={S.title}>{showAdmin ? 'Admin Sign In' : 'Enter your\nphone number'}</Text>
-          <Text style={S.subtitle}>
-            {showAdmin
-              ? 'Sign in with your admin phone and password'
-              : 'We\'ll send a 6-digit code to verify your number'}
-          </Text>
+          {showAdmin ? (
+            <>
+              <Text style={S.title}>Admin Sign In</Text>
+              <Text style={S.subtitle}>Sign in with your admin credentials</Text>
+            </>
+          ) : (
+            <>
+              {/* Sign In / Sign Up tabs */}
+              <View style={S.tabBar}>
+                {TABS.map(t => (
+                  <TouchableOpacity
+                    key={t.key}
+                    style={[S.tabBtn, tab === t.key && S.tabBtnActive]}
+                    onPress={() => { setTab(t.key); setError(''); }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[S.tabText, tab === t.key && S.tabTextActive]}>
+                      {t.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={S.title}>
+                {isSignUp ? 'Create your\naccount' : 'Welcome\nback'}
+              </Text>
+              <Text style={S.subtitle}>
+                {isSignUp
+                  ? 'Enter your phone number to get started'
+                  : 'Enter your phone number to continue'}
+              </Text>
+            </>
+          )}
 
           {/* Error */}
           {!!error && (
@@ -160,7 +199,11 @@ export default function PhoneEntryScreen({ navigation }) {
           ) : (
             <View style={S.fields}>
               <Text style={S.label}>MOBILE NUMBER</Text>
-              <TouchableOpacity style={S.phoneRow} onPress={() => inputRef.current?.focus()} activeOpacity={1}>
+              <TouchableOpacity
+                style={S.phoneRow}
+                onPress={() => inputRef.current?.focus()}
+                activeOpacity={1}
+              >
                 <View style={S.countryBadge}>
                   <Text style={S.flag}>🇪🇹</Text>
                   <Text style={S.countryCode}>+251</Text>
@@ -195,13 +238,20 @@ export default function PhoneEntryScreen({ navigation }) {
           >
             {loading
               ? <ActivityIndicator color={COLORS.white} />
-              : <Text style={S.ctaText}>{showAdmin ? 'Sign In' : 'Continue  →'}</Text>
+              : <Text style={S.ctaText}>
+                  {showAdmin ? 'Sign In' : isSignUp ? 'Create Account  →' : 'Continue  →'}
+                </Text>
             }
           </TouchableOpacity>
 
           {/* Admin toggle */}
-          <TouchableOpacity style={S.toggleRow} onPress={() => { setShowAdmin(!showAdmin); setError(''); }}>
-            <Text style={S.toggleText}>{showAdmin ? '← Back to Phone Login' : 'Admin Sign In'}</Text>
+          <TouchableOpacity
+            style={S.toggleRow}
+            onPress={() => { setShowAdmin(!showAdmin); setError(''); }}
+          >
+            <Text style={S.toggleText}>
+              {showAdmin ? '← Back to Phone Login' : 'Admin Sign In'}
+            </Text>
           </TouchableOpacity>
 
           {__DEV__ && <Text style={S.devNote}>🔌  {DEV_API_BASE}</Text>}
@@ -221,11 +271,11 @@ const S = StyleSheet.create({
     width: 42, height: 42, borderRadius: 21,
     backgroundColor: '#F5F5F5',
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: 32, alignSelf: 'flex-start',
+    marginBottom: 24, alignSelf: 'flex-start',
   },
   backArrow: { fontSize: 20, color: COLORS.text },
 
-  iconWrap: { marginBottom: 28 },
+  iconWrap: { marginBottom: 20 },
   iconCircle: {
     width: 72, height: 72, borderRadius: 36,
     backgroundColor: '#E8F5E9',
@@ -233,8 +283,30 @@ const S = StyleSheet.create({
   },
   iconEmoji: { fontSize: 30 },
 
-  title: { fontSize: 32, fontWeight: '800', color: COLORS.black, lineHeight: 38, marginBottom: 10 },
-  subtitle: { fontSize: 15, color: COLORS.gray, lineHeight: 22, marginBottom: 28 },
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#F0F0F0',
+    borderRadius: 14,
+    padding: 4,
+    marginBottom: 24,
+  },
+  tabBtn: {
+    flex: 1, paddingVertical: 10, borderRadius: 10,
+    alignItems: 'center',
+  },
+  tabBtnActive: {
+    backgroundColor: COLORS.white,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  tabText: { fontSize: 14, fontWeight: '600', color: COLORS.gray },
+  tabTextActive: { color: COLORS.primary, fontWeight: '700' },
+
+  title: { fontSize: 30, fontWeight: '800', color: COLORS.black, lineHeight: 36, marginBottom: 8 },
+  subtitle: { fontSize: 15, color: COLORS.gray, lineHeight: 22, marginBottom: 24 },
 
   errorBox: {
     backgroundColor: '#FEF2F2', borderRadius: 14,
