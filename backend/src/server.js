@@ -38,8 +38,10 @@ app.use(requestId);
 
 // Security middleware
 app.use(helmet());
+// Allow any origin — mobile apps (iOS/Android) send no Origin header,
+// and we rely on JWT auth rather than CORS for API security.
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: true,
   credentials: true,
 }));
 
