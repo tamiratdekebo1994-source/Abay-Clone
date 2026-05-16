@@ -15,7 +15,7 @@ const _getDevBase = () => {
   if (hostUri) {
     const ip = hostUri.split(':')[0];
     if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
-      return `http://${ip}:5000`;
+      return `http://${ip}`;
     }
   }
 
@@ -25,12 +25,12 @@ const _getDevBase = () => {
   if (envUrl && !PLACEHOLDER_IPS.some((p) => envUrl.includes(p))) return envUrl;
 
   // 3. Localhost fallback (works in iOS Simulator / Android Emulator)
-  return 'http://localhost:5000';
+  return 'http://localhost';
 };
 
 export const DEV_API_BASE = _getDevBase();
 
-const PROD_API_BASE = 'http://21.4.0.28:5000';
+const PROD_API_BASE = 'http://21.4.0.28';
 
 export const API_URL = __DEV__
   ? `${DEV_API_BASE}/api`
