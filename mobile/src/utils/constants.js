@@ -30,7 +30,7 @@ const _getDevBase = () => {
 
 export const DEV_API_BASE = _getDevBase();
 
-const PROD_API_BASE = 'http://21.4.0.188';
+const PROD_API_BASE = 'http://10.134.153.28:3000';
 
 export const API_URL = __DEV__
   ? `${DEV_API_BASE}/api`
