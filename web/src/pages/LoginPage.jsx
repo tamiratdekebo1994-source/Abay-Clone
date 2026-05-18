@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { login, clearError } from '../store/authSlice';
 
 export default function LoginPage() {
-  const [mode, setMode] = useState('otp'); // 'otp' | 'password'
+  const [mode, setMode] = useState('otp');
   const [phone, setPhone] = useState('+251');
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
@@ -24,7 +24,6 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, user]);
 
-  // ── OTP Flow ──────────────────────────────────────────────────────────────
   const sendOtp = async () => {
     setOtpLoading(true); setOtpError('');
     try {
@@ -35,20 +34,12 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!data.success) {
-        if (res.status === 404) {
-          setOtpError('Phone not registered. Please sign up first.');
-        } else {
-          setOtpError(data.message);
-        }
+        setOtpError(res.status === 404 ? 'Phone not registered. Please sign up first.' : data.message);
         return;
       }
       setOtpSent(true);
       setCountdown(60);
       const timer = setInterval(() => setCountdown(c => { if (c <= 1) { clearInterval(timer); return 0; } return c - 1; }), 1000);
-      if (data.data?.devCode) {
-        setOtp(data.data.devCode);
-        setOtpError(`[Dev] Code pre-filled: ${data.data.devCode}`);
-      }
     } catch { setOtpError('Network error. Please try again.'); }
     finally { setOtpLoading(false); }
   };
@@ -70,144 +61,163 @@ export default function LoginPage() {
     finally { setOtpLoading(false); }
   };
 
-  // ── Password Flow (Admin) ─────────────────────────────────────────────────
   const handlePasswordLogin = (e) => {
     e.preventDefault();
     dispatch(login({ phone, password }));
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-700 to-primary-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-accent rounded-2xl mb-4 shadow-lg">
-            <span className="text-primary-800 font-black text-2xl">Fetno</span>
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-accent rounded-2xl mb-4 shadow-xl">
+            <span className="text-primary-900 font-black text-3xl">ET</span>
           </div>
-          <h1 className="text-3xl font-black text-white">Fetno</h1>
-          <p className="text-primary-200 mt-1">Ethiopia's Delivery Network • የኢትዮጵያ የማድረስ አውታር</p>
+          <h1 className="text-4xl font-black text-white tracking-tight">ET Spark</h1>
+          <p className="text-primary-300 mt-1 text-sm">ኢቲ ስፓርክ • Ethiopia's Delivery Network</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          {/* Mode Toggle */}
-          <div className="flex rounded-xl overflow-hidden border border-gray-200 mb-6">
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+
+          {/* Tab bar */}
+          <div className="flex border-b border-gray-100">
             <button
-              onClick={() => { setMode('otp'); dispatch(clearError()); }}
-              className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${mode === 'otp' ? 'bg-primary-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+              onClick={() => { setMode('otp'); dispatch(clearError()); setOtpError(''); }}
+              className={`flex-1 py-3.5 text-sm font-semibold transition-colors ${mode === 'otp' ? 'text-primary-700 border-b-2 border-primary-600 bg-primary-50' : 'text-gray-400 hover:text-gray-600'}`}
             >
-              📱 OTP Login
+              📱 Sign In with OTP
             </button>
             <button
               onClick={() => { setMode('password'); setOtpError(''); }}
-              className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${mode === 'password' ? 'bg-primary-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+              className={`flex-1 py-3.5 text-sm font-semibold transition-colors ${mode === 'password' ? 'text-primary-700 border-b-2 border-primary-600 bg-primary-50' : 'text-gray-400 hover:text-gray-600'}`}
             >
-              🔐 Admin Login
+              🔐 Admin Sign In
             </button>
           </div>
 
-          {/* ── OTP Mode ── */}
-          {mode === 'otp' && (
-            <div>
-              {(otpError) && (
-                <div className={`border rounded-lg p-3 mb-4 text-sm ${otpError.startsWith('[Dev]') ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
-                  {otpError}
-                </div>
-              )}
+          <div className="p-8">
 
-              <div className="mb-4">
-                <label className="label">Phone Number / ስልክ ቁጥር</label>
-                <div className="flex gap-2">
-                  <span className="flex items-center bg-gray-100 border border-gray-300 rounded-lg px-3 text-xl">🇪🇹</span>
-                  <input
-                    type="tel"
-                    className="input flex-1"
-                    value={phone}
-                    onChange={(e) => { setPhone(e.target.value); setOtpError(''); setOtpSent(false); setOtp(''); }}
-                    placeholder="+251912345678"
-                    maxLength={13}
-                    disabled={otpSent}
-                  />
-                </div>
-              </div>
-
-              {!otpSent ? (
-                <button onClick={sendOtp} className="btn-primary w-full py-3" disabled={otpLoading || phone.length < 13}>
-                  {otpLoading ? <span className="inline-block animate-spin mr-2">⟳</span> : null}
-                  Send Verification Code / ኮድ ላክ
-                </button>
-              ) : (
-                <>
-                  <div className="mb-4">
-                    <label className="label">
-                      6-digit code sent to {phone}
-                      <button onClick={() => { setOtpSent(false); setOtp(''); }} className="text-xs text-primary-600 ml-2 font-normal hover:underline">Change</button>
-                    </label>
+            {/* OTP Mode */}
+            {mode === 'otp' && (
+              <div>
+                {otpError && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-5 text-sm text-red-700">
+                    ⚠ {otpError}
+                  </div>
+                )}
+                <div className="mb-5">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    Phone Number
+                  </label>
+                  <div className="flex gap-2">
+                    <span className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3 text-xl select-none">🇪🇹</span>
                     <input
-                      type="text"
-                      className="input text-center text-2xl tracking-[0.5em] font-bold"
-                      value={otp}
-                      onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setOtpError(''); }}
-                      maxLength={6}
-                      placeholder="______"
-                      autoFocus
+                      type="tel"
+                      className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      value={phone}
+                      onChange={(e) => { setPhone(e.target.value); setOtpError(''); setOtpSent(false); setOtp(''); }}
+                      placeholder="+251912345678"
+                      maxLength={13}
+                      disabled={otpSent}
                     />
                   </div>
-                  <button onClick={verifyOtpAndLogin} className="btn-primary w-full py-3 mb-3" disabled={otpLoading || otp.length < 6}>
-                    {otpLoading ? 'Verifying...' : 'Sign In / ግባ ✓'}
-                  </button>
-                  <button onClick={sendOtp} className="w-full text-sm text-primary-600 py-2 disabled:text-gray-400" disabled={countdown > 0 || otpLoading}>
-                    {countdown > 0 ? `Resend in ${countdown}s` : '↩ Resend code'}
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* ── Password Mode (Admin) ── */}
-          {mode === 'password' && (
-            <form onSubmit={handlePasswordLogin}>
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-red-700 text-sm">{error}</div>
-              )}
-              <div className="mb-4">
-                <label className="label">Phone / ስልክ</label>
-                <input type="tel" className="input" value={phone} onChange={(e) => { setPhone(e.target.value); dispatch(clearError()); }} placeholder="+251 9XX XXX XXX" required />
-              </div>
-              <div className="mb-5">
-                <label className="label">Password</label>
-                <div className="relative">
-                  <input type={showPw ? 'text' : 'password'} className="input pr-10" value={password} onChange={(e) => { setPassword(e.target.value); dispatch(clearError()); }} required />
-                  <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{showPw ? '🙈' : '👁️'}</button>
                 </div>
-              </div>
-              <button type="submit" className="btn-primary w-full py-3" disabled={isLoading}>
-                {isLoading ? <span className="inline-block animate-spin mr-2">⟳</span> : null}
-                Sign In / ግባ
-              </button>
-            </form>
-          )}
 
-          {/* Demo credentials */}
-          <div className="mt-6 pt-5 border-t border-gray-100">
-            <p className="text-xs font-semibold text-gray-500 mb-2">Quick Demo:</p>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button onClick={() => { setPhone('+251922000001'); setMode('otp'); setOtpSent(false); setOtp(''); }}
-                className="bg-gray-50 hover:bg-gray-100 p-2 rounded-lg text-left transition-colors">
-                🏪 Store Login<br/><span className="text-gray-400">+251922000001</span>
-              </button>
-              <button onClick={() => { setPhone('+251911000000'); setPassword('Admin@1234'); setMode('password'); }}
-                className="bg-gray-50 hover:bg-gray-100 p-2 rounded-lg text-left transition-colors">
-                👑 Admin Login<br/><span className="text-gray-400">+251911000000</span>
-              </button>
-            </div>
+                {!otpSent ? (
+                  <button
+                    onClick={sendOtp}
+                    className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-3.5 rounded-xl transition-colors disabled:opacity-40"
+                    disabled={otpLoading || phone.length < 13}
+                  >
+                    {otpLoading ? 'Sending...' : 'Send Verification Code →'}
+                  </button>
+                ) : (
+                  <>
+                    <div className="mb-5">
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                        6-digit code sent to {phone}
+                        <button onClick={() => { setOtpSent(false); setOtp(''); }} className="ml-2 text-primary-600 normal-case font-normal hover:underline">
+                          Change
+                        </button>
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-center text-3xl tracking-[0.6em] font-bold focus:outline-none focus:border-primary-500"
+                        value={otp}
+                        onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setOtpError(''); }}
+                        maxLength={6}
+                        placeholder="——————"
+                        autoFocus
+                      />
+                    </div>
+                    <button
+                      onClick={verifyOtpAndLogin}
+                      className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-3.5 rounded-xl transition-colors disabled:opacity-40 mb-3"
+                      disabled={otpLoading || otp.length < 6}
+                    >
+                      {otpLoading ? 'Verifying...' : 'Sign In ✓'}
+                    </button>
+                    <button
+                      onClick={sendOtp}
+                      className="w-full text-sm text-primary-600 py-2 disabled:text-gray-300 hover:underline"
+                      disabled={countdown > 0 || otpLoading}
+                    >
+                      {countdown > 0 ? `Resend code in ${countdown}s` : '↩ Resend code'}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Password Mode (Admin) */}
+            {mode === 'password' && (
+              <form onSubmit={handlePasswordLogin}>
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-5 text-sm text-red-700">
+                    ⚠ {error}
+                  </div>
+                )}
+                <div className="mb-4">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Phone</label>
+                  <input
+                    type="tel"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    value={phone}
+                    onChange={(e) => { setPhone(e.target.value); dispatch(clearError()); }}
+                    placeholder="+251 9XX XXX XXX"
+                    required
+                  />
+                </div>
+                <div className="mb-6">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPw ? 'text' : 'password'}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      value={password}
+                      onChange={(e) => { setPassword(e.target.value); dispatch(clearError()); }}
+                      required
+                    />
+                    <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">
+                      {showPw ? '🙈' : '👁️'}
+                    </button>
+                  </div>
+                </div>
+                <button type="submit" className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-3.5 rounded-xl transition-colors disabled:opacity-40" disabled={isLoading}>
+                  {isLoading ? 'Signing in...' : 'Sign In →'}
+                </button>
+              </form>
+            )}
           </div>
         </div>
 
-        <p className="text-center text-primary-200 text-sm mt-6">
+        <p className="text-center text-primary-300 text-sm mt-6">
           New store owner?{' '}
-          <Link to="/register" className="text-accent font-semibold hover:underline">Register here / ይመዝገቡ</Link>
+          <Link to="/register" className="text-accent font-semibold hover:underline">Register here</Link>
         </p>
-        <p className="text-center text-primary-300 text-xs mt-2">🇪🇹 Made for Ethiopia</p>
+        <p className="text-center text-primary-400 text-xs mt-2">🇪🇹 Made for Ethiopia</p>
       </div>
     </div>
   );
