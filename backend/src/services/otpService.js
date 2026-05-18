@@ -137,10 +137,29 @@ async function verifyOtpViaDb(phone, code, purpose) {
   return true;
 }
 
+// ─── Test phone numbers (always accept code 123456) ──────────────────────────
+
+const TEST_PHONES = new Set(
+  (process.env.TEST_PHONE_NUMBERS || '').split(',').map(p => p.trim()).filter(Boolean)
+);
+
+function isTestPhone(phone) {
+  return TEST_PHONES.has(phone);
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 const sendOtp = async (phone, purpose = 'LOGIN') => {
   const useRedis = !!getRedis();
+
+  // Test phone numbers always get code 123456, no cooldown, no SMS
+  if (isTestPhone(phone)) {
+    const code = '123456';
+    if (useRedis) await sendOtpViaRedis(phone, purpose, code);
+    else await sendOtpViaDb(phone, purpose, code);
+    console.log(`[OTP TEST] Phone: ${phone} | Code: ${code} | Purpose: ${purpose}`);
+    return { sent: true, expiresIn: OTP_EXPIRY_SECONDS };
+  }
 
   // Cooldown check
   const secondsLeft = useRedis
