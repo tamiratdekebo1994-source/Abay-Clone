@@ -46,10 +46,12 @@ app.use(cors({
 }));
 
 // Rate limiting — Redis-backed when REDIS_URL is set
+// Note: /api/auth has its own per-route OTP limiter in routes/auth.js; keep this one generous
 app.use('/api/auth', makeRateLimiter({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 100,
   message: { success: false, message: 'Too many requests, please try again later' },
+  skip: (req) => req.path.startsWith('/otp/'), // OTP routes have their own limiter
 }));
 
 app.use(makeRateLimiter({

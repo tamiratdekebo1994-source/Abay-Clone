@@ -12,7 +12,7 @@ const { makeRateLimiter } = require('../utils/rateLimiter');
 // Rate limit for OTP requests (Redis-backed when available)
 const otpRateLimit = makeRateLimiter({
   windowMs: 5 * 60 * 1000,   // 5-minute rolling window
-  max: 10,
+  max: 20,
   message: { success: false, message: 'Too many OTP requests. Please try again in 5 minutes.' },
 });
 
