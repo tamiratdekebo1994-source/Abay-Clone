@@ -9,11 +9,11 @@ const validate = require('../middleware/validate');
 const authValidators = require('../validators/auth');
 const { makeRateLimiter } = require('../utils/rateLimiter');
 
-// Tight rate limit for OTP requests (Redis-backed when available)
+// Rate limit for OTP requests (Redis-backed when available)
 const otpRateLimit = makeRateLimiter({
-  windowMs: 10 * 60 * 1000,  // 10 minutes
-  max: 5,
-  message: { success: false, message: 'Too many OTP requests. Please try again later.' },
+  windowMs: 5 * 60 * 1000,   // 5-minute rolling window
+  max: 10,
+  message: { success: false, message: 'Too many OTP requests. Please try again in 5 minutes.' },
 });
 
 // OTP flows
