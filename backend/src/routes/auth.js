@@ -9,10 +9,14 @@ const validate = require('../middleware/validate');
 const authValidators = require('../validators/auth');
 const { makeRateLimiter } = require('../utils/rateLimiter');
 
-// Rate limit for OTP requests (Redis-backed when available)
+// Rate limit for OTP requests — test phone numbers bypass it entirely
+const TEST_PHONES = new Set(
+  (process.env.TEST_PHONE_NUMBERS || '').split(',').map(p => p.trim()).filter(Boolean)
+);
 const otpRateLimit = makeRateLimiter({
-  windowMs: 5 * 60 * 1000,   // 5-minute rolling window
+  windowMs: 5 * 60 * 1000,
   max: 20,
+  skip: (req) => TEST_PHONES.has(req.body?.phone),
   message: { success: false, message: 'Too many OTP requests. Please try again in 5 minutes.' },
 });
 
