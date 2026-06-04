@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Animated, Easing, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
@@ -180,6 +180,18 @@ function AuthStack() {
 export default function AppNavigator() {
   const dispatch = useDispatch();
   const { isAuthenticated, isLoading, driver, user } = useSelector((state) => state.auth);
+  const spinValue = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 1800,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -187,11 +199,15 @@ export default function AppNavigator() {
     }
   }, [isAuthenticated]);
 
+  const spin = spinValue.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+
   if (isLoading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary }}>
-        <View style={{ alignItems: "center" }}><Text style={{ color: COLORS.accent, fontSize: 42, fontWeight: "900", letterSpacing: 1 }}>ET</Text><Text style={{ color: COLORS.white, fontSize: 28, fontWeight: "900", letterSpacing: 2 }}>SPARK</Text></View>
-        <ActivityIndicator color={COLORS.accent} style={{ marginTop: 24 }} />
+        <Animated.Image
+          source={require('../../assets/icon.png')}
+          style={{ width: 120, height: 120, transform: [{ rotate: spin }] }}
+        />
       </View>
     );
   }
