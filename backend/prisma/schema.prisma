@@ -60,6 +60,13 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
 model User {
   id           String   @id @default(uuid())
   phone        String   @unique
@@ -129,6 +136,7 @@ model Driver {
   earnings     Earning[]
   reviews      Review[]      @relation("DriverReviews")
   wallet       Wallet?
+  offers       OrderDriverOffer[]
 
   @@index([status])
 }
@@ -219,6 +227,7 @@ model Order {
   earning         Earning?
   review          Review?
   chatMessages    ChatMessage[]
+  offers          OrderDriverOffer[]
 
   @@index([storeId])
   @@index([driverId])
@@ -352,6 +361,21 @@ model WalletWithdrawal {
   reference     String?
   createdAt     DateTime @default(now())
   processedAt   DateTime?
+}
+
+model OrderDriverOffer {
+  id        String      @id @default(uuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  driverId  String
+  driver    Driver      @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  status    OfferStatus @default(PENDING)
+  offeredAt DateTime    @default(now())
+  expiresAt DateTime
+
+  @@unique([orderId, driverId])
+  @@index([orderId])
+  @@index([driverId])
 }
 
 model PushToken {

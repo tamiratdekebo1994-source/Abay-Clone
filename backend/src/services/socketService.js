@@ -40,6 +40,7 @@ const initSocket = (httpServer) => {
 
     if (user.role === 'DRIVER') {
       socket.join('drivers');
+      socket.join(`driver:${user.id}`);
 
       // Join active order room if exists
       const driver = await prisma.driver.findUnique({ where: { userId: user.id } });

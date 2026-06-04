@@ -2,6 +2,7 @@ const prisma = require('../config/database');
 const { calculateDeliveryFee, calculateDistance } = require('../utils/pricing');
 const pushService = require('../services/pushNotificationService');
 const { getSurgeMultiplier } = require('../services/surgeService');
+const assignmentService = require('../services/orderAssignmentService');
 
 const createOrder = async (req, res, next) => {
   try {
@@ -70,35 +71,8 @@ const createOrder = async (req, res, next) => {
       store: order.store,
     };
 
-    // Notify nearby online drivers via socket
-    req.io?.emit('new_order_available', orderPayload);
-
-    // Push notification to online drivers
-    pushService.notifyNearbyDrivers(order).catch(console.error);
-
-    // Auto-rebroadcast every 30 s up to 3 times; give up after 90 s with no_driver_found
-    const io = req.io;
-    const scheduleRebroadcast = (attempt) => {
-      setTimeout(async () => {
-        try {
-          const current = await prisma.order.findUnique({
-            where: { id: order.id },
-            select: { status: true },
-          });
-          if (!current || current.status !== 'SEARCHING_DRIVER') return;
-          if (attempt > 3) {
-            io?.to(`store:${order.storeId}`).emit('no_driver_found', {
-              orderId: order.id,
-              orderNumber: order.orderNumber,
-            });
-            return;
-          }
-          io?.emit('new_order_available', orderPayload);
-          scheduleRebroadcast(attempt + 1);
-        } catch (_) {}
-      }, 30_000);
-    };
-    scheduleRebroadcast(1);
+    // Start smart assignment: offer to nearest driver first, route on reject/timeout
+    assignmentService.startAssignment(req.io, order).catch(console.error);
 
     res.status(201).json({
       success: true,
@@ -135,6 +109,13 @@ const acceptOrder = async (req, res, next) => {
     if (!order || order.status !== 'SEARCHING_DRIVER') {
       return res.status(404).json({ success: false, message: 'Order not available' });
     }
+
+    // Cancel pending offer timer and mark offer accepted
+    assignmentService.cancelOrderTimer(orderId);
+    await prisma.orderDriverOffer.updateMany({
+      where: { orderId, driverId: driver.id, status: 'PENDING' },
+      data: { status: 'ACCEPTED' },
+    });
 
     const updated = await prisma.order.update({
       where: { id: orderId },

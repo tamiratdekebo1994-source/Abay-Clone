@@ -58,6 +58,7 @@ export const orderAPI = {
   getMyOrders: (params) => api.get('/orders', { params }),
   getOrder: (id) => api.get(`/orders/${id}`),
   acceptOrder: (id) => api.post(`/orders/${id}/accept`),
+  rejectOrder: (id) => api.post(`/driver/orders/${id}/reject`),
   updateStatus: (id, status) => api.patch(`/orders/${id}/status`, { status }),
   cancelOrder: (id, reason) => api.post(`/orders/${id}/cancel`, { reason }),
   submitReview: (id, data) => api.post(`/orders/${id}/review`, data),

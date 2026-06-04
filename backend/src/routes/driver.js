@@ -14,7 +14,7 @@ const pushTokenLimit = makeRateLimiter({
 });
 const {
   registerDriver, getDriverProfile, updateLocation,
-  toggleOnline, getNearbyOrders, getEarnings,
+  toggleOnline, getNearbyOrders, getEarnings, rejectOrder,
 } = require('../controllers/driverController');
 
 router.use(authenticate);
@@ -25,6 +25,7 @@ router.get('/profile', getDriverProfile);
 router.patch('/location', validate(driverValidators.location), updateLocation);
 router.post('/toggle-online', toggleOnline);
 router.get('/orders/nearby', getNearbyOrders);
+router.post('/orders/:orderId/reject', rejectOrder);
 router.get('/earnings', getEarnings);
 
 // Push token registration

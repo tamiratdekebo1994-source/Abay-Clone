@@ -5,9 +5,8 @@ import {
 } from 'react-native';
 import { COLORS } from '../utils/constants';
 
-const TIMER_DURATION = 15;
-
 export default function OrderOfferCard({ order, onAccept, onDecline, onExpire }) {
+  const TIMER_DURATION = order.timeoutSeconds || 30;
   const [timeLeft, setTimeLeft] = useState(TIMER_DURATION);
   const progressAnim = useRef(new Animated.Value(1)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;

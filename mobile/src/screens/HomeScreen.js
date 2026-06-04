@@ -109,10 +109,11 @@ export default function HomeScreen({ navigation }) {
       const token = await SecureStore.getItemAsync('firebaseIdToken');
       if (!token) return;
       const socket = io(SOCKET_URL, { auth: { token }, transports: ['websocket'] });
-      socket.on('new_order_available', (order) => {
+      // Targeted offer (nearest driver first routing)
+      socket.on('new_order_offer', (order) => {
         if (isOnlineRef.current) {
           setNearbyOrders((prev) => {
-            if (prev.find((o) => o.orderId === order.orderId || o.id === order.orderId)) return prev;
+            if (prev.find((o) => o.orderId === order.orderId || o.id === order.id)) return prev;
             return [order, ...prev];
           });
           Notifications.scheduleNotificationAsync({
@@ -125,6 +126,16 @@ export default function HomeScreen({ navigation }) {
           }).catch(() => {});
         }
       });
+      // Fallback broadcast (no nearby drivers)
+      socket.on('new_order_available', (order) => {
+        if (isOnlineRef.current) {
+          setNearbyOrders((prev) => {
+            if (prev.find((o) => o.orderId === order.orderId || o.id === order.id)) return prev;
+            return [order, ...prev];
+          });
+        }
+      });
+      socket.on('order_offer_expired', ({ orderId }) => setNearbyOrders((prev) => prev.filter((o) => o.id !== orderId)));
       socket.on('driver_assigned', ({ orderId }) => setNearbyOrders((prev) => prev.filter((o) => o.id !== orderId)));
       socket.on('no_driver_found', ({ orderId }) => setNearbyOrders((prev) => prev.filter((o) => o.id !== orderId)));
       socketRef.current = socket;
@@ -444,10 +455,17 @@ export default function HomeScreen({ navigation }) {
               </View>
             </View>
             {nearbyOrders.map((order) => (
-              <OrderOfferCard key={order.id} order={order}
+              <OrderOfferCard
+                key={order.id}
+                order={order}
                 onAccept={() => navigation.navigate('ActiveDelivery', { orderId: order.id, autoAccept: true })}
-                onDecline={() => setNearbyOrders((prev) => prev.filter((o) => o.id !== order.id))}
-                onExpire={() => setNearbyOrders((prev) => prev.filter((o) => o.id !== order.id))}
+                onDecline={() => {
+                  setNearbyOrders((prev) => prev.filter((o) => o.id !== order.id));
+                  orderAPI.rejectOrder(order.id).catch(() => {});
+                }}
+                onExpire={() => {
+                  setNearbyOrders((prev) => prev.filter((o) => o.id !== order.id));
+                }}
               />
             ))}
           </View>

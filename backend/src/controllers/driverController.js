@@ -210,6 +210,35 @@ const getEarnings = async (req, res, next) => {
   }
 };
 
+const rejectOrder = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    const driver = await prisma.driver.findUnique({ where: { userId: req.user.id } });
+    if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
+
+    const offer = await prisma.orderDriverOffer.findUnique({
+      where: { orderId_driverId: { orderId, driverId: driver.id } },
+    });
+    if (!offer || offer.status !== 'PENDING') {
+      return res.status(400).json({ success: false, message: 'No pending offer for this order' });
+    }
+
+    const assignmentService = require('../services/orderAssignmentService');
+    assignmentService.cancelOrderTimer(orderId);
+
+    await prisma.orderDriverOffer.update({
+      where: { orderId_driverId: { orderId, driverId: driver.id } },
+      data: { status: 'REJECTED' },
+    });
+
+    await assignmentService.advanceToNextDriver(req.io, orderId);
+
+    res.json({ success: true, message: 'Order declined' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   registerDriver,
   getDriverProfile,
@@ -217,4 +246,5 @@ module.exports = {
   toggleOnline,
   getNearbyOrders,
   getEarnings,
+  rejectOrder,
 };
