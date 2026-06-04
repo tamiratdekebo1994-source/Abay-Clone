@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -181,6 +181,7 @@ export default function AppNavigator() {
   const dispatch = useDispatch();
   const { isAuthenticated, isLoading, driver, user } = useSelector((state) => state.auth);
   const spinValue = useRef(new Animated.Value(0)).current;
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     Animated.loop(
@@ -191,6 +192,8 @@ export default function AppNavigator() {
         useNativeDriver: true,
       })
     ).start();
+    const timer = setTimeout(() => setShowSplash(false), 5000);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -201,12 +204,12 @@ export default function AppNavigator() {
 
   const spin = spinValue.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
 
-  if (isLoading) {
+  if (isLoading || showSplash) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary }}>
         <Animated.Image
           source={require('../../assets/icon.png')}
-          style={{ width: 120, height: 120, transform: [{ rotate: spin }] }}
+          style={{ width: 220, height: 220, transform: [{ rotate: spin }] }}
         />
       </View>
     );
