@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, Image,
+  TextInput, Alert, ActivityIndicator, Image, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { useSelector, useDispatch } from 'react-redux';
-import { loadUser, updateDriver } from '../store/authStore';
+import Constants from 'expo-constants';
+import { loadUser, updateDriver, logout } from '../store/authStore';
 import { authAPI, uploadAPI } from '../services/api';
 import { COLORS, VEHICLE_TYPES } from '../utils/constants';
+
+const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
 const VEHICLE_ICONS = {
   MOTORCYCLE: '🏍️',
@@ -24,6 +27,21 @@ const STATUS_COLORS = {
   PENDING:   '#D97706',
   SUSPENDED: '#DC2626',
   OFFLINE:   '#6B7280',
+};
+
+const STATUS_INFO = {
+  PENDING: {
+    icon: '⏳',
+    title: 'Account under review',
+    body: 'Your documents are being verified. This usually takes 1–2 business days. We'll notify you once approved.',
+    bg: '#FFFBEB', border: '#FDE68A', text: '#92400E',
+  },
+  SUSPENDED: {
+    icon: '🚫',
+    title: 'Account suspended',
+    body: 'Your account has been suspended. Please contact support to resolve the issue and restore access.',
+    bg: '#FEF2F2', border: '#FECACA', text: '#991B1B',
+  },
 };
 
 export default function ProfileScreen({ navigation }) {
@@ -43,8 +61,8 @@ export default function ProfileScreen({ navigation }) {
   const vehicleLabel = VEHICLE_TYPES.find((v) => v.value === driver?.vehicleType)?.label
     || driver?.vehicleType || '—';
   const vehicleIcon = VEHICLE_ICONS[driver?.vehicleType] || '🚗';
-
   const statusColor = STATUS_COLORS[driver?.status] || '#6B7280';
+  const statusInfo = STATUS_INFO[driver?.status] ?? null;
 
   const pickPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -62,7 +80,7 @@ export default function ProfileScreen({ navigation }) {
     try {
       setUploadingPhoto(true);
       const { data } = await uploadAPI.avatar(result.assets[0].uri);
-      dispatch(updateDriver({ profilePhotoUrl: data.data.avatarUrl }));
+      dispatch(updateDriver({ profilePhotoUrl: data.data?.avatarUrl ?? data.data?.url }));
     } catch {
       Alert.alert('Upload failed', 'Could not update your profile photo. Try again.');
     } finally {
@@ -84,6 +102,21 @@ export default function ProfileScreen({ navigation }) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: () => dispatch(logout()),
+        },
+      ]
+    );
   };
 
   return (
@@ -132,7 +165,7 @@ export default function ProfileScreen({ navigation }) {
         {driver?.status && (
           <View style={[S.statusBadge, { backgroundColor: statusColor + '33', borderColor: statusColor + '66' }]}>
             <View style={[S.statusDot, { backgroundColor: statusColor }]} />
-            <Text style={[S.statusText, { color: statusColor === '#6B7280' ? 'rgba(255,255,255,0.7)' : COLORS.white }]}>
+            <Text style={[S.statusText, { color: COLORS.white }]}>
               {driver.status}
             </Text>
           </View>
@@ -140,6 +173,17 @@ export default function ProfileScreen({ navigation }) {
       </SafeAreaView>
 
       <ScrollView style={S.scroll} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+
+        {/* ── Status alert for PENDING / SUSPENDED ── */}
+        {statusInfo && (
+          <View style={[S.statusAlert, { backgroundColor: statusInfo.bg, borderColor: statusInfo.border }]}>
+            <Text style={S.statusAlertIcon}>{statusInfo.icon}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[S.statusAlertTitle, { color: statusInfo.text }]}>{statusInfo.title}</Text>
+              <Text style={[S.statusAlertBody, { color: statusInfo.text }]}>{statusInfo.body}</Text>
+            </View>
+          </View>
+        )}
 
         {/* ── Stats strip ── */}
         {driver && (
@@ -255,6 +299,36 @@ export default function ProfileScreen({ navigation }) {
           </View>
         )}
 
+        {/* ── Support ── */}
+        <View style={S.section}>
+          <Text style={S.sectionTitle}>Support</Text>
+          <View style={S.card}>
+            <LinkRow
+              icon="📞"
+              label="Call Support"
+              detail="+251 911 000 000"
+              onPress={() => Linking.openURL('tel:+251911000000')}
+            />
+            <LinkRow
+              icon="✉️"
+              label="Email Support"
+              detail="support@etspark.et"
+              onPress={() => Linking.openURL('mailto:support@etspark.et')}
+              last
+            />
+          </View>
+        </View>
+
+        {/* ── Sign Out ── */}
+        <View style={S.section}>
+          <TouchableOpacity style={S.signOutBtn} onPress={handleSignOut} activeOpacity={0.85}>
+            <Text style={S.signOutText}>Sign Out</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── App version ── */}
+        <Text style={S.version}>ET Spark v{APP_VERSION}</Text>
+
       </ScrollView>
     </View>
   );
@@ -292,6 +366,19 @@ function VehicleRow({ label, value, last }) {
   );
 }
 
+function LinkRow({ icon, label, detail, onPress, last }) {
+  return (
+    <TouchableOpacity style={[LR.row, !last && LR.border]} onPress={onPress} activeOpacity={0.7}>
+      <Text style={LR.icon}>{icon}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={LR.label}>{label}</Text>
+        <Text style={LR.detail}>{detail}</Text>
+      </View>
+      <Text style={LR.chevron}>›</Text>
+    </TouchableOpacity>
+  );
+}
+
 const IF = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 16, paddingVertical: 13 },
   border: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F3F4F6' },
@@ -310,6 +397,15 @@ const VR = StyleSheet.create({
   border: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F3F4F6' },
   label: { flex: 1, fontSize: 14, color: '#6B7280', fontWeight: '500' },
   value: { fontSize: 14, color: '#111827', fontWeight: '600', maxWidth: '55%', textAlign: 'right' },
+});
+
+const LR = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
+  border: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F3F4F6' },
+  icon: { fontSize: 18, width: 26 },
+  label: { fontSize: 15, color: '#111827', fontWeight: '600' },
+  detail: { fontSize: 12, color: '#6B7280', marginTop: 1 },
+  chevron: { fontSize: 22, color: '#D1D5DB', lineHeight: 26 },
 });
 
 const S = StyleSheet.create({
@@ -357,6 +453,16 @@ const S = StyleSheet.create({
   },
   statusDot: { width: 7, height: 7, borderRadius: 4 },
   statusText: { fontSize: 12, fontWeight: '700' },
+
+  // Status alert banner
+  statusAlert: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+    marginHorizontal: 16, marginTop: 16,
+    borderWidth: 1, borderRadius: 14, padding: 14,
+  },
+  statusAlertIcon: { fontSize: 22, lineHeight: 26 },
+  statusAlertTitle: { fontSize: 13, fontWeight: '700', marginBottom: 3 },
+  statusAlertBody: { fontSize: 13, lineHeight: 19 },
 
   // Stats
   statsRow: {
@@ -410,5 +516,18 @@ const S = StyleSheet.create({
   vehiclePlate: {
     fontSize: 13, fontWeight: '700', color: COLORS.primary,
     marginTop: 3, letterSpacing: 1,
+  },
+
+  // Sign out
+  signOutBtn: {
+    borderRadius: 50, paddingVertical: 15, alignItems: 'center',
+    borderWidth: 1.5, borderColor: '#FCA5A5', backgroundColor: '#FFF5F5',
+  },
+  signOutText: { fontSize: 15, fontWeight: '700', color: '#DC2626' },
+
+  // Version
+  version: {
+    textAlign: 'center', fontSize: 12, color: '#9CA3AF',
+    marginTop: 24, marginBottom: 8,
   },
 });
