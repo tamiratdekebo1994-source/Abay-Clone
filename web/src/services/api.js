@@ -75,6 +75,37 @@ export const adminAPI = {
   getAllOrders: (params) => api.get('/admin/orders', { params }),
   getSurge: () => api.get('/admin/surge'),
   setSurge: (city, multiplier) => api.post('/admin/surge', { city, multiplier }),
+
+  // Driver Earnings
+  getDriverEarnings: (params) => api.get('/admin/drivers/earnings', { params }),
+
+  // Financial Reports
+  getFinancialReport: (days = 30) => api.get('/admin/reports/financial', { params: { days } }),
+
+  // Commission Settings
+  getCommissionSettings: () => api.get('/admin/settings/commission'),
+  updateCommissionSettings: (data) => api.patch('/admin/settings/commission', data),
+
+  // Push Notifications
+  sendPushNotification: (data) => api.post('/admin/notifications/send', data),
+
+  // Customer Management
+  getCustomers: (params) => api.get('/admin/customers', { params }),
+  blockCustomer: (id, reason) => api.patch(`/admin/customers/${id}/block`, { blockedReason: reason }),
+  unblockCustomer: (id) => api.patch(`/admin/customers/${id}/unblock`),
+
+  // Promo Codes
+  getPromoCodes: (params) => api.get('/admin/promo-codes', { params }),
+  createPromoCode: (data) => api.post('/admin/promo-codes', data),
+  deactivatePromoCode: (id) => api.patch(`/admin/promo-codes/${id}/deactivate`),
+
+  // Audit Logs
+  getAuditLogs: (params) => api.get('/admin/audit-logs', { params }),
+
+  // Fraud Detection
+  getFraudFlags: (params) => api.get('/admin/fraud-flags', { params }),
+  reportFraud: (data) => api.post('/admin/fraud-flags', data),
+  resolveFraudFlag: (id, data) => api.patch(`/admin/fraud-flags/${id}/resolve`, data),
 };
 
 /**

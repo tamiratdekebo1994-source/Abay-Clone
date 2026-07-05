@@ -1,7 +1,29 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate, authorize } = require('../middleware/auth');
-const { getDashboard, getDrivers, approveDriver, getStores, getAllOrders, updateStoreStatus } = require('../controllers/adminController');
+const {
+  getDashboard,
+  getDrivers,
+  approveDriver,
+  getStores,
+  getAllOrders,
+  updateStoreStatus,
+  getDriverEarnings,
+  getFinancialReport,
+  sendPushNotification,
+  getCommissionSettings,
+  updateCommissionSettings,
+  getCustomers,
+  blockCustomer,
+  unblockCustomer,
+  getPromoCodes,
+  createPromoCode,
+  deactivatePromoCode,
+  getAuditLogs,
+  getFraudFlags,
+  reportFraud,
+  resolveFraudFlag,
+} = require('../controllers/adminController');
 const { getSurgeMultiplier, setManualSurge } = require('../services/surgeService');
 const prisma = require('../config/database');
 const validate = require('../middleware/validate');
@@ -13,9 +35,36 @@ router.use(authorize('ADMIN'));
 router.get('/dashboard', getDashboard);
 router.get('/drivers', getDrivers);
 router.patch('/drivers/:driverId/status', validate(adminValidators.approveDriver), approveDriver);
+router.get('/drivers/earnings', getDriverEarnings);
 router.get('/stores', getStores);
 router.patch('/stores/:storeId/status', updateStoreStatus);
 router.get('/orders', getAllOrders);
+
+// Financial Reports & Settings
+router.get('/reports/financial', getFinancialReport);
+router.get('/settings/commission', getCommissionSettings);
+router.patch('/settings/commission', updateCommissionSettings);
+
+// Push Notifications
+router.post('/notifications/send', sendPushNotification);
+
+// Customer Management
+router.get('/customers', getCustomers);
+router.patch('/customers/:customerId/block', blockCustomer);
+router.patch('/customers/:customerId/unblock', unblockCustomer);
+
+// Promo Codes
+router.get('/promo-codes', getPromoCodes);
+router.post('/promo-codes', createPromoCode);
+router.patch('/promo-codes/:codeId/deactivate', deactivatePromoCode);
+
+// Audit Logs
+router.get('/audit-logs', getAuditLogs);
+
+// Fraud Detection
+router.get('/fraud-flags', getFraudFlags);
+router.post('/fraud-flags', reportFraud);
+router.patch('/fraud-flags/:flagId/resolve', resolveFraudFlag);
 
 // Surge pricing management
 router.get('/surge', async (req, res, next) => {

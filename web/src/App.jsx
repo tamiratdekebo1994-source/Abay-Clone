@@ -16,6 +16,13 @@ import AdminStores from './pages/admin/AdminStores';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminWithdrawals from './pages/admin/AdminWithdrawals';
 import AdminSurge from './pages/admin/AdminSurge';
+import AdminEarningsPage from './pages/admin/AdminEarningsPage';
+import AdminFinancialPage from './pages/admin/AdminFinancialPage';
+import AdminCustomersPage from './pages/admin/AdminCustomersPage';
+import AdminPromoCodesPage from './pages/admin/AdminPromoCodesPage';
+import AdminAuditLogsPage from './pages/admin/AdminAuditLogsPage';
+import AdminFraudPage from './pages/admin/AdminFraudPage';
+import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import StoreProfile from './pages/store/StoreProfile';
 import PaymentResult from './pages/store/PaymentResult';
 import Layout from './components/Layout';
@@ -59,10 +66,17 @@ export default function App() {
       <Route path="/admin" element={<PrivateRoute roles={['ADMIN']}><Layout /></PrivateRoute>}>
         <Route index element={<AdminDashboard />} />
         <Route path="drivers" element={<AdminDrivers />} />
+        <Route path="drivers/earnings" element={<AdminEarningsPage />} />
         <Route path="stores" element={<AdminStores />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="withdrawals" element={<AdminWithdrawals />} />
         <Route path="surge" element={<AdminSurge />} />
+        <Route path="reports/financial" element={<AdminFinancialPage />} />
+        <Route path="customers" element={<AdminCustomersPage />} />
+        <Route path="promo-codes" element={<AdminPromoCodesPage />} />
+        <Route path="audit-logs" element={<AdminAuditLogsPage />} />
+        <Route path="fraud" element={<AdminFraudPage />} />
+        <Route path="settings" element={<AdminSettingsPage />} />
       </Route>
 
       {/* Default redirect based on role */}

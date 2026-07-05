@@ -15,10 +15,17 @@ const storeNav = [
 const adminNav = [
   { to: '/admin', label: 'Dashboard', icon: '📊', end: true },
   { to: '/admin/drivers', label: 'Drivers', icon: '🚗' },
+  { to: '/admin/drivers/earnings', label: 'Driver Earnings', icon: '💰' },
   { to: '/admin/stores', label: 'Stores', icon: '🏪' },
   { to: '/admin/orders', label: 'All Orders', icon: '📦' },
   { to: '/admin/withdrawals', label: 'Withdrawals', icon: '💸' },
+  { to: '/admin/reports/financial', label: 'Financial Reports', icon: '📈' },
   { to: '/admin/surge', label: 'Surge Pricing', icon: '🔥' },
+  { to: '/admin/customers', label: 'Customers', icon: '👥' },
+  { to: '/admin/promo-codes', label: 'Promo Codes', icon: '🎁' },
+  { to: '/admin/fraud', label: 'Fraud Detection', icon: '⚠️' },
+  { to: '/admin/audit-logs', label: 'Audit Logs', icon: '📋' },
+  { to: '/admin/settings', label: 'Commission Settings', icon: '⚙️' },
 ];
 
 export default function Layout() {

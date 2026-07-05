@@ -137,6 +137,7 @@ model Driver {
   reviews      Review[]      @relation("DriverReviews")
   wallet       Wallet?
   offers       OrderDriverOffer[]
+  fraudFlags   FraudFlag[]
 
   @@index([status])
 }
@@ -164,6 +165,7 @@ model Store {
 
   orders Order[]
   reviews Review[] @relation("StoreReviews")
+  fraudFlags FraudFlag[]
 }
 
 model Order {
@@ -173,6 +175,8 @@ model Order {
   store           Store         @relation(fields: [storeId], references: [id])
   driverId        String?
   driver          Driver?       @relation("DriverOrders", fields: [driverId], references: [id])
+  customerId      String?
+  customer        Customer?     @relation("CustomerOrders", fields: [customerId], references: [id])
   status          OrderStatus   @default(PENDING)
 
   // Pickup info
@@ -386,4 +390,99 @@ model PushToken {
   platform  String   // ios | android
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  name      String
+  email     String?
+  city      String
+  totalOrders Int    @default(0)
+  totalSpent Float   @default(0)
+  isBlocked Boolean  @default(false)
+  blockedReason String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders Order[] @relation("CustomerOrders")
+
+  @@index([phone])
+  @@index([isBlocked])
+}
+
+model PromoCode {
+  id            String   @id @default(uuid())
+  code          String   @unique
+  description   String
+  discountType  String   // FIXED | PERCENTAGE
+  discountValue Float
+  maxUses       Int?
+  usedCount     Int      @default(0)
+  minOrderAmount Float   @default(0)
+  maxDiscount   Float?   // cap on discount amount
+  validFrom     DateTime
+  validTo       DateTime
+  isActive      Boolean  @default(true)
+  createdBy     String   // admin user ID
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([code])
+  @@index([isActive])
+  @@index([validFrom, validTo])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String   // admin who took the action
+  action    String   // APPROVE_DRIVER, SUSPEND_STORE, SET_SURGE, etc.
+  resource  String   // DRIVER, STORE, ORDER, COMMISSION, etc.
+  resourceId String
+  changes   String   // JSON of what changed
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([resourceId])
+  @@index([createdAt])
+}
+
+model FraudFlag {
+  id            String   @id @default(uuid())
+  flagType      String   // DUPLICATE_ACCOUNT, SUSPICIOUS_ORDERS, HIGH_CANCELLATION, FAKE_DISTANCE, etc.
+  driverId      String?
+  driver        Driver?  @relation(fields: [driverId], references: [id])
+  storeId       String?
+  store         Store?   @relation(fields: [storeId], references: [id])
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  severity      String   @default("MEDIUM") // LOW | MEDIUM | HIGH | CRITICAL
+  description   String
+  evidence      String?  // JSON with details
+  status        String   @default("OPEN") // OPEN | INVESTIGATING | RESOLVED | FALSE_ALARM
+  resolvedBy    String?
+  resolvedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([flagType])
+  @@index([status])
+  @@index([severity])
+  @@index([driverId])
+  @@index([storeId])
+  @@index([customerId])
+}
+
+model CommissionSetting {
+  id               String   @id @default(uuid())
+  platformCommissionPercent Float @default(15) // platform takes 15% of order value
+  driverCommissionPercent   Float @default(85) // driver gets 85% of order value
+  minimumOrderValue Float   @default(0)
+  surgeCommissionBonus Float @default(0.05) // extra 5% during surge
+  updatedBy        String
+  updatedAt        DateTime @updatedAt
+  createdAt        DateTime @default(now())
 }
