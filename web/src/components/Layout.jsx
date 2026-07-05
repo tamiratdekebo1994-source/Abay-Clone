@@ -46,7 +46,7 @@ export default function Layout() {
       setOrderAlert({ ...data, ts: Date.now() });
       // Browser notification if permission granted
       if (Notification.permission === 'granted') {
-        new Notification('Fetno — Order Update', {
+        new Notification('ET SPAR — Order Update', {
           body: `Order #${data.orderNumber}: ${data.status?.replace(/_/g, ' ')}`,
           icon: '/favicon.svg',
         });
@@ -93,14 +93,14 @@ export default function Layout() {
       <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-primary-600 text-white flex flex-col transition-all duration-300 flex-shrink-0`}>
         {/* Logo */}
         <div className="flex items-center p-4 border-b border-primary-500">
-          <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center flex-shrink-0">
-            <span className="text-primary-800 font-bold text-xs">Fetno</span>
+          <div className="w-10 h-10 bg-gradient-to-br from-accent to-yellow-400 rounded-lg flex items-center justify-center flex-shrink-0 text-lg font-bold">
+            ⚡
           </div>
           {sidebarOpen && (
             <div className="ml-3">
-              <div className="font-bold text-lg leading-none">Fetno</div>
+              <div className="font-black text-base leading-none">ET SPAR</div>
               <div className="text-primary-300 text-xs mt-0.5">
-                {user?.role === 'ADMIN' ? 'Admin Portal' : 'Store Portal'}
+                {user?.role === 'ADMIN' ? 'Admin Dashboard' : 'Store Dashboard'}
               </div>
             </div>
           )}

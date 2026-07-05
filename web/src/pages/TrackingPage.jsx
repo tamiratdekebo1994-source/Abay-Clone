@@ -109,8 +109,8 @@ export default function TrackingPage() {
       <header className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center text-white font-black text-sm">A</div>
-            <span className="font-bold text-gray-900 text-lg">Fetno</span>
+            <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-primary-700 rounded-lg flex items-center justify-center text-white font-black text-lg">⚡</div>
+            <span className="font-black text-gray-900 text-lg">ET SPAR</span>
           </div>
           <div className="text-right">
             <div className="text-xs text-gray-500">Order</div>

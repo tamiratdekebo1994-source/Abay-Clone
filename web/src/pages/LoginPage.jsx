@@ -67,16 +67,17 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-700 to-primary-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-700 via-primary-800 to-primary-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
 
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-accent rounded-2xl mb-4 shadow-xl">
-            <span className="text-primary-900 font-black text-3xl">ET</span>
+        {/* Logo & Branding */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-accent to-yellow-400 rounded-3xl mb-6 shadow-2xl">
+            <span className="text-primary-900 font-black text-4xl">⚡</span>
           </div>
-          <h1 className="text-4xl font-black text-white tracking-tight">ET Spark</h1>
-          <p className="text-primary-300 mt-1 text-sm">ኢቲ ስፓርክ • Ethiopia's Delivery Network</p>
+          <h1 className="text-5xl font-black text-white tracking-tighter">ET SPAR</h1>
+          <p className="text-accent font-bold text-sm mt-2">DELIVERY NETWORK</p>
+          <p className="text-primary-300 mt-3 text-xs">Fast • Reliable • Connected</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
@@ -213,11 +214,11 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="text-center text-primary-300 text-sm mt-6">
-          New store owner?{' '}
-          <Link to="/register" className="text-accent font-semibold hover:underline">Register here</Link>
+        <p className="text-center text-primary-200 text-sm mt-8">
+          Don't have an account?{' '}
+          <Link to="/register" className="text-accent font-bold hover:text-yellow-300 transition-colors">Create Account</Link>
         </p>
-        <p className="text-center text-primary-400 text-xs mt-2">🇪🇹 Made for Ethiopia</p>
+        <p className="text-center text-primary-400 text-xs mt-3">© 2025 ET SPAR • Powering Ethiopia</p>
       </div>
     </div>
   );

@@ -141,15 +141,16 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-700 via-primary-800 to-primary-900 flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         {/* Logo */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-2xl mb-3 shadow-lg">
-            <span className="text-primary-800 font-black text-3xl">አ</span>
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-accent to-yellow-400 rounded-3xl mb-4 shadow-2xl">
+            <span className="text-primary-900 text-3xl">⚡</span>
           </div>
-          <h1 className="text-2xl font-black text-white">Join Fetno</h1>
-          <p className="text-primary-200 text-sm mt-1">Register your store / መደብርዎን ይመዝገቡ</p>
+          <h1 className="text-3xl font-black text-white">Join ET SPAR</h1>
+          <p className="text-accent font-bold text-xs mt-2">DELIVERY NETWORK</p>
+          <p className="text-primary-300 text-sm mt-2">Register your store / መደብርዎን ይመዝገቡ</p>
         </div>
 
         {/* Step indicator */}
