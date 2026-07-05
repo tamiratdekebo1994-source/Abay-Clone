@@ -21,9 +21,9 @@ async function main() {
     update: {},
     create: {
       phone: '+251911000000',
-      email: 'admin@fetno.et',
+      email: 'admin@etspar.et',
       passwordHash: adminHash,
-      fullName: 'Fetno Admin',
+      fullName: 'ET SPAR Admin',
       role: 'ADMIN',
       isVerified: true,
     },

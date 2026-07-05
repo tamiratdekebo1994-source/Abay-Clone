@@ -1,5 +1,5 @@
 /**
- * Pricing utilities for Fetno - Ethiopia
+ * Pricing utilities for ET SPAR - Ethiopia
  * All amounts in Ethiopian Birr (ETB)
  */
 

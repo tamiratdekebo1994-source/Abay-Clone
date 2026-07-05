@@ -187,7 +187,7 @@ const sendOtp = async (phone, purpose = 'LOGIN') => {
   if (process.env.AT_API_KEY && process.env.AT_API_KEY !== 'sandbox' && process.env.NODE_ENV !== 'test') {
     try {
       const sms = getAT().SMS;
-      await sms.send({ to: [phone], message, from: process.env.AT_SENDER_ID || 'Fetno' });
+      await sms.send({ to: [phone], message, from: process.env.AT_SENDER_ID || 'ETSPAR' });
     } catch (smsErr) {
       smsFailed = true;
       console.error(`[OTP] SMS send failed: ${smsErr.message}`);
@@ -215,7 +215,7 @@ const verifyOtp = async (phone, code, purpose = 'LOGIN') => {
 
 const buildSmsMessage = (code, purpose) => {
   const purposeText = { REGISTER: 'registration', LOGIN: 'login', RESET: 'password reset' }[purpose] || 'verification';
-  return `Your Fetno ${purposeText} code is: ${code}\nValid for ${OTP_EXPIRY_SECONDS / 60} minutes.\nDo not share this code.\n\nFetno Ethiopia`;
+  return `Your ET SPAR ${purposeText} code is: ${code}\nValid for ${OTP_EXPIRY_SECONDS / 60} minutes.\nDo not share this code.\n\nET SPAR Ethiopia`;
 };
 
 module.exports = { sendOtp, verifyOtp };

@@ -112,7 +112,7 @@ app.get('/health', async (_req, res) => {
     await prisma.$queryRaw`SELECT 1`;
     res.json({
       status: 'ok',
-      app: 'Fetno API',
+      app: 'ET SPAR API',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
       db: 'ok',
@@ -120,7 +120,7 @@ app.get('/health', async (_req, res) => {
   } catch {
     res.status(503).json({
       status: 'error',
-      app: 'Fetno API',
+      app: 'ET SPAR API',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
       db: 'unreachable',
@@ -141,7 +141,7 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, '0.0.0.0', () => {
-  logger.info('Fetno API started', {
+  logger.info('ET SPAR API started', {
     port: PORT,
     env: process.env.NODE_ENV || 'development',
     health: `http://localhost:${PORT}/health`,
