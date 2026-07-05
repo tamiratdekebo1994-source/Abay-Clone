@@ -148,7 +148,7 @@ export default function RegisterPage() {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-accent to-yellow-400 rounded-3xl mb-4 shadow-2xl">
             <span className="text-primary-900 text-3xl">⚡</span>
           </div>
-          <h1 className="text-3xl font-black text-white">Join ET SPAR</h1>
+          <h1 className="text-3xl font-black text-white">Join ET SPARK</h1>
           <p className="text-accent font-bold text-xs mt-2">DELIVERY NETWORK</p>
           <p className="text-primary-300 text-sm mt-2">Register your store / መደብርዎን ይመዝገቡ</p>
         </div>

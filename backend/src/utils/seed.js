@@ -23,7 +23,7 @@ async function main() {
       phone: '+251911000000',
       email: 'admin@etspar.et',
       passwordHash: adminHash,
-      fullName: 'ET SPAR Admin',
+      fullName: 'ET SPARK Admin',
       role: 'ADMIN',
       isVerified: true,
     },

@@ -46,7 +46,7 @@ export default function Layout() {
       setOrderAlert({ ...data, ts: Date.now() });
       // Browser notification if permission granted
       if (Notification.permission === 'granted') {
-        new Notification('ET SPAR — Order Update', {
+        new Notification('ET SPARK — Order Update', {
           body: `Order #${data.orderNumber}: ${data.status?.replace(/_/g, ' ')}`,
           icon: '/favicon.svg',
         });
@@ -98,7 +98,7 @@ export default function Layout() {
           </div>
           {sidebarOpen && (
             <div className="ml-3">
-              <div className="font-black text-base leading-none">ET SPAR</div>
+              <div className="font-black text-base leading-none">ET SPARK</div>
               <div className="text-primary-300 text-xs mt-0.5">
                 {user?.role === 'ADMIN' ? 'Admin Dashboard' : 'Store Dashboard'}
               </div>

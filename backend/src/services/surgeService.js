@@ -1,5 +1,5 @@
 /**
- * Surge Pricing Engine for ET SPAR
+ * Surge Pricing Engine for ET SPARK
  *
  * Surge is triggered by:
  * 1. Time-of-day (peak hours in Addis Ababa traffic)

@@ -1,5 +1,5 @@
 /**
- * Pricing utilities for ET SPAR - Ethiopia
+ * Pricing utilities for ET SPARK - Ethiopia
  * All amounts in Ethiopian Birr (ETB)
  */
 

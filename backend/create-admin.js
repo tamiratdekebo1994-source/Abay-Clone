@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Create admin user for ET SPAR
+ * Create admin user for ET SPARK
  * Usage: node create-admin.js
  */
 
@@ -20,7 +20,7 @@ async function createAdmin() {
       update: {},
       create: {
         phone: '+251911111111',
-        fullName: 'ET SPAR Admin',
+        fullName: 'ET SPARK Admin',
         email: 'admin@etspar.et',
         role: 'ADMIN',
         status: 'VERIFIED',

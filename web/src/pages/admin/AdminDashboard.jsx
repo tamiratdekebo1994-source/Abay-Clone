@@ -72,7 +72,7 @@ export default function AdminDashboard() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-black text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-500 text-sm mt-1">የአስተዳዳሪ ዳሽቦርድ • ET SPAR Ethiopia</p>
+          <p className="text-gray-500 text-sm mt-1">የአስተዳዳሪ ዳሽቦርድ • ET SPARK Ethiopia</p>
         </div>
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
           {PERIOD_OPTIONS.map((opt) => (

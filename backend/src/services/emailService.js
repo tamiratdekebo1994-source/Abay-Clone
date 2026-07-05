@@ -35,7 +35,7 @@ function getTransporter() {
   return transporter;
 }
 
-const FROM = () => process.env.SMTP_FROM || 'ET SPAR <noreply@etspar.et>';
+const FROM = () => process.env.SMTP_FROM || 'ET SPARK <noreply@etspar.et>';
 
 async function send(to, subject, html) {
   if (!to) return;
@@ -52,26 +52,26 @@ async function send(to, subject, html) {
 // ─── Driver notifications ────────────────────────────────────────────────────
 
 async function sendDriverApproved(to, name) {
-  return send(to, '✅ Your ET SPAR Application is Approved!', `
+  return send(to, '✅ Your ET SPARK Application is Approved!', `
     <div style="font-family:sans-serif;max-width:600px;margin:auto">
       <h2 style="color:#1B4332">Congratulations, ${name}!</h2>
       <p>Your driver application has been reviewed and <strong>approved</strong>. You can now go online and start earning!</p>
-      <p>Open the ET SPAR app, tap the toggle to go <strong>Online</strong>, and delivery requests will start coming in.</p>
+      <p>Open the ET SPARK app, tap the toggle to go <strong>Online</strong>, and delivery requests will start coming in.</p>
       <hr style="border-color:#e9ecef"/>
-      <p style="color:#6c757d;font-size:13px">— ET SPAR Team</p>
+      <p style="color:#6c757d;font-size:13px">— ET SPARK Team</p>
     </div>
   `);
 }
 
 async function sendDriverSuspended(to, name) {
-  return send(to, 'Important: Your ET SPAR Account', `
+  return send(to, 'Important: Your ET SPARK Account', `
     <div style="font-family:sans-serif;max-width:600px;margin:auto">
       <h2 style="color:#dc3545">Account Suspended</h2>
       <p>Hi ${name},</p>
-      <p>Your ET SPAR account has been <strong>suspended</strong>.</p>
+      <p>Your ET SPARK account has been <strong>suspended</strong>.</p>
       <p>If you believe this is an error or would like more information, please contact our support team by replying to this email.</p>
       <hr style="border-color:#e9ecef"/>
-      <p style="color:#6c757d;font-size:13px">— ET SPAR Team</p>
+      <p style="color:#6c757d;font-size:13px">— ET SPARK Team</p>
     </div>
   `);
 }
@@ -97,7 +97,7 @@ async function sendWithdrawalUpdate(to, name, status, amount) {
            <p>Please verify your account details and try again, or contact support if the problem persists.</p>`
       }
       <hr style="border-color:#e9ecef"/>
-      <p style="color:#6c757d;font-size:13px">— ET SPAR Team</p>
+      <p style="color:#6c757d;font-size:13px">— ET SPARK Team</p>
     </div>
   `);
 }
@@ -105,12 +105,12 @@ async function sendWithdrawalUpdate(to, name, status, amount) {
 // ─── Store notifications ──────────────────────────────────────────────────────
 
 async function sendStoreVerified(to, storeName) {
-  return send(to, '✅ Your Store is Now Verified on ET SPAR', `
+  return send(to, '✅ Your Store is Now Verified on ET SPARK', `
     <div style="font-family:sans-serif;max-width:600px;margin:auto">
       <h2 style="color:#1B4332">Store Verified!</h2>
       <p><strong>${storeName}</strong> has been verified. Customers will now see a verified badge on your store profile.</p>
       <hr style="border-color:#e9ecef"/>
-      <p style="color:#6c757d;font-size:13px">— ET SPAR Team</p>
+      <p style="color:#6c757d;font-size:13px">— ET SPARK Team</p>
     </div>
   `);
 }

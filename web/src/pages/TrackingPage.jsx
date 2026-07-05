@@ -110,7 +110,7 @@ export default function TrackingPage() {
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-primary-700 rounded-lg flex items-center justify-center text-white font-black text-lg">⚡</div>
-            <span className="font-black text-gray-900 text-lg">ET SPAR</span>
+            <span className="font-black text-gray-900 text-lg">ET SPARK</span>
           </div>
           <div className="text-right">
             <div className="text-xs text-gray-500">Order</div>

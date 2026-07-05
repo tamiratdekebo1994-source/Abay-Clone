@@ -215,7 +215,7 @@ const verifyOtp = async (phone, code, purpose = 'LOGIN') => {
 
 const buildSmsMessage = (code, purpose) => {
   const purposeText = { REGISTER: 'registration', LOGIN: 'login', RESET: 'password reset' }[purpose] || 'verification';
-  return `Your ET SPAR ${purposeText} code is: ${code}\nValid for ${OTP_EXPIRY_SECONDS / 60} minutes.\nDo not share this code.\n\nET SPAR Ethiopia`;
+  return `Your ET SPARK ${purposeText} code is: ${code}\nValid for ${OTP_EXPIRY_SECONDS / 60} minutes.\nDo not share this code.\n\nET SPARK Ethiopia`;
 };
 
 module.exports = { sendOtp, verifyOtp };

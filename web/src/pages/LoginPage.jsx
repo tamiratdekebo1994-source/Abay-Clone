@@ -75,7 +75,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-accent to-yellow-400 rounded-3xl mb-6 shadow-2xl">
             <span className="text-primary-900 font-black text-4xl">⚡</span>
           </div>
-          <h1 className="text-5xl font-black text-white tracking-tighter">ET SPAR</h1>
+          <h1 className="text-5xl font-black text-white tracking-tighter">ET SPARK</h1>
           <p className="text-accent font-bold text-sm mt-2">DELIVERY NETWORK</p>
           <p className="text-primary-300 mt-3 text-xs">Fast • Reliable • Connected</p>
         </div>
@@ -218,7 +218,7 @@ export default function LoginPage() {
           Don't have an account?{' '}
           <Link to="/register" className="text-accent font-bold hover:text-yellow-300 transition-colors">Create Account</Link>
         </p>
-        <p className="text-center text-primary-400 text-xs mt-3">© 2025 ET SPAR • Powering Ethiopia</p>
+        <p className="text-center text-primary-400 text-xs mt-3">© 2025 ET SPARK • Powering Ethiopia</p>
       </div>
     </div>
   );

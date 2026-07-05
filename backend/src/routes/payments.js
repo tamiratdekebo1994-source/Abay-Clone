@@ -87,9 +87,9 @@ router.post('/telebirr/initiate', authorize('STORE'), async (req, res, next) => 
         appKey,
         shortCode,
         outTradeNo: payRef,
-        subject: `ET SPAR Delivery — ${order.orderNumber}`,
+        subject: `ET SPARK Delivery — ${order.orderNumber}`,
         totalAmount: order.totalAmount.toFixed(2),
-        receiveName: 'ET SPAR PLC',
+        receiveName: 'ET SPARK PLC',
         notifyUrl: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/payments/telebirr/callback`,
         returnUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/store/orders/${orderId}/payment-result`,
       });
@@ -174,7 +174,7 @@ router.post('/cbe/initiate', authorize('STORE'), async (req, res, next) => {
       orderRef: payRef,
       amount: order.totalAmount,
       currency: 'ETB',
-      "description": "ET SPAR - Ethiopia's Delivery Network connecting stores and drivers",
+      "description": "ET SPARK - Ethiopia's Delivery Network connecting stores and drivers",
       callbackUrl: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/payments/cbe/callback`,
     };
     // In production: const { paymentUrl } = await cbeMerchantAPI.createPayment(cbePayload);
