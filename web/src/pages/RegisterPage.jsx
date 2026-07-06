@@ -111,7 +111,7 @@ export default function RegisterPage() {
       const data = await res.json();
       if (!data.success) { setError(data.message); return; }
       localStorage.setItem('accessToken', data.data.accessToken);
-      localStorage.setItem('refreshToken', data.data.refreshToken);
+      localStorage.setItem('userId', data.data.user?.uid);
       setStep(3);
     } catch { setError('Failed to create account.'); }
     finally { setIsLoading(false); }

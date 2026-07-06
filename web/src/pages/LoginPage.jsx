@@ -55,7 +55,7 @@ export default function LoginPage() {
       const data = await res.json();
       if (!data.success) { setOtpError(data.message); return; }
       localStorage.setItem('accessToken', data.data.accessToken);
-      localStorage.setItem('refreshToken', data.data.refreshToken);
+      localStorage.setItem('userId', data.data.user?.uid);
       window.location.href = '/';
     } catch { setOtpError('Login failed. Please try again.'); }
     finally { setOtpLoading(false); }

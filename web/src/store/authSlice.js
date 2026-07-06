@@ -4,11 +4,14 @@ import { authAPI } from '../services/api';
 export const login = createAsyncThunk('auth/login', async (credentials, { rejectWithValue }) => {
   try {
     const { data } = await authAPI.login(credentials);
+    if (!data.success) {
+      return rejectWithValue(data.message || 'Login failed');
+    }
     localStorage.setItem('accessToken', data.data.accessToken);
-    localStorage.setItem('refreshToken', data.data.refreshToken);
+    localStorage.setItem('userId', data.data.user.uid);
     return data.data;
   } catch (err) {
-    return rejectWithValue(err.response?.data?.message || 'Login failed');
+    return rejectWithValue(err.response?.data?.message || err.message || 'Login failed');
   }
 });
 
@@ -16,18 +19,15 @@ export const loadUser = createAsyncThunk('auth/loadUser', async (_, { rejectWith
   try {
     const token = localStorage.getItem('accessToken');
     if (!token) return null;
-    const { data } = await authAPI.getMe();
-    return data.data;
+    return { uid: localStorage.getItem('userId') };
   } catch {
     return rejectWithValue(null);
   }
 });
 
 export const logout = createAsyncThunk('auth/logout', async () => {
-  const refreshToken = localStorage.getItem('refreshToken');
   localStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
-  try { await authAPI.logout(refreshToken); } catch {}
+  localStorage.removeItem('userId');
 });
 
 const authSlice = createSlice({
