@@ -552,6 +552,38 @@ app.patch('/admin/settings/commission', verifyToken, async (req, res) => {
   }
 });
 
+// ─── Debug endpoint to check user data ──────────────────────────────────────
+
+app.get('/debug/user/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    console.log(`Checking user: ${email}`);
+
+    let user;
+    try {
+      user = await auth.getUserByEmail(email);
+      console.log(`Found in Auth: ${user.uid}`);
+    } catch (err) {
+      return res.json({ success: false, message: `Not in Auth: ${err.message}` });
+    }
+
+    const userDoc = await db.collection('users').doc(user.uid).get();
+    console.log(`Firestore doc exists: ${userDoc.exists}`);
+
+    res.json({
+      success: true,
+      authUser: {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName
+      },
+      firestoreDoc: userDoc.exists ? userDoc.data() : null
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ─── Admin Setup (One-time) ─────────────────────────────────────────────────
 
 app.post('/admin/setup-password', async (req, res) => {
