@@ -59,10 +59,15 @@ app.post('/register', async (req, res) => {
 
 app.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    let { email, phone, password } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email required' });
+    if (!email && !phone) {
+      return res.status(400).json({ success: false, message: 'Email or phone required' });
+    }
+
+    // Convert phone to email format if phone is provided
+    if (phone && !email) {
+      email = `${phone}@etspark.et`;
     }
 
     // Get user from Firebase Auth by email
