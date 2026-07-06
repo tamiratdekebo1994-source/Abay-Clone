@@ -4,7 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 
-// Initialize Firebase Admin
+// Initialize Firebase Admin SDK
 admin.initializeApp();
 const db = admin.firestore();
 const auth = admin.auth();
