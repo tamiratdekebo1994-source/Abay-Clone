@@ -4,11 +4,11 @@ const API_ORIGIN = import.meta.env.VITE_API_BASE_URL || '';
 
 export const SOCKET_URL = API_ORIGIN || '/';
 
-// When using Cloud Functions directly, don't add /api prefix
-// Cloud Functions are accessed at root level
-const baseURL = API_ORIGIN
-  ? API_ORIGIN  // Cloud Functions URL (no /api prefix needed)
-  : '/api';      // Relative URL uses Firebase Hosting rewrites
+// Use relative URLs by default (Firebase Hosting rewrites /api/** to Cloud Functions)
+// Only use full URL if explicitly set in environment
+const baseURL = API_ORIGIN || '/api';
+
+console.log('API Base URL:', baseURL);
 
 const api = axios.create({
   baseURL,

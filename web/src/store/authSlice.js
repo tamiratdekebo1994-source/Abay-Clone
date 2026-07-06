@@ -3,7 +3,9 @@ import { authAPI } from '../services/api';
 
 export const login = createAsyncThunk('auth/login', async (credentials, { rejectWithValue }) => {
   try {
+    console.log('Attempting login with:', credentials);
     const { data } = await authAPI.login(credentials);
+    console.log('Login response:', data);
     if (!data.success) {
       return rejectWithValue(data.message || 'Login failed');
     }
@@ -11,7 +13,9 @@ export const login = createAsyncThunk('auth/login', async (credentials, { reject
     localStorage.setItem('userId', data.data.user.uid);
     return data.data;
   } catch (err) {
-    return rejectWithValue(err.response?.data?.message || err.message || 'Login failed');
+    console.error('Login error:', err);
+    const message = err.response?.data?.message || err.message || 'Network error - check your connection';
+    return rejectWithValue(message);
   }
 });
 
