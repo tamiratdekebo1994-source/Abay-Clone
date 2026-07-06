@@ -14,6 +14,14 @@ const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json());
 
+// Middleware to strip /api prefix (Firebase Hosting rewrites /api/** to this function)
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    req.url = req.url.replace(/^\/api/, '') || '/';
+  }
+  next();
+});
+
 // ─── Authentication Middleware ───────────────────────────────────────────────
 const verifyToken = async (req, res, next) => {
   const token = req.headers.authorization?.split('Bearer ')[1];
