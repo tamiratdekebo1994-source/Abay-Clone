@@ -3,7 +3,6 @@ const admin = require('firebase-admin');
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
-const axios = require('axios');
 
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -62,27 +61,23 @@ app.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Email and password required' });
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email required' });
     }
 
-    // Use Firebase REST API to verify credentials and get ID token
-    const apiKey = process.env.FIREBASE_API_KEY || 'AIzaSyA4YE9aBP7adElrVM_OgZ_6Ffrd8dx4P0A';
+    // Get user from Firebase Auth by email
+    const user = await auth.getUserByEmail(email);
 
-    const authResponse = await axios.post(
-      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
-      { email, password, returnSecureToken: true }
-    );
-
-    const { localId: uid, idToken } = authResponse.data;
+    // Create custom token for login
+    const customToken = await auth.createCustomToken(user.uid);
 
     // Get or create user document in Firestore
-    let userDoc = await db.collection('users').doc(uid).get();
+    let userDoc = await db.collection('users').doc(user.uid).get();
 
     let userData = userDoc.exists ? userDoc.data() : {
-      uid,
-      email,
-      fullName: 'Admin User',
+      uid: user.uid,
+      email: user.email,
+      fullName: user.displayName || 'User',
       role: 'ADMIN',
       isVerified: true,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -90,19 +85,19 @@ app.post('/login', async (req, res) => {
 
     // Create document if it doesn't exist
     if (!userDoc.exists) {
-      await db.collection('users').doc(uid).set(userData);
+      await db.collection('users').doc(user.uid).set(userData);
     }
 
     res.json({
       success: true,
       data: {
-        accessToken: idToken,
-        user: { uid, ...userData }
+        accessToken: customToken,
+        user: { uid: user.uid, ...userData }
       }
     });
   } catch (err) {
-    console.error('Login error:', err.message || err);
-    res.status(401).json({ success: false, message: 'Invalid credentials' });
+    console.error('Login error:', err.message);
+    res.status(401).json({ success: false, message: 'Invalid email or user not found' });
   }
 });
 
