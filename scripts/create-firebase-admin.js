@@ -5,6 +5,7 @@
  */
 
 const admin = require('firebase-admin');
+const bcrypt = require('bcrypt');
 const path = require('path');
 
 // Initialize Firebase Admin SDK
@@ -49,12 +50,16 @@ async function createAdmin() {
       }
     }
 
+    // Hash password for local verification
+    const passwordHash = await bcrypt.hash(adminData.password, 10);
+
     // Create/update user document in Firestore
     await db.collection('users').doc(userRecord.uid).set({
       phone: adminData.phone,
       fullName: adminData.fullName,
       email: adminData.email,
       role: adminData.role,
+      passwordHash,
       isVerified: true,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),

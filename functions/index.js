@@ -36,15 +36,19 @@ app.post('/register', async (req, res) => {
 
     // Create Firebase Auth user
     const userRecord = await auth.createUser({
-      email: email || `${phone}@etspar.et`,
+      email: email || `${phone}@etspark.et`,
       password,
     });
+
+    // Hash password for local verification
+    const passwordHash = await bcrypt.hash(password, 10);
 
     // Store user data in Firestore
     await db.collection('users').doc(userRecord.uid).set({
       phone,
       fullName,
-      email,
+      email: email || `${phone}@etspark.et`,
+      passwordHash,
       role: role || 'STORE',
       isVerified: true,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -65,20 +69,43 @@ app.post('/login', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email or phone required' });
     }
 
+    if (!password) {
+      return res.status(400).json({ success: false, message: 'Password required' });
+    }
+
     // Convert phone to email format if phone is provided
     if (phone && !email) {
       email = `${phone}@etspark.et`;
     }
 
     // Get user from Firebase Auth by email
-    const user = await auth.getUserByEmail(email);
+    let user;
+    try {
+      user = await auth.getUserByEmail(email);
+    } catch (err) {
+      if (err.code === 'auth/user-not-found') {
+        return res.status(401).json({ success: false, message: 'User not found' });
+      }
+      throw err;
+    }
+
+    // Verify password using bcrypt against stored hash
+    const userDoc = await db.collection('users').doc(user.uid).get();
+    if (userDoc.exists && userDoc.data().passwordHash) {
+      const passwordMatch = await bcrypt.compare(password, userDoc.data().passwordHash);
+      if (!passwordMatch) {
+        return res.status(401).json({ success: false, message: 'Invalid password' });
+      }
+    } else {
+      // For backwards compatibility with users created before password hashing
+      // Just accept the login (this is a temporary measure)
+      console.warn(`User ${email} has no password hash, allowing login`);
+    }
 
     // Create custom token for login
     const customToken = await auth.createCustomToken(user.uid);
 
-    // Get or create user document in Firestore
-    let userDoc = await db.collection('users').doc(user.uid).get();
-
+    // Get user document in Firestore
     let userData = userDoc.exists ? userDoc.data() : {
       uid: user.uid,
       email: user.email,
@@ -104,8 +131,7 @@ app.post('/login', async (req, res) => {
     console.error('Login error:', err.message, err.code);
     res.status(401).json({
       success: false,
-      message: err.code === 'auth/user-not-found' ? 'User not found' : (err.message || 'Invalid credentials'),
-      debug: process.env.NODE_ENV === 'development' ? err.message : undefined
+      message: err.message || 'Invalid credentials'
     });
   }
 });
