@@ -96,8 +96,12 @@ app.post('/login', async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Login error:', err.message);
-    res.status(401).json({ success: false, message: 'Invalid email or user not found' });
+    console.error('Login error:', err.message, err.code);
+    res.status(401).json({
+      success: false,
+      message: err.code === 'auth/user-not-found' ? 'User not found' : (err.message || 'Invalid credentials'),
+      debug: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
