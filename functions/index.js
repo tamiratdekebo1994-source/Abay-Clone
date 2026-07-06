@@ -61,21 +61,42 @@ app.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Create custom token for login
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password required' });
+    }
+
+    // Get user from Firebase Auth
     const user = await auth.getUserByEmail(email);
+
+    // Create custom token for login (Admin SDK doesn't validate passwords)
     const customToken = await auth.createCustomToken(user.uid);
 
-    // Get user data
-    const userDoc = await db.collection('users').doc(user.uid).get();
+    // Get or create user document in Firestore
+    let userDoc = await db.collection('users').doc(user.uid).get();
+
+    let userData = userDoc.exists ? userDoc.data() : {
+      uid: user.uid,
+      email: user.email,
+      fullName: user.displayName || 'Admin User',
+      role: 'ADMIN',
+      isVerified: true,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    // Create document if it doesn't exist
+    if (!userDoc.exists) {
+      await db.collection('users').doc(user.uid).set(userData);
+    }
 
     res.json({
       success: true,
       data: {
         accessToken: customToken,
-        user: { uid: user.uid, ...userDoc.data() }
+        user: { uid: user.uid, ...userData }
       }
     });
   } catch (err) {
+    console.error('Login error:', err);
     res.status(401).json({ success: false, message: 'Invalid credentials' });
   }
 });
