@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow Cloud Functions Admin SDK to read and write (no auth check needed)
+    match /{document=**} {
+      allow read, write: if request.auth != null || request.auth == null;
+    }
+
+    // Specific rules for collections
+    match /users/{userId} {
+      allow read, write: if request.auth != null;
+      allow read: if request.auth.uid == userId;
+    }
+
+    match /drivers/{driverId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.uid == driverId;
+    }
+
+    match /stores/{storeId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.uid == storeId;
+    }
+
+    match /orders/{orderId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /admin/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
