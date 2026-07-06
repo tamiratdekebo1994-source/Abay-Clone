@@ -16,8 +16,11 @@ app.use(express.json());
 
 // Middleware to strip /api prefix (Firebase Hosting rewrites /api/** to this function)
 app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} (original: ${req.url})`);
   if (req.path.startsWith('/api')) {
-    req.url = req.url.replace(/^\/api/, '') || '/';
+    const newUrl = req.url.replace(/^\/api/, '') || '/';
+    console.log(`Stripping /api prefix: ${req.url} -> ${newUrl}`);
+    req.url = newUrl;
   }
   next();
 });
@@ -71,26 +74,34 @@ app.post('/register', async (req, res) => {
 
 app.post('/login', async (req, res) => {
   try {
+    console.log('Login request received:', { body: req.body, headers: req.headers });
+
     let { email, phone, password } = req.body;
 
     if (!email && !phone) {
+      console.log('No email or phone provided');
       return res.status(400).json({ success: false, message: 'Email or phone required' });
     }
 
     if (!password) {
+      console.log('No password provided');
       return res.status(400).json({ success: false, message: 'Password required' });
     }
 
     // Convert phone to email format if phone is provided
     if (phone && !email) {
       email = `${phone}@etspark.et`;
+      console.log(`Converted phone ${phone} to email ${email}`);
     }
 
     // Get user from Firebase Auth by email
     let user;
     try {
+      console.log(`Looking up user by email: ${email}`);
       user = await auth.getUserByEmail(email);
+      console.log(`User found: ${user.uid}`);
     } catch (err) {
+      console.error(`User lookup failed: ${err.code} - ${err.message}`);
       if (err.code === 'auth/user-not-found') {
         return res.status(401).json({ success: false, message: 'User not found' });
       }
