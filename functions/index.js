@@ -3,6 +3,7 @@ const admin = require('firebase-admin');
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
+const axios = require('axios');
 
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -66,10 +67,8 @@ app.post('/login', async (req, res) => {
     }
 
     // Use Firebase REST API to verify credentials and get ID token
-    const firebaseConfig = process.env.FIREBASE_CONFIG ? JSON.parse(process.env.FIREBASE_CONFIG) : {};
     const apiKey = process.env.FIREBASE_API_KEY || 'AIzaSyA4YE9aBP7adElrVM_OgZ_6Ffrd8dx4P0A';
 
-    const axios = require('axios');
     const authResponse = await axios.post(
       `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
       { email, password, returnSecureToken: true }
