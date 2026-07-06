@@ -533,6 +533,38 @@ app.patch('/admin/settings/commission', verifyToken, async (req, res) => {
   }
 });
 
+// ─── Admin Setup (One-time) ─────────────────────────────────────────────────
+
+app.post('/admin/setup-password', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password required' });
+    }
+
+    const user = await auth.getUserByEmail(email);
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    await db.collection('users').doc(user.uid).update({
+      passwordHash,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }).catch(async () => {
+      await db.collection('users').doc(user.uid).set({
+        email,
+        passwordHash,
+        role: 'ADMIN',
+        isVerified: true,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    });
+
+    res.json({ success: true, message: 'Password hash updated' });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
 // ─── Health Check ───────────────────────────────────────────────────────────
 
 app.get('/health', (req, res) => {
