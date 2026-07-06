@@ -1,9 +1,5 @@
 import axios from 'axios';
 
-// VITE_API_BASE_URL is set to the backend origin (e.g. https://api.fetno.et)
-// when the web app is hosted separately (Firebase Hosting).
-// When served from the same origin as the backend (nginx/VPS), leave it unset
-// and the vite dev proxy / nginx will handle /api forwarding.
 const API_ORIGIN = import.meta.env.VITE_API_BASE_URL || '';
 
 export const SOCKET_URL = API_ORIGIN || '/';
@@ -22,114 +18,51 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (res) => res,
-  async (error) => {
-    const original = error.config;
-    if (error.response?.status === 401 && error.response?.data?.code === 'TOKEN_EXPIRED' && !original._retry) {
-      original._retry = true;
-      try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        const { data } = await axios.post('/api/auth/refresh', { refreshToken });
-        localStorage.setItem('accessToken', data.data.accessToken);
-        localStorage.setItem('refreshToken', data.data.refreshToken);
-        original.headers.Authorization = `Bearer ${data.data.accessToken}`;
-        return api(original);
-      } catch {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        window.location.href = '/login';
-      }
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('userId');
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }
 );
 
 export const authAPI = {
-  login: (data) => api.post('/auth/login', data),
-  getMe: () => api.get('/auth/me'),
-  logout: (refreshToken) => api.post('/auth/logout', { refreshToken }),
+  login: (data) => api.post('/login', data),
+  register: (data) => api.post('/register', data),
+};
+
+export const driverAPI = {
+  list: () => api.get('/drivers'),
+  create: (data) => api.post('/drivers', data),
 };
 
 export const storeAPI = {
-  register: (data) => api.post('/store/register', data),
-  getProfile: () => api.get('/store/profile'),
-  updateProfile: (data) => api.patch('/store/profile', data),
-  getDashboard: () => api.get('/store/dashboard'),
+  list: () => api.get('/stores'),
+  create: (data) => api.post('/stores', data),
 };
 
 export const orderAPI = {
-  estimate: (data) => api.post('/orders/estimate', data),
   create: (data) => api.post('/orders', data),
-  getMyOrders: (params) => api.get('/orders', { params }),
-  getOrder: (id) => api.get(`/orders/${id}`),
-  cancel: (id, reason) => api.post(`/orders/${id}/cancel`, { reason }),
-  review: (id, data) => api.post(`/orders/${id}/review`, data),
+  list: () => api.get('/orders'),
+  get: (id) => api.get(`/orders/${id}`),
 };
 
 export const adminAPI = {
   getDashboard: () => api.get('/admin/dashboard'),
-  getAnalytics: (days = 7) => api.get('/admin/analytics', { params: { days } }),
-  getDrivers: (params) => api.get('/admin/drivers', { params }),
-  approveDriver: (id, action) => api.patch(`/admin/drivers/${id}/status`, { action }),
-  getStores: (params) => api.get('/admin/stores', { params }),
-  updateStoreStatus: (id, action) => api.patch(`/admin/stores/${id}/status`, { action }),
-  getAllOrders: (params) => api.get('/admin/orders', { params }),
-  getSurge: () => api.get('/admin/surge'),
-  setSurge: (city, multiplier) => api.post('/admin/surge', { city, multiplier }),
-
-  // Driver Earnings
-  getDriverEarnings: (params) => api.get('/admin/drivers/earnings', { params }),
-
-  // Financial Reports
-  getFinancialReport: (days = 30) => api.get('/admin/reports/financial', { params: { days } }),
-
-  // Commission Settings
+  getDrivers: () => api.get('/admin/drivers'),
+  getCustomers: () => api.get('/admin/customers'),
+  blockCustomer: (id, reason) => api.patch(`/admin/customers/${id}/block`, { reason }),
+  getPromoCodes: () => api.get('/admin/promo-codes'),
+  createPromoCode: (data) => api.post('/admin/promo-codes', data),
+  getAuditLogs: () => api.get('/admin/audit-logs'),
+  getFraudFlags: () => api.get('/admin/fraud-flags'),
+  createFraudFlag: (data) => api.post('/admin/fraud-flags', data),
+  resolveFraudFlag: (id, data) => api.patch(`/admin/fraud-flags/${id}/resolve`, data),
   getCommissionSettings: () => api.get('/admin/settings/commission'),
   updateCommissionSettings: (data) => api.patch('/admin/settings/commission', data),
-
-  // Push Notifications
-  sendPushNotification: (data) => api.post('/admin/notifications/send', data),
-
-  // Customer Management
-  getCustomers: (params) => api.get('/admin/customers', { params }),
-  blockCustomer: (id, reason) => api.patch(`/admin/customers/${id}/block`, { blockedReason: reason }),
-  unblockCustomer: (id) => api.patch(`/admin/customers/${id}/unblock`),
-
-  // Promo Codes
-  getPromoCodes: (params) => api.get('/admin/promo-codes', { params }),
-  createPromoCode: (data) => api.post('/admin/promo-codes', data),
-  deactivatePromoCode: (id) => api.patch(`/admin/promo-codes/${id}/deactivate`),
-
-  // Audit Logs
-  getAuditLogs: (params) => api.get('/admin/audit-logs', { params }),
-
-  // Fraud Detection
-  getFraudFlags: (params) => api.get('/admin/fraud-flags', { params }),
-  reportFraud: (data) => api.post('/admin/fraud-flags', data),
-  resolveFraudFlag: (id, data) => api.patch(`/admin/fraud-flags/${id}/resolve`, data),
 };
-
-/**
- * Download an authenticated CSV export from the admin API.
- * Falls back to window.open for browsers that block programmatic downloads.
- * @param {string} path  e.g. '/admin/export/orders.csv'
- * @param {string} filename  suggested download filename
- */
-export async function downloadCSV(path, filename) {
-  const token = localStorage.getItem('accessToken');
-  const res = await fetch(`/api${path}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!res.ok) throw new Error(`Export failed: ${res.status}`);
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
 
 export const chatAPI = {
   getMessages: (orderId) => api.get(`/chat/order/${orderId}`),
@@ -146,5 +79,22 @@ export const notificationAPI = {
   markAllRead: () => api.patch('/notifications/read-all'),
   markRead: (id) => api.patch(`/notifications/${id}/read`),
 };
+
+export async function downloadCSV(path, filename) {
+  const token = localStorage.getItem('accessToken');
+  const res = await fetch(`${API_ORIGIN}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 export default api;
