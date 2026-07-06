@@ -65,19 +65,25 @@ app.post('/login', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email and password required' });
     }
 
-    // Get user from Firebase Auth
-    const user = await auth.getUserByEmail(email);
+    // Use Firebase REST API to verify credentials and get ID token
+    const firebaseConfig = process.env.FIREBASE_CONFIG ? JSON.parse(process.env.FIREBASE_CONFIG) : {};
+    const apiKey = process.env.FIREBASE_API_KEY || 'AIzaSyA4YE9aBP7adElrVM_OgZ_6Ffrd8dx4P0A';
 
-    // Create custom token for login (Admin SDK doesn't validate passwords)
-    const customToken = await auth.createCustomToken(user.uid);
+    const axios = require('axios');
+    const authResponse = await axios.post(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
+      { email, password, returnSecureToken: true }
+    );
+
+    const { localId: uid, idToken } = authResponse.data;
 
     // Get or create user document in Firestore
-    let userDoc = await db.collection('users').doc(user.uid).get();
+    let userDoc = await db.collection('users').doc(uid).get();
 
     let userData = userDoc.exists ? userDoc.data() : {
-      uid: user.uid,
-      email: user.email,
-      fullName: user.displayName || 'Admin User',
+      uid,
+      email,
+      fullName: 'Admin User',
       role: 'ADMIN',
       isVerified: true,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -85,18 +91,18 @@ app.post('/login', async (req, res) => {
 
     // Create document if it doesn't exist
     if (!userDoc.exists) {
-      await db.collection('users').doc(user.uid).set(userData);
+      await db.collection('users').doc(uid).set(userData);
     }
 
     res.json({
       success: true,
       data: {
-        accessToken: customToken,
-        user: { uid: user.uid, ...userData }
+        accessToken: idToken,
+        user: { uid, ...userData }
       }
     });
   } catch (err) {
-    console.error('Login error:', err);
+    console.error('Login error:', err.message || err);
     res.status(401).json({ success: false, message: 'Invalid credentials' });
   }
 });
