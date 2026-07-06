@@ -46,3 +46,4 @@ google-play-service-account.json
 # Cache
 .cache/
 .parcel-cache/
+.firebase/
