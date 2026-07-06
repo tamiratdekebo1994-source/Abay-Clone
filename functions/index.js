@@ -542,40 +542,58 @@ app.post('/admin/setup-password', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email and password required' });
     }
 
+    console.log(`Setting up password for: ${email}`);
+
     let user;
     try {
       user = await auth.getUserByEmail(email);
+      console.log(`Found user: ${user.uid}`);
     } catch (err) {
+      console.error(`User lookup failed: ${err.code} - ${err.message}`);
       return res.status(404).json({ success: false, message: 'User not found in Firebase Auth' });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
+    console.log(`Password hashed`);
 
     // Try to update existing document
     const userRef = db.collection('users').doc(user.uid);
-    const userDoc = await userRef.get();
 
-    if (userDoc.exists) {
-      // Update existing document
-      await userRef.update({
-        passwordHash,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-    } else {
-      // Create new document
-      await userRef.set({
-        uid: user.uid,
-        email: user.email,
-        fullName: user.displayName || 'Admin',
-        passwordHash,
-        role: 'ADMIN',
-        isVerified: true,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    try {
+      const userDoc = await userRef.get();
+      console.log(`Document exists: ${userDoc.exists}`);
+
+      if (userDoc.exists) {
+        // Update existing document
+        await userRef.update({
+          passwordHash,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        console.log(`Document updated`);
+      } else {
+        // Create new document
+        await userRef.set({
+          uid: user.uid,
+          email: user.email,
+          fullName: user.displayName || 'Admin',
+          passwordHash,
+          role: 'ADMIN',
+          isVerified: true,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        console.log(`Document created`);
+      }
+
+      res.json({ success: true, message: 'Password setup complete', userId: user.uid });
+    } catch (err) {
+      console.error(`Firestore error: ${err.code} - ${err.message}`, err);
+      res.status(400).json({
+        success: false,
+        message: `Firestore error: ${err.message}`,
+        code: err.code
       });
     }
-
-    res.json({ success: true, message: 'Password setup complete', userId: user.uid });
   } catch (err) {
     console.error('Setup password error:', err);
     res.status(400).json({ success: false, message: err.message });
