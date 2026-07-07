@@ -74,7 +74,7 @@ app.post('/register', async (req, res) => {
 
 app.post('/login', async (req, res) => {
   try {
-    console.log('Login request received:', { body: req.body, headers: req.headers });
+    console.log('Login request received:', { body: req.body });
 
     let { email, phone, password } = req.body;
 
@@ -88,43 +88,74 @@ app.post('/login', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Password required' });
     }
 
-    // Convert phone to email format if phone is provided
-    if (phone && !email) {
-      email = `${phone}@etspark.et`;
-      console.log(`Converted phone ${phone} to email ${email}`);
+    // Get user from Firebase Auth
+    let user;
+    let userDoc;
+
+    // If email is provided, try to find user by email first
+    if (email) {
+      try {
+        console.log(`Looking up user by email: ${email}`);
+        user = await auth.getUserByEmail(email);
+        console.log(`User found by email: ${user.uid}`);
+      } catch (err) {
+        console.log(`Email lookup failed: ${err.code}`);
+        user = null;
+      }
     }
 
-    // Get user from Firebase Auth by email
-    let user;
-    try {
-      console.log(`Looking up user by email: ${email}`);
-      user = await auth.getUserByEmail(email);
-      console.log(`User found: ${user.uid}`);
-    } catch (err) {
-      console.error(`User lookup failed: ${err.code} - ${err.message}`);
-      if (err.code === 'auth/user-not-found') {
-        return res.status(401).json({ success: false, message: 'User not found' });
+    // If phone is provided or email lookup failed, try finding by phone in Firestore
+    if (!user && phone) {
+      console.log(`Looking up user by phone: ${phone} in Firestore`);
+      const snapshot = await db.collection('users')
+        .where('phone', '==', phone)
+        .limit(1)
+        .get();
+
+      if (!snapshot.empty) {
+        const doc = snapshot.docs[0];
+        userDoc = doc;
+        console.log(`Found user by phone: ${doc.id}`);
+        // Now get the Auth user
+        try {
+          user = await auth.getUser(doc.id);
+          console.log(`Got auth user: ${user.uid}`);
+        } catch (err) {
+          console.error(`Failed to get auth user: ${err.message}`);
+          throw err;
+        }
       }
-      throw err;
+    }
+
+    // If still no user found
+    if (!user) {
+      console.log('User not found by email or phone');
+      return res.status(401).json({ success: false, message: 'User not found' });
+    }
+
+    // Get Firestore document if we haven't already
+    if (!userDoc) {
+      userDoc = await db.collection('users').doc(user.uid).get();
     }
 
     // Verify password using bcrypt against stored hash
-    const userDoc = await db.collection('users').doc(user.uid).get();
     if (userDoc.exists && userDoc.data().passwordHash) {
       const passwordMatch = await bcrypt.compare(password, userDoc.data().passwordHash);
       if (!passwordMatch) {
+        console.log('Password does not match');
         return res.status(401).json({ success: false, message: 'Invalid password' });
       }
+      console.log('Password verified');
     } else {
       // For backwards compatibility with users created before password hashing
-      // Just accept the login (this is a temporary measure)
-      console.warn(`User ${email} has no password hash, allowing login`);
+      console.warn(`User ${user.uid} has no password hash, allowing login`);
     }
 
     // Create custom token for login
     const customToken = await auth.createCustomToken(user.uid);
+    console.log('Custom token created');
 
-    // Get user document in Firestore
+    // Get user data from Firestore
     let userData = userDoc.exists ? userDoc.data() : {
       uid: user.uid,
       email: user.email,
@@ -136,6 +167,7 @@ app.post('/login', async (req, res) => {
 
     // Create document if it doesn't exist
     if (!userDoc.exists) {
+      console.log('Creating new user document');
       await db.collection('users').doc(user.uid).set(userData);
     }
 
@@ -588,12 +620,12 @@ app.get('/debug/user/:email', async (req, res) => {
 
 app.post('/admin/setup-password', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, phone, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Email and password required' });
     }
 
-    console.log(`Setting up password for: ${email}`);
+    console.log(`Setting up password for: ${email}, phone: ${phone}`);
 
     let user;
     try {
@@ -618,6 +650,7 @@ app.post('/admin/setup-password', async (req, res) => {
         // Update existing document
         await userRef.update({
           passwordHash,
+          phone: phone || userDoc.data().phone,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
         console.log(`Document updated`);
@@ -626,6 +659,7 @@ app.post('/admin/setup-password', async (req, res) => {
         await userRef.set({
           uid: user.uid,
           email: user.email,
+          phone: phone,
           fullName: user.displayName || 'Admin',
           passwordHash,
           role: 'ADMIN',
