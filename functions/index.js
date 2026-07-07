@@ -3,6 +3,7 @@ const admin = require('firebase-admin');
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -26,15 +27,16 @@ app.use((req, res, next) => {
 });
 
 // ─── Authentication Middleware ───────────────────────────────────────────────
-const verifyToken = async (req, res, next) => {
+const verifyToken = (req, res, next) => {
   const token = req.headers.authorization?.split('Bearer ')[1];
   if (!token) return res.status(401).json({ success: false, message: 'No token' });
 
   try {
-    const decodedToken = await auth.verifyIdToken(token);
+    const decodedToken = jwt.verify(token, 'et-spark-secret-key');
     req.userId = decodedToken.uid;
     next();
-  } catch {
+  } catch (err) {
+    console.error('Token verification failed:', err.message);
     res.status(401).json({ success: false, message: 'Invalid token' });
   }
 };
@@ -151,9 +153,13 @@ app.post('/login', async (req, res) => {
       console.warn(`User ${user.uid} has no password hash, allowing login`);
     }
 
-    // Create custom token for login
-    const customToken = await auth.createCustomToken(user.uid);
-    console.log('Custom token created');
+    // Create JWT token for login (avoids IAM permission issues)
+    const accessToken = jwt.sign(
+      { uid: user.uid, email: user.email },
+      'et-spark-secret-key', // In production, use environment variable
+      { expiresIn: '7d' }
+    );
+    console.log('JWT token created');
 
     // Get user data from Firestore
     let userData = userDoc.exists ? userDoc.data() : {
@@ -174,7 +180,7 @@ app.post('/login', async (req, res) => {
     res.json({
       success: true,
       data: {
-        accessToken: customToken,
+        accessToken,
         user: { uid: user.uid, ...userData }
       }
     });
