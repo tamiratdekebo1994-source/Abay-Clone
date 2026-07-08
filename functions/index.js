@@ -90,54 +90,37 @@ app.post('/login', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Password required' });
     }
 
-    // Get user from Firebase Auth
+    // Convert phone to email if phone is provided
+    if (phone && !email) {
+      email = `${phone}@etspark.et`;
+      console.log(`Converted phone to email: ${email}`);
+    }
+
+    // Get user from Firebase Auth by email
     let user;
+    try {
+      console.log(`Looking up user by email: ${email}`);
+      user = await auth.getUserByEmail(email);
+      console.log(`User found: ${user.uid}`);
+    } catch (err) {
+      console.error(`User lookup failed: ${err.code} - ${err.message}`);
+      if (err.code === 'auth/user-not-found') {
+        return res.status(401).json({ success: false, message: 'User not found' });
+      }
+      throw err;
+    }
+
     let userDoc;
-
-    // If email is provided, try to find user by email first
-    if (email) {
-      try {
-        console.log(`Looking up user by email: ${email}`);
-        user = await auth.getUserByEmail(email);
-        console.log(`User found by email: ${user.uid}`);
-      } catch (err) {
-        console.log(`Email lookup failed: ${err.code}`);
-        user = null;
-      }
-    }
-
-    // If phone is provided or email lookup failed, try finding by phone in Firestore
-    if (!user && phone) {
-      console.log(`Looking up user by phone: ${phone} in Firestore`);
-      const snapshot = await db.collection('users')
-        .where('phone', '==', phone)
-        .limit(1)
-        .get();
-
-      if (!snapshot.empty) {
-        const doc = snapshot.docs[0];
-        userDoc = doc;
-        console.log(`Found user by phone: ${doc.id}`);
-        // Now get the Auth user
-        try {
-          user = await auth.getUser(doc.id);
-          console.log(`Got auth user: ${user.uid}`);
-        } catch (err) {
-          console.error(`Failed to get auth user: ${err.message}`);
-          throw err;
-        }
-      }
-    }
-
-    // If still no user found
-    if (!user) {
-      console.log('User not found by email or phone');
-      return res.status(401).json({ success: false, message: 'User not found' });
-    }
 
     // Get Firestore document if we haven't already
     if (!userDoc) {
-      userDoc = await db.collection('users').doc(user.uid).get();
+      try {
+        userDoc = await db.collection('users').doc(user.uid).get();
+      } catch (err) {
+        console.error(`Failed to get Firestore document: ${err.message}`);
+        // If Firestore is unavailable, create a minimal user doc
+        userDoc = { exists: false, data: () => ({}) };
+      }
     }
 
     // Verify password using bcrypt against stored hash
