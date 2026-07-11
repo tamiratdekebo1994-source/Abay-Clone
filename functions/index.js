@@ -653,6 +653,7 @@ app.post('/admin/setup-password', async (req, res) => {
 // ─── Health Check ───────────────────────────────────────────────────────────
 
 app.get('/health', (req, res) => {
+  console.log('Health check endpoint called');
   res.json({
     status: 'ok',
     app: 'ET SPARK API (Firebase)',
@@ -660,6 +661,11 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     deployed: true,
   });
+});
+
+app.get('/test', (req, res) => {
+  console.log('Test endpoint called');
+  res.json({ message: 'API is working!' });
 });
 
 // ─── Export Functions ───────────────────────────────────────────────────────
