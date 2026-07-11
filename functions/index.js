@@ -5,10 +5,16 @@ const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-// Initialize Firebase Admin SDK
-admin.initializeApp();
-const db = admin.firestore();
-const auth = admin.auth();
+// Initialize Firebase Admin SDK with error handling
+let db, auth;
+try {
+  admin.initializeApp();
+  db = admin.firestore();
+  auth = admin.auth();
+} catch (err) {
+  console.error('Admin SDK initialization error:', err.message);
+  // Continue anyway - login endpoint doesn't require Admin SDK
+}
 
 // Create Express app
 const app = express();
@@ -45,6 +51,10 @@ const verifyToken = (req, res, next) => {
 
 app.post('/register', async (req, res) => {
   try {
+    if (!auth || !db) {
+      return res.status(503).json({ success: false, message: 'Auth service unavailable' });
+    }
+
     const { phone, fullName, email, password, role } = req.body;
 
     // Create Firebase Auth user
