@@ -21,6 +21,12 @@ const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json());
 
+// Log all requests for debugging
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
+
 // Middleware to strip /api prefix (Firebase Hosting rewrites /api/** to this function)
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} (original: ${req.url})`);
