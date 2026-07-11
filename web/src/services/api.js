@@ -1,12 +1,11 @@
 import axios from 'axios';
 
-const API_ORIGIN = import.meta.env.VITE_API_BASE_URL || '';
+const API_ORIGIN = import.meta.env.VITE_API_BASE_URL || 'https://europe-west1-abay-clone-project-36721.cloudfunctions.net/api';
 
 export const SOCKET_URL = API_ORIGIN || '/';
 
-// Use relative URLs by default (Firebase Hosting rewrites /api/** to Cloud Functions)
-// Only use full URL if explicitly set in environment
-const baseURL = API_ORIGIN || '/api';
+// Use direct Cloud Function URL
+const baseURL = API_ORIGIN;
 
 console.log('API Base URL:', baseURL);
 
