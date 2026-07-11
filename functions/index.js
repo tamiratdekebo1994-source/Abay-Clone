@@ -5,27 +5,21 @@ const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-// Initialize Firebase Admin SDK with error handling
-let db, auth;
-try {
-  admin.initializeApp();
-  db = admin.firestore();
-  auth = admin.auth();
-} catch (err) {
-  console.error('Admin SDK initialization error:', err.message);
-  // Continue anyway - login endpoint doesn't require Admin SDK
-}
+console.log('Initializing ET SPARK API...');
+
+// Initialize Firebase Admin SDK
+admin.initializeApp();
+const db = admin.firestore();
+const auth = admin.auth();
+
+console.log('Admin SDK initialized');
 
 // Create Express app
 const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json());
 
-// Log all requests for debugging
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  next();
-});
+console.log('Express app created');
 
 // Middleware to strip /api prefix (Firebase Hosting rewrites /api/** to this function)
 app.use((req, res, next) => {
