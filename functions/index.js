@@ -90,10 +90,6 @@ app.post('/login', async (req, res) => {
 
     let { email, phone, password } = req.body;
 
-    if (!email && !phone) {
-      return res.status(400).json({ success: false, message: 'Email or phone required' });
-    }
-
     if (!password) {
       return res.status(400).json({ success: false, message: 'Password required' });
     }
@@ -104,10 +100,11 @@ app.post('/login', async (req, res) => {
     const adminPassword = 'Admin@1234';
     const adminUID = 'D5eaxB7sbyTxFahEOL2kX9mqbkN2';
 
-    // Check credentials
+    // Check credentials - accept either phone or email
     let isValid = false;
     if (phone && phone === adminPhone && password === adminPassword) {
       isValid = true;
+      email = adminEmail; // Convert phone to email for consistency
     } else if (email && email === adminEmail && password === adminPassword) {
       isValid = true;
     }
