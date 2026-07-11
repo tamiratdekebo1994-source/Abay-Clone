@@ -25,8 +25,7 @@
     "rewrites": [
       {
         "source": "/api/**",
-        "function": "api",
-        "region": "europe-west1"
+        "function": "api"
       },
       {
         "source": "**",
