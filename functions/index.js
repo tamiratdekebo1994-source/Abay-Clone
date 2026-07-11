@@ -76,103 +76,81 @@ app.post('/register', async (req, res) => {
 
 app.post('/login', async (req, res) => {
   try {
-    console.log('Login request received:', { body: req.body });
+    console.log('Login request received');
 
     let { email, phone, password } = req.body;
 
     if (!email && !phone) {
-      console.log('No email or phone provided');
       return res.status(400).json({ success: false, message: 'Email or phone required' });
     }
 
     if (!password) {
-      console.log('No password provided');
       return res.status(400).json({ success: false, message: 'Password required' });
     }
 
-    // Convert phone to email if phone is provided
+    // Convert phone to email if needed
     if (phone && !email) {
       email = `${phone}@etspark.et`;
-      console.log(`Converted phone to email: ${email}`);
     }
 
-    // Get user from Firebase Auth by email
-    let user;
+    // Use Firebase REST API to sign in (avoids Admin SDK permission issues)
+    const firebaseApiKey = 'AIzaSyA5WgYvHVLWaF6n8VJ7N9dXpSVnQFRZkOc';
+    const signInUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${firebaseApiKey}`;
+
+    console.log(`Attempting Firebase REST sign-in for: ${email}`);
+
     try {
-      console.log(`Looking up user by email: ${email}`);
-      user = await auth.getUserByEmail(email);
-      console.log(`User found: ${user.uid}`);
-    } catch (err) {
-      console.error(`User lookup failed: ${err.code} - ${err.message}`);
-      if (err.code === 'auth/user-not-found') {
-        return res.status(401).json({ success: false, message: 'User not found' });
-      }
-      throw err;
-    }
+      const signInResponse = await axios.post(signInUrl, {
+        email,
+        password,
+        returnSecureToken: true
+      });
 
-    let userDoc;
+      const { idToken, localId } = signInResponse.data;
+      console.log(`Sign-in successful for uid: ${localId}`);
 
-    // Get Firestore document if we haven't already
-    if (!userDoc) {
+      // Create JWT token for consistency
+      const accessToken = jwt.sign(
+        { uid: localId, email },
+        'et-spark-secret-key',
+        { expiresIn: '7d' }
+      );
+
+      // Try to get user data from Firestore
+      let userData = {
+        uid: localId,
+        email,
+        fullName: 'Admin',
+        role: 'ADMIN',
+        isVerified: true
+      };
+
       try {
-        userDoc = await db.collection('users').doc(user.uid).get();
+        const userDoc = await db.collection('users').doc(localId).get();
+        if (userDoc.exists) {
+          userData = { ...userData, ...userDoc.data() };
+        }
       } catch (err) {
-        console.error(`Failed to get Firestore document: ${err.message}`);
-        // If Firestore is unavailable, create a minimal user doc
-        userDoc = { exists: false, data: () => ({}) };
+        console.log('Firestore unavailable, using basic user data');
       }
+
+      res.json({
+        success: true,
+        data: {
+          accessToken,
+          user: userData
+        }
+      });
+
+    } catch (signInErr) {
+      console.error('Sign-in error:', signInErr.response?.data || signInErr.message);
+      const errorMessage = signInErr.response?.data?.error?.message || 'Invalid credentials';
+      res.status(401).json({ success: false, message: errorMessage });
     }
 
-    // Verify password using bcrypt against stored hash
-    if (userDoc.exists && userDoc.data().passwordHash) {
-      const passwordMatch = await bcrypt.compare(password, userDoc.data().passwordHash);
-      if (!passwordMatch) {
-        console.log('Password does not match');
-        return res.status(401).json({ success: false, message: 'Invalid password' });
-      }
-      console.log('Password verified');
-    } else {
-      // For backwards compatibility with users created before password hashing
-      console.warn(`User ${user.uid} has no password hash, allowing login`);
-    }
-
-    // Create JWT token for login (avoids IAM permission issues)
-    const accessToken = jwt.sign(
-      { uid: user.uid, email: user.email },
-      'et-spark-secret-key', // In production, use environment variable
-      { expiresIn: '7d' }
-    );
-    console.log('JWT token created');
-
-    // Get user data from Firestore
-    let userData = userDoc.exists ? userDoc.data() : {
-      uid: user.uid,
-      email: user.email,
-      fullName: user.displayName || 'User',
-      role: 'ADMIN',
-      isVerified: true,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    };
-
-    // Create document if it doesn't exist
-    if (!userDoc.exists) {
-      console.log('Creating new user document');
-      await db.collection('users').doc(user.uid).set(userData);
-    }
-
-    res.json({
-      success: true,
-      data: {
-        accessToken,
-        user: { uid: user.uid, ...userData }
-      }
-    });
   } catch (err) {
-    console.error('Login error:', err.message, err.code);
-    res.status(401).json({
-      success: false,
-      message: err.message || 'Invalid credentials'
-    });
+    console.error('Login error:', err.message);
+    res.status(500).json({ success: false, message: err.message || 'Login failed' });
   }
 });
 
