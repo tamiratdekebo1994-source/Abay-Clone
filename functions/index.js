@@ -650,8 +650,9 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     app: 'ET SPARK API (Firebase)',
-    version: '1.0.0',
+    version: '1.0.1',
     timestamp: new Date().toISOString(),
+    deployed: true,
   });
 });
 
