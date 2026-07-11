@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ET SPARK | Login</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1B4332 0%, #2D6A4F 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #333;
+    }
+
+    .login-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      padding: 48px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .logo-section {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo-section h1 {
+      color: #1B4332;
+      font-size: 28px;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    .logo-section p {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.3s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #1B4332;
+      box-shadow: 0 0 0 3px rgba(27, 67, 50, 0.1);
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, #1B4332 0%, #2D6A4F 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 12px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .login-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(27, 67, 50, 0.2);
+    }
+
+    .login-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .error-message {
+      display: none;
+      background: #fee;
+      color: #c33;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      border: 1px solid #fcc;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      color: #1B4332;
+      font-size: 14px;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #1B4332;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="logo-section">
+      <h1>ET SPARK</h1>
+      <p>Admin Dashboard</p>
+    </div>
+
+    <div class="error-message" id="errorMsg"></div>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="phone">Phone Number</label>
+        <input
+          type="tel"
+          id="phone"
+          placeholder="Enter your phone"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          placeholder="Enter your password"
+          required
+        />
+      </div>
+
+      <button type="submit" class="login-btn" id="loginBtn">
+        Sign In
+      </button>
+
+      <div class="loading" id="loading">
+        <span class="spinner"></span>
+        <span>Signing in...</span>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const API_URL = 'https://europe-west1-abay-clone-project-36721.cloudfunctions.net/api';
+
+    const form = document.getElementById('loginForm');
+    const phoneInput = document.getElementById('phone');
+    const passwordInput = document.getElementById('password');
+    const loginBtn = document.getElementById('loginBtn');
+    const errorMsg = document.getElementById('errorMsg');
+    const loading = document.getElementById('loading');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMsg.classList.remove('show');
+      errorMsg.textContent = '';
+
+      const phone = phoneInput.value.trim();
+      const password = passwordInput.value;
+
+      if (!phone || !password) {
+        showError('Please fill in all fields');
+        return;
+      }
+
+      loginBtn.disabled = true;
+      loading.style.display = 'block';
+
+      try {
+        const response = await fetch(`${API_URL}/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ phone, password }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Login failed');
+        }
+
+        if (data.token) {
+          localStorage.setItem('accessToken', data.token);
+          if (data.user?.uid) {
+            localStorage.setItem('userId', data.user.uid);
+          }
+          window.location.href = '/index.html';
+        } else {
+          throw new Error('No token received');
+        }
+      } catch (error) {
+        showError(error.message || 'Login failed. Please try again.');
+        console.error('Login error:', error);
+      } finally {
+        loginBtn.disabled = false;
+        loading.style.display = 'none';
+      }
+    });
+
+    function showError(message) {
+      errorMsg.textContent = message;
+      errorMsg.classList.add('show');
+    }
+  </script>
+</body>
+</html>
