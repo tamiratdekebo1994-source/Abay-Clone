@@ -33,8 +33,8 @@ export const authAPI = {
   verifyOtpLogin: (phone, code) => api.post('/auth/otp/verify-login', { phone, code }),
   verifyOtpRegister: (phone, code) => api.post('/auth/otp/verify-register', { phone, code }),
   completeRegistration: (data) => api.post('/auth/register/complete', data),
-  // Legacy password (admin)
-  login: (data) => api.post('/auth/login', data),
+  // Legacy password (admin) - Firebase Cloud Functions endpoint
+  login: (data) => api.post('/login', data),
   getMe: () => api.get('/auth/me'),
   updateProfile: (data) => api.patch('/auth/profile', data),
   logout: (refreshToken) => api.post('/auth/logout', { refreshToken }),
