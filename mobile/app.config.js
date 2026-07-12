@@ -12,7 +12,7 @@ const googleServicesJson = process.env.GOOGLE_SERVICES_JSON || './google-service
 
 // For EAS Build: Use file environment variable
 // For local development: Use local file
-const googleServicesPlist = process.env.GOOGLE_SERVICES_PLIST || './GoogleService-Info.plist';
+const googleServicesPlist = process.env.GOOGLE_SERVICES_PLIST || 'GoogleService-Info.plist';
 
 // Firebase Web App config — from Firebase Console → Project Settings → Your Apps
 const firebase = {
