@@ -33,7 +33,7 @@ const STATUS_INFO = {
   PENDING: {
     icon: '⏳',
     title: 'Account under review',
-    body: 'Your documents are being verified. This usually takes 1–2 business days. We'll notify you once approved.',
+    body: 'Your documents are being verified. This usually takes 1-2 business days. We\'ll notify you once approved.',
     bg: '#FFFBEB', border: '#FDE68A', text: '#92400E',
   },
   SUSPENDED: {
