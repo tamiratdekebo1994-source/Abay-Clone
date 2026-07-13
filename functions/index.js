@@ -226,6 +226,70 @@ app.post('/drivers', verifyToken, async (req, res) => {
   }
 });
 
+app.post('/driver/register', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split('Bearer ')[1];
+    if (!token) return res.status(401).json({ success: false, message: 'Authentication required' });
+
+    let userId;
+    try {
+      const decodedJWT = jwt.verify(token, 'et-spark-secret-key');
+      userId = decodedJWT.uid;
+    } catch (jwtErr) {
+      try {
+        const decodedFirebase = await admin.auth().verifyIdToken(token);
+        userId = decodedFirebase.uid;
+      } catch (firebaseErr) {
+        return res.status(401).json({ success: false, message: 'Invalid token' });
+      }
+    }
+
+    const {
+      fullName, dateOfBirth, gender, nationalId, emergencyContactName, emergencyContactPhone,
+      city, homeAddress, vehicleType, vehicleMake, vehicleModel, vehicleYear, vehicleColor, vehiclePlate,
+      licenseNumber, licenseClass, licenseExpiry
+    } = req.body;
+
+    if (!fullName || !emergencyContactPhone || !city || !vehicleType || !vehiclePlate || !licenseNumber || !licenseExpiry) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    const docRef = await db.collection('driverApplications').add({
+      userId,
+      fullName: fullName.trim(),
+      dateOfBirth: dateOfBirth || null,
+      gender: gender || null,
+      nationalId: nationalId || null,
+      emergencyContactName: emergencyContactName || null,
+      emergencyContactPhone: emergencyContactPhone.trim(),
+      city,
+      homeAddress: homeAddress || null,
+      vehicleType,
+      vehicleMake: vehicleMake || null,
+      vehicleModel: vehicleModel || null,
+      vehicleYear: vehicleYear || null,
+      vehicleColor: vehicleColor || null,
+      vehiclePlate: vehiclePlate.toUpperCase(),
+      licenseNumber: licenseNumber.trim(),
+      licenseClass: licenseClass || null,
+      licenseExpiry,
+      status: 'PENDING',
+      rejectionReason: null,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    res.json({
+      success: true,
+      message: 'Driver application submitted successfully',
+      data: { applicationId: docRef.id }
+    });
+  } catch (err) {
+    console.error('Driver registration error:', err.message);
+    res.status(400).json({ success: false, message: err.message || 'Registration failed' });
+  }
+});
+
 // ─── Store Routes ───────────────────────────────────────────────────────────
 
 app.get('/stores', async (req, res) => {
