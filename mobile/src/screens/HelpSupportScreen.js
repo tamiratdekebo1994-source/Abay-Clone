@@ -23,8 +23,8 @@ const FAQ = [
   {
     q: 'My account is suspended. What do I do?',
     qAm: 'መለያዬ ታግዷል። ምን ማድረግ አለብኝ?',
-    a: 'Contact our support team at +251 11 555 0000 or email support@fetno.et for account review.',
-    aAm: 'ለድጋፍ ቡድናችን +251 11 555 0000 ይደውሉ ወይም support@fetno.et ኢሜይል ይላኩ።',
+    a: 'Contact our support team at +251 11 555 0000 or email support@etspark.et for account review.',
+    aAm: 'ለድጋፍ ቡድናችን +251 11 555 0000 ይደውሉ ወይም support@etspark.et ኢሜይል ይላኩ።',
   },
   {
     q: 'How is my fare calculated?',
@@ -49,8 +49,8 @@ const FAQ = [
 const CONTACT = [
   { icon: '📞', label: 'Call Support', subLabel: '+251 11 555 0000', action: 'tel:+251115550000' },
   { icon: '💬', label: 'WhatsApp', subLabel: '+251 91 555 0001', action: 'https://wa.me/251915550001' },
-  { icon: '📧', label: 'Email', subLabel: 'support@fetno.et', action: 'mailto:support@fetno.et' },
-  { icon: '🌐', label: 'Website', subLabel: 'fetno.et', action: 'https://fetno.et' },
+  { icon: '📧', label: 'Email', subLabel: 'support@etspark.et', action: 'mailto:support@etspark.et' },
+  { icon: '🌐', label: 'Website', subLabel: 'etspark.et', action: 'https://etspark.et' },
 ];
 
 export default function HelpSupportScreen() {
@@ -66,7 +66,7 @@ export default function HelpSupportScreen() {
         <Text style={styles.headerTitle}>Help & Support</Text>
         <Text style={styles.headerTitleAm}>እርዳታ እና ድጋፍ</Text>
         <Text style={styles.headerSubtitle}>
-          We're here to help you succeed as a Fetno driver.{'\n'}
+          We're here to help you succeed as an ET Spark driver.{'\n'}
           ስኬታማ ሾፌር እንዲሆኑ ዝግጁ ነን።
         </Text>
       </View>

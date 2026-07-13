@@ -4,15 +4,29 @@
  *
  * This file takes precedence over app.json for any overlapping fields.
  */
+const fs = require('fs');
+const path = require('path');
+
 const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY || '';
 const apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:5000';
 const easProjectId = process.env.EAS_PROJECT_ID || '9ec35099-d353-4072-bbbd-2504bcde96f6';
 const sentryDsn = process.env.SENTRY_DSN || '';
 const googleServicesJson = process.env.GOOGLE_SERVICES_JSON || './google-services.json';
 
-// For EAS Build: Use file environment variable
-// For local development: Use local file
-const googleServicesPlist = process.env.GOOGLE_SERVICES_PLIST || 'GoogleService-Info.plist';
+// Handle EAS file environment variable for GoogleService-Info.plist
+let googleServicesPlist = process.env.GOOGLE_SERVICES_PLIST || './GoogleService-Info.plist';
+
+// If base64 secret is provided (from EAS), decode and write it
+if (process.env.GOOGLE_SERVICES_PLIST_BASE64) {
+  try {
+    const plistPath = path.join(__dirname, 'GoogleService-Info.plist');
+    const decodedContent = Buffer.from(process.env.GOOGLE_SERVICES_PLIST_BASE64, 'base64').toString('utf-8');
+    fs.writeFileSync(plistPath, decodedContent);
+    googleServicesPlist = plistPath;
+  } catch (error) {
+    console.warn('Failed to decode GoogleService-Info.plist from base64:', error.message);
+  }
+}
 
 // Firebase Web App config — from Firebase Console → Project Settings → Your Apps
 const firebase = {
@@ -28,7 +42,7 @@ module.exports = ({ config }) => ({
   ...config,
   ios: {
     ...config.ios,
-    // googleServicesFile: googleServicesPlist,
+    // googleServicesFile: googleServicesPlist, // Temporarily disabled for EAS build testing
     infoPlist: {
       ...config.ios?.infoPlist,
       NSLocationWhenInUseUsageDescription: 'We need your location to show nearby deliveries and track your progress.',
