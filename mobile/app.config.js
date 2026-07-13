@@ -28,7 +28,7 @@ module.exports = ({ config }) => ({
   ...config,
   ios: {
     ...config.ios,
-    googleServicesFile: googleServicesPlist,
+    // googleServicesFile: googleServicesPlist,
     infoPlist: {
       ...config.ios?.infoPlist,
       NSLocationWhenInUseUsageDescription: 'We need your location to show nearby deliveries and track your progress.',
