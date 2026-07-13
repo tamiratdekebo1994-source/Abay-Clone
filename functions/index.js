@@ -228,18 +228,29 @@ app.post('/drivers', verifyToken, async (req, res) => {
 
 app.post('/driver/register', async (req, res) => {
   try {
+    console.log('[DRIVER/REGISTER] Request received');
+    console.log('[DRIVER/REGISTER] Headers:', req.headers.authorization ? 'Bearer token present' : 'NO TOKEN');
+    console.log('[DRIVER/REGISTER] Body keys:', Object.keys(req.body));
+
     const token = req.headers.authorization?.split('Bearer ')[1];
-    if (!token) return res.status(401).json({ success: false, message: 'Authentication required' });
+    if (!token) {
+      console.error('[DRIVER/REGISTER] No token provided');
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
 
     let userId;
     try {
       const decodedJWT = jwt.verify(token, 'et-spark-secret-key');
       userId = decodedJWT.uid;
+      console.log('[DRIVER/REGISTER] JWT token verified, userId:', userId);
     } catch (jwtErr) {
+      console.log('[DRIVER/REGISTER] JWT failed, trying Firebase token...');
       try {
         const decodedFirebase = await admin.auth().verifyIdToken(token);
         userId = decodedFirebase.uid;
+        console.log('[DRIVER/REGISTER] Firebase token verified, userId:', userId);
       } catch (firebaseErr) {
+        console.error('[DRIVER/REGISTER] Firebase token failed:', firebaseErr.message);
         return res.status(401).json({ success: false, message: 'Invalid token' });
       }
     }
@@ -250,10 +261,22 @@ app.post('/driver/register', async (req, res) => {
       licenseNumber, licenseClass, licenseExpiry
     } = req.body;
 
-    if (!fullName || !emergencyContactPhone || !city || !vehicleType || !vehiclePlate || !licenseNumber || !licenseExpiry) {
-      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    console.log('[DRIVER/REGISTER] Validating fields...');
+    const missing = [];
+    if (!fullName) missing.push('fullName');
+    if (!emergencyContactPhone) missing.push('emergencyContactPhone');
+    if (!city) missing.push('city');
+    if (!vehicleType) missing.push('vehicleType');
+    if (!vehiclePlate) missing.push('vehiclePlate');
+    if (!licenseNumber) missing.push('licenseNumber');
+    if (!licenseExpiry) missing.push('licenseExpiry');
+
+    if (missing.length > 0) {
+      console.error('[DRIVER/REGISTER] Missing fields:', missing);
+      return res.status(400).json({ success: false, message: `Missing required fields: ${missing.join(', ')}` });
     }
 
+    console.log('[DRIVER/REGISTER] Saving to Firestore...');
     const docRef = await db.collection('driverApplications').add({
       userId,
       fullName: fullName.trim(),
@@ -279,13 +302,15 @@ app.post('/driver/register', async (req, res) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
+    console.log('[DRIVER/REGISTER] Success! Application ID:', docRef.id);
     res.json({
       success: true,
       message: 'Driver application submitted successfully',
       data: { applicationId: docRef.id }
     });
   } catch (err) {
-    console.error('Driver registration error:', err.message);
+    console.error('[DRIVER/REGISTER] Error:', err.message);
+    console.error('[DRIVER/REGISTER] Stack:', err.stack);
     res.status(400).json({ success: false, message: err.message || 'Registration failed' });
   }
 });
