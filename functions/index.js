@@ -143,6 +143,48 @@ app.post('/login', async (req, res) => {
   }
 });
 
+app.get('/auth/me', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split('Bearer ')[1];
+    if (!token) return res.status(401).json({ success: false, message: 'No token' });
+
+    let uid, isFirebaseToken = false;
+
+    try {
+      // Try to verify as JWT token first (web admin login)
+      const decodedJWT = jwt.verify(token, 'et-spark-secret-key');
+      uid = decodedJWT.uid;
+    } catch (jwtErr) {
+      // If JWT fails, try Firebase ID token (mobile phone auth)
+      try {
+        const decodedFirebase = await admin.auth().verifyIdToken(token);
+        uid = decodedFirebase.uid;
+        isFirebaseToken = true;
+      } catch (firebaseErr) {
+        console.error('Token verification failed:', firebaseErr.message);
+        return res.status(401).json({ success: false, message: 'Invalid token' });
+      }
+    }
+
+    // Retrieve user from Firestore
+    const userDoc = await db.collection('users').doc(uid).get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const userData = {
+      uid,
+      ...userDoc.data()
+    };
+
+    res.json({ success: true, data: userData });
+  } catch (err) {
+    console.error('Auth/me error:', err.message);
+    res.status(500).json({ success: false, message: err.message || 'Failed to get user' });
+  }
+});
+
 // ─── Driver Routes ──────────────────────────────────────────────────────────
 
 app.get('/drivers', async (req, res) => {
@@ -638,127 +680,6 @@ app.post('/admin/setup-password', async (req, res) => {
   } catch (err) {
     console.error('Setup password error:', err);
     res.status(400).json({ success: false, message: err.message });
-  }
-});
-
-// ─── Mock OTP Endpoints (for testing - accepts any OTP code) ──────────────────
-
-app.post('/auth/otp/request', async (req, res) => {
-  try {
-    const { phone, purpose } = req.body;
-
-    if (!phone) {
-      return res.status(400).json({
-        success: false,
-        message: 'Phone number is required',
-      });
-    }
-
-    console.log(`Mock OTP requested for phone: ${phone}, purpose: ${purpose}`);
-
-    // Mock response - in real implementation would send SMS
-    res.json({
-      success: true,
-      message: 'Mock OTP sent successfully',
-      data: {
-        phone,
-        purpose,
-        expiresIn: 600, // 10 minutes
-        // For testing: any OTP code will be accepted (e.g., 123456)
-        testOtp: '123456',
-      },
-    });
-  } catch (err) {
-    console.error('OTP request error:', err);
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-});
-
-app.post('/auth/otp/verify-login', async (req, res) => {
-  try {
-    const { phone, code } = req.body;
-
-    if (!phone || !code) {
-      return res.status(400).json({
-        success: false,
-        message: 'Phone and OTP code are required',
-      });
-    }
-
-    console.log(`Mock OTP verification for phone: ${phone}, code: ${code}`);
-
-    // Mock verification - accept any code for testing
-    // In production, verify against stored OTP
-    if (!code || code.length < 4) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid OTP code',
-      });
-    }
-
-    // Create or get user from Firestore
-    const usersRef = db.collection('users');
-    const userSnapshot = await usersRef.where('phone', '==', phone).get();
-
-    let userId, email, userData;
-
-    if (userSnapshot.empty) {
-      // Create new user if doesn't exist
-      const newUserRef = await db.collection('users').add({
-        phone,
-        email: `user-${phone.replace(/\D/g, '')}@etspark.et`,
-        displayName: `Driver ${phone}`,
-        role: 'DRIVER',
-        isVerified: true,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-      userId = newUserRef.id;
-      email = `user-${phone.replace(/\D/g, '')}@etspark.et`;
-      userData = { uid: userId, email, phone };
-    } else {
-      const userDoc = userSnapshot.docs[0];
-      userId = userDoc.id;
-      userData = userDoc.data();
-      email = userData.email;
-    }
-
-    // Create JWT token
-    const accessToken = jwt.sign(
-      {
-        uid: userId,
-        email: email,
-        phone: phone,
-      },
-      'et-spark-secret-key',
-      { expiresIn: '7d' }
-    );
-
-    console.log(`OTP verified for user: ${userId}`);
-
-    res.json({
-      success: true,
-      data: {
-        accessToken,
-        user: {
-          uid: userId,
-          email: email,
-          phone: phone,
-          fullName: userData.displayName || 'User',
-          role: userData.role || 'DRIVER',
-          isVerified: true,
-        },
-      },
-    });
-  } catch (err) {
-    console.error('OTP verification error:', err);
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
   }
 });
 
