@@ -592,6 +592,81 @@
       opacity: 0.6;
       cursor: not-allowed;
     }
+
+    .app-btn-neutral {
+      background: var(--color-bg-page);
+      color: var(--color-text-secondary);
+      border: 1.5px solid var(--color-border);
+    }
+
+    .status-pill {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .status-pill.open { background: rgba(239, 68, 68, 0.12); color: var(--color-critical); }
+    .status-pill.resolved { background: rgba(16, 185, 129, 0.12); color: var(--color-success); }
+    .status-pill.blocked { background: rgba(239, 68, 68, 0.12); color: var(--color-critical); }
+    .status-pill.active { background: rgba(16, 185, 129, 0.12); color: var(--color-success); }
+
+    .log-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--color-border);
+      gap: 12px;
+    }
+
+    .log-row:last-child {
+      border-bottom: none;
+    }
+
+    .log-row-main {
+      font-size: 13px;
+      color: var(--color-text-primary);
+      font-weight: 600;
+    }
+
+    .log-row-sub {
+      font-size: 12px;
+      color: var(--color-text-muted);
+      margin-top: 2px;
+    }
+
+    .log-row-time {
+      font-size: 12px;
+      color: var(--color-text-muted);
+      white-space: nowrap;
+    }
+
+    .form-field select {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1.5px solid var(--color-border);
+      background: var(--color-bg-page);
+      color: var(--color-text-primary);
+      font-size: 14px;
+      font-family: var(--font-sans);
+    }
+
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--color-border);
+      margin: 20px 0;
+    }
+
+    .subsection-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      margin-bottom: 12px;
+    }
   </style>
 </head>
 <body>
@@ -653,7 +728,7 @@
               <div class="feature-icon">📈</div>
               <div class="feature-name">Financial Reports</div>
             </div>
-            <div class="feature-card">
+            <div class="feature-card" id="customersCard">
               <div class="feature-icon">👥</div>
               <div class="feature-name">Customer Management</div>
             </div>
@@ -661,19 +736,19 @@
               <div class="feature-icon">🔔</div>
               <div class="feature-name">Push Notifications</div>
             </div>
-            <div class="feature-card">
+            <div class="feature-card" id="commissionCard">
               <div class="feature-icon">⚙️</div>
               <div class="feature-name">Commission Settings</div>
             </div>
-            <div class="feature-card">
+            <div class="feature-card" id="promoCodesCard">
               <div class="feature-icon">🎁</div>
               <div class="feature-name">Promo Codes</div>
             </div>
-            <div class="feature-card">
+            <div class="feature-card" id="auditLogsCard">
               <div class="feature-icon">📝</div>
               <div class="feature-name">Activity Logs</div>
             </div>
-            <div class="feature-card">
+            <div class="feature-card" id="fraudFlagsCard">
               <div class="feature-icon">🚨</div>
               <div class="feature-name">Fraud Detection</div>
             </div>
@@ -749,6 +824,113 @@
         <button type="submit" class="modal-submit-btn" id="testOrderSubmit">Create Order</button>
         <div class="modal-feedback" id="testOrderFeedback"></div>
       </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="customersModal">
+    <div class="modal-box wide">
+      <div class="modal-header">
+        <h3>Customer Management</h3>
+        <button class="modal-close" id="customersClose">&times;</button>
+      </div>
+      <p class="modal-sub">View and block customers.</p>
+      <div id="customersList"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="commissionModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Commission Settings</h3>
+        <button class="modal-close" id="commissionClose">&times;</button>
+      </div>
+      <p class="modal-sub">Platform and driver commission split must add up to 100%.</p>
+      <form id="commissionForm">
+        <div class="form-row">
+          <div class="form-field">
+            <label>Platform %</label>
+            <input type="number" step="any" id="cPlatformPercent" required />
+          </div>
+          <div class="form-field">
+            <label>Driver %</label>
+            <input type="number" step="any" id="cDriverPercent" required />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Minimum Order (ETB)</label>
+            <input type="number" step="any" id="cMinOrder" required />
+          </div>
+          <div class="form-field">
+            <label>Surge Bonus (0-1)</label>
+            <input type="number" step="any" id="cSurgeBonus" required />
+          </div>
+        </div>
+        <button type="submit" class="modal-submit-btn" id="commissionSubmit">Save Settings</button>
+        <div class="modal-feedback" id="commissionFeedback"></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="promoModal">
+    <div class="modal-box wide">
+      <div class="modal-header">
+        <h3>Promo Codes</h3>
+        <button class="modal-close" id="promoClose">&times;</button>
+      </div>
+      <p class="subsection-title">Existing Codes</p>
+      <div id="promoList"></div>
+      <hr class="section-divider" />
+      <p class="subsection-title">Create New Code</p>
+      <form id="promoForm">
+        <div class="form-row">
+          <div class="form-field">
+            <label>Code</label>
+            <input type="text" id="pCode" required placeholder="SPARK20" style="text-transform: uppercase;" />
+          </div>
+          <div class="form-field">
+            <label>Type</label>
+            <select id="pDiscountType" required>
+              <option value="PERCENTAGE">Percentage</option>
+              <option value="FIXED">Fixed Amount</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Discount Value</label>
+            <input type="number" step="any" id="pDiscountValue" required placeholder="20" />
+          </div>
+          <div class="form-field">
+            <label>Max Uses</label>
+            <input type="number" id="pMaxUses" required placeholder="100" />
+          </div>
+        </div>
+        <button type="submit" class="modal-submit-btn" id="promoSubmit">Create Promo Code</button>
+        <div class="modal-feedback" id="promoFeedback"></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="auditLogsModal">
+    <div class="modal-box wide">
+      <div class="modal-header">
+        <h3>Activity Logs</h3>
+        <button class="modal-close" id="auditLogsClose">&times;</button>
+      </div>
+      <p class="modal-sub">Recent admin actions across the platform.</p>
+      <div id="auditLogsList"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="fraudFlagsModal">
+    <div class="modal-box wide">
+      <div class="modal-header">
+        <h3>Fraud Detection</h3>
+        <button class="modal-close" id="fraudFlagsClose">&times;</button>
+      </div>
+      <p class="modal-sub">Open fraud flags requiring review.</p>
+      <div id="fraudFlagsList"></div>
     </div>
   </div>
 
@@ -1012,6 +1194,287 @@
         testOrderSubmit.disabled = false;
         testOrderSubmit.textContent = 'Create Order';
       }
+    });
+
+    // ── Shared helper: simple GET-and-render modal ──────────────────────────
+    function openModal(el) { el.classList.add('open'); }
+    function closeModal(el) { el.classList.remove('open'); }
+    function wireModalClose(modalEl, closeBtnId) {
+      document.getElementById(closeBtnId).addEventListener('click', () => closeModal(modalEl));
+      modalEl.addEventListener('click', (e) => { if (e.target === modalEl) closeModal(modalEl); });
+    }
+    async function authedFetch(path, options = {}) {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`${API_URL}${path}`, {
+        ...options,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          ...(options.headers || {}),
+        },
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || `Request failed (${response.status})`);
+      return data;
+    }
+
+    // ── Customer Management ──────────────────────────────────────────────────
+    const customersModal = document.getElementById('customersModal');
+    const customersList = document.getElementById('customersList');
+    wireModalClose(customersModal, 'customersClose');
+
+    async function loadCustomers() {
+      customersList.innerHTML = '<div class="app-list-empty">Loading…</div>';
+      try {
+        const data = await authedFetch('/admin/customers');
+        const customers = data.data.customers;
+        if (customers.length === 0) {
+          customersList.innerHTML = '<div class="app-list-empty">No customers yet.</div>';
+          return;
+        }
+        customersList.innerHTML = customers.map((c) => `
+          <div class="app-card" data-id="${escapeHtml(c.id)}">
+            <div class="app-card-top">
+              <div>
+                <div class="app-card-name">${escapeHtml(c.fullName || c.phone || 'Customer')} ${c.isBlocked ? '<span class="status-pill blocked">Blocked</span>' : '<span class="status-pill active">Active</span>'}</div>
+                <div class="app-card-sub">${escapeHtml(c.phone || '')} ${c.email ? '· ' + escapeHtml(c.email) : ''}</div>
+              </div>
+            </div>
+            ${!c.isBlocked ? `<div class="app-card-actions"><button class="app-btn app-btn-reject" data-action="block">Block Customer</button></div>` : ''}
+          </div>
+        `).join('');
+      } catch (error) {
+        customersList.innerHTML = '<div class="app-list-empty">⚠️ ' + escapeHtml(error.message) + '</div>';
+      }
+    }
+
+    customersList.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.app-btn');
+      if (!btn) return;
+      const card = btn.closest('.app-card');
+      const id = card.getAttribute('data-id');
+      const reason = window.prompt('Reason for blocking this customer:', '');
+      if (reason === null) return;
+      btn.disabled = true;
+      try {
+        await authedFetch(`/admin/customers/${id}/block`, { method: 'PATCH', body: JSON.stringify({ reason }) });
+        loadCustomers();
+      } catch (error) {
+        alert('⚠️ ' + error.message);
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('customersCard').addEventListener('click', () => {
+      openModal(customersModal);
+      loadCustomers();
+    });
+
+    // ── Commission Settings ──────────────────────────────────────────────────
+    const commissionModal = document.getElementById('commissionModal');
+    const commissionForm = document.getElementById('commissionForm');
+    const commissionFeedback = document.getElementById('commissionFeedback');
+    wireModalClose(commissionModal, 'commissionClose');
+
+    async function loadCommission() {
+      try {
+        const data = await authedFetch('/admin/settings/commission');
+        document.getElementById('cPlatformPercent').value = data.data.platformCommissionPercent;
+        document.getElementById('cDriverPercent').value = data.data.driverCommissionPercent;
+        document.getElementById('cMinOrder').value = data.data.minimumOrderValue;
+        document.getElementById('cSurgeBonus').value = data.data.surgeCommissionBonus;
+      } catch (error) {
+        commissionFeedback.className = 'modal-feedback error';
+        commissionFeedback.textContent = '⚠️ ' + error.message;
+      }
+    }
+
+    document.getElementById('commissionCard').addEventListener('click', () => {
+      commissionFeedback.className = 'modal-feedback';
+      openModal(commissionModal);
+      loadCommission();
+    });
+
+    commissionForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const submitBtn = document.getElementById('commissionSubmit');
+      submitBtn.disabled = true;
+      commissionFeedback.className = 'modal-feedback';
+      try {
+        await authedFetch('/admin/settings/commission', {
+          method: 'PATCH',
+          body: JSON.stringify({
+            platformCommissionPercent: parseFloat(document.getElementById('cPlatformPercent').value),
+            driverCommissionPercent: parseFloat(document.getElementById('cDriverPercent').value),
+            minimumOrderValue: parseFloat(document.getElementById('cMinOrder').value),
+            surgeCommissionBonus: parseFloat(document.getElementById('cSurgeBonus').value),
+          }),
+        });
+        commissionFeedback.className = 'modal-feedback success';
+        commissionFeedback.textContent = '✓ Commission settings saved.';
+      } catch (error) {
+        commissionFeedback.className = 'modal-feedback error';
+        commissionFeedback.textContent = '⚠️ ' + error.message;
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    // ── Promo Codes ───────────────────────────────────────────────────────────
+    const promoModal = document.getElementById('promoModal');
+    const promoList = document.getElementById('promoList');
+    const promoForm = document.getElementById('promoForm');
+    const promoFeedback = document.getElementById('promoFeedback');
+    wireModalClose(promoModal, 'promoClose');
+
+    async function loadPromoCodes() {
+      promoList.innerHTML = '<div class="app-list-empty">Loading…</div>';
+      try {
+        const data = await authedFetch('/admin/promo-codes');
+        const codes = data.data.promoCodes;
+        if (codes.length === 0) {
+          promoList.innerHTML = '<div class="app-list-empty">No promo codes yet.</div>';
+          return;
+        }
+        promoList.innerHTML = codes.map((p) => `
+          <div class="log-row">
+            <div>
+              <div class="log-row-main">${escapeHtml(p.code)} ${p.isActive ? '<span class="status-pill active">Active</span>' : '<span class="status-pill blocked">Inactive</span>'}</div>
+              <div class="log-row-sub">${p.discountType === 'PERCENTAGE' ? p.discountValue + '% off' : 'ETB ' + p.discountValue + ' off'} · used ${p.usedCount || 0}/${p.maxUses}</div>
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        promoList.innerHTML = '<div class="app-list-empty">⚠️ ' + escapeHtml(error.message) + '</div>';
+      }
+    }
+
+    document.getElementById('promoCodesCard').addEventListener('click', () => {
+      promoFeedback.className = 'modal-feedback';
+      openModal(promoModal);
+      loadPromoCodes();
+    });
+
+    promoForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const submitBtn = document.getElementById('promoSubmit');
+      submitBtn.disabled = true;
+      promoFeedback.className = 'modal-feedback';
+      try {
+        await authedFetch('/admin/promo-codes', {
+          method: 'POST',
+          body: JSON.stringify({
+            code: document.getElementById('pCode').value.trim().toUpperCase(),
+            discountType: document.getElementById('pDiscountType').value,
+            discountValue: parseFloat(document.getElementById('pDiscountValue').value),
+            maxUses: parseInt(document.getElementById('pMaxUses').value, 10),
+          }),
+        });
+        promoFeedback.className = 'modal-feedback success';
+        promoFeedback.textContent = '✓ Promo code created.';
+        promoForm.reset();
+        loadPromoCodes();
+      } catch (error) {
+        promoFeedback.className = 'modal-feedback error';
+        promoFeedback.textContent = '⚠️ ' + error.message;
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    // ── Activity Logs ─────────────────────────────────────────────────────────
+    const auditLogsModal = document.getElementById('auditLogsModal');
+    const auditLogsList = document.getElementById('auditLogsList');
+    wireModalClose(auditLogsModal, 'auditLogsClose');
+
+    async function loadAuditLogs() {
+      auditLogsList.innerHTML = '<div class="app-list-empty">Loading…</div>';
+      try {
+        const data = await authedFetch('/admin/audit-logs');
+        const logs = data.data.logs;
+        if (logs.length === 0) {
+          auditLogsList.innerHTML = '<div class="app-list-empty">No activity yet.</div>';
+          return;
+        }
+        auditLogsList.innerHTML = logs.map((l) => `
+          <div class="log-row">
+            <div>
+              <div class="log-row-main">${escapeHtml(l.action)}</div>
+              <div class="log-row-sub">${escapeHtml(l.resource || '')} ${l.resourceId ? '· ' + escapeHtml(l.resourceId) : ''}</div>
+            </div>
+            <div class="log-row-time">${l.createdAt ? new Date(l.createdAt._seconds * 1000).toLocaleString() : ''}</div>
+          </div>
+        `).join('');
+      } catch (error) {
+        auditLogsList.innerHTML = '<div class="app-list-empty">⚠️ ' + escapeHtml(error.message) + '</div>';
+      }
+    }
+
+    document.getElementById('auditLogsCard').addEventListener('click', () => {
+      openModal(auditLogsModal);
+      loadAuditLogs();
+    });
+
+    // ── Fraud Detection ────────────────────────────────────────────────────────
+    const fraudFlagsModal = document.getElementById('fraudFlagsModal');
+    const fraudFlagsList = document.getElementById('fraudFlagsList');
+    wireModalClose(fraudFlagsModal, 'fraudFlagsClose');
+
+    async function loadFraudFlags() {
+      fraudFlagsList.innerHTML = '<div class="app-list-empty">Loading…</div>';
+      try {
+        const data = await authedFetch('/admin/fraud-flags?status=OPEN');
+        const flags = data.data.flags;
+        if (flags.length === 0) {
+          fraudFlagsList.innerHTML = '<div class="app-list-empty">No open fraud flags. 🎉</div>';
+          return;
+        }
+        fraudFlagsList.innerHTML = flags.map((f) => `
+          <div class="app-card" data-id="${escapeHtml(f.id)}">
+            <div class="app-card-top">
+              <div>
+                <div class="app-card-name">${escapeHtml(f.flagType || 'Flag')} <span class="status-pill open">${escapeHtml(f.severity || 'OPEN')}</span></div>
+                <div class="app-card-sub">Subject: ${escapeHtml(f.subjectId || '—')}</div>
+              </div>
+            </div>
+            <div class="app-card-detail">${escapeHtml(f.description || '')}</div>
+            <div class="app-card-actions">
+              <button class="app-btn app-btn-approve" data-action="resolve">Mark Resolved</button>
+              <button class="app-btn app-btn-neutral" data-action="dismiss">Dismiss</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        fraudFlagsList.innerHTML = '<div class="app-list-empty">⚠️ ' + escapeHtml(error.message) + '</div>';
+      }
+    }
+
+    fraudFlagsList.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.app-btn');
+      if (!btn) return;
+      const card = btn.closest('.app-card');
+      const id = card.getAttribute('data-id');
+      const action = btn.getAttribute('data-action');
+      const status = action === 'resolve' ? 'RESOLVED' : 'DISMISSED';
+      const resolution = window.prompt('Resolution notes:', '');
+      if (resolution === null) return;
+
+      card.querySelectorAll('.app-btn').forEach((b) => b.disabled = true);
+      try {
+        await authedFetch(`/admin/fraud-flags/${id}/resolve`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status, resolution }),
+        });
+        loadFraudFlags();
+      } catch (error) {
+        alert('⚠️ ' + error.message);
+        card.querySelectorAll('.app-btn').forEach((b) => b.disabled = false);
+      }
+    });
+
+    document.getElementById('fraudFlagsCard').addEventListener('click', () => {
+      openModal(fraudFlagsModal);
+      loadFraudFlags();
     });
 
     initialize();
