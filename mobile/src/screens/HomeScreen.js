@@ -5,6 +5,7 @@ import {
   Platform, Animated, Dimensions, Modal, Linking,
 } from 'react-native';
 import MapView, { Marker, Polygon, PROVIDER_GOOGLE } from 'react-native-maps';
+import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { collection, query, where, onSnapshot, doc, getDoc, getDocs } from 'firebase/firestore';
 import { useSelector, useDispatch } from 'react-redux';
@@ -458,7 +459,11 @@ export default function HomeScreen({ navigation }) {
               ? <ActivityIndicator color={isOnline ? COLORS.primary : COLORS.white} />
               : (
                 <View style={styles.sparkBtnInner}>
-                  <Text style={styles.sparkBtnIcon}>{isOnline ? '⏸' : '⚡'}</Text>
+                  <Ionicons
+                    name={isOnline ? 'pause' : 'flash'}
+                    size={18}
+                    color={isOnline ? COLORS.primary : COLORS.white}
+                  />
                   <Text style={[styles.sparkBtnText, isOnline && styles.sparkBtnTextOnline]}>{isOnline ? 'GO OFFLINE' : 'SPARK NOW'}</Text>
                 </View>
               )
@@ -628,7 +633,7 @@ export default function HomeScreen({ navigation }) {
             <TouchableOpacity activeOpacity={1}>
               <View style={styles.goOfflineHandle} />
 
-              <Text style={styles.goOfflineEmoji}>⏸</Text>
+              <Ionicons name="pause-circle" size={40} color={COLORS.text} style={styles.goOfflineEmoji} />
               <Text style={styles.goOfflineTitle}>Stop receiving offers?</Text>
               <Text style={styles.goOfflineSub}>
                 You won't receive new delivery offers while you're offline.
@@ -711,7 +716,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
   },
   sparkBtnInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  sparkBtnIcon: { fontSize: 18 },
   sparkBtnText: { color: COLORS.white, fontSize: 17, fontWeight: '900', letterSpacing: 1.5 },
   sparkBtnTextOnline: { color: COLORS.primary },
 
@@ -839,7 +843,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24, paddingTop: 12, paddingBottom: 32,
   },
   goOfflineHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB', alignSelf: 'center', marginBottom: 24 },
-  goOfflineEmoji: { fontSize: 36, textAlign: 'center', marginBottom: 12 },
+  goOfflineEmoji: { alignSelf: 'center', marginBottom: 12 },
   goOfflineTitle: { fontSize: 22, fontWeight: '800', color: '#111827', textAlign: 'center', marginBottom: 8 },
   goOfflineSub: { fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 21, marginBottom: 28 },
   goOfflineBtn: {
