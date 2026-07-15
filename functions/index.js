@@ -237,6 +237,52 @@ app.post('/drivers', verifyToken, async (req, res) => {
   }
 });
 
+app.post('/driver/toggle-online', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split('Bearer ')[1];
+    if (!token) return res.status(401).json({ success: false, message: 'Authentication required' });
+
+    let userId;
+    try {
+      const decodedJWT = jwt.verify(token, 'et-spark-secret-key');
+      userId = decodedJWT.uid;
+    } catch (jwtErr) {
+      try {
+        const decodedFirebase = await admin.auth().verifyIdToken(token);
+        userId = decodedFirebase.uid;
+      } catch (firebaseErr) {
+        return res.status(401).json({ success: false, message: 'Invalid token' });
+      }
+    }
+
+    // Get current driver status
+    const driverDoc = await db.collection('drivers').doc(userId).get();
+    if (!driverDoc.exists) {
+      return res.status(404).json({ success: false, message: 'Driver profile not found' });
+    }
+
+    const currentStatus = driverDoc.data().status || 'OFFLINE';
+    const newStatus = currentStatus === 'ONLINE' ? 'OFFLINE' : 'ONLINE';
+
+    // Update driver status
+    await db.collection('drivers').doc(userId).update({
+      status: newStatus,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    res.json({
+      success: true,
+      data: {
+        status: newStatus,
+        message: `Driver is now ${newStatus.toLowerCase()}`
+      }
+    });
+  } catch (err) {
+    console.error('Toggle online error:', err.message);
+    res.status(400).json({ success: false, message: err.message || 'Failed to toggle status' });
+  }
+});
+
 app.post('/driver/register', async (req, res) => {
   try {
     console.log('[DRIVER/REGISTER] Request received');
