@@ -225,10 +225,10 @@ const styles = StyleSheet.create({
   declineBtn: {
     flex: 1, borderRadius: 50, paddingVertical: 15,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
+    borderWidth: 1.5, borderColor: '#FECACA',
+    backgroundColor: '#FEF2F2',
   },
-  declineBtnText: { fontSize: 15, fontWeight: '700', color: '#6B7280' },
+  declineBtnText: { fontSize: 15, fontWeight: '700', color: '#DC2626' },
   acceptBtn: {
     flex: 2, borderRadius: 50, paddingVertical: 15,
     alignItems: 'center', justifyContent: 'center',
