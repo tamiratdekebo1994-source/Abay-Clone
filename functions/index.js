@@ -505,13 +505,15 @@ app.post('/driver/register', async (req, res) => {
       licenseNumber: licenseNumber.trim(),
       licenseClass: licenseClass || null,
       licenseExpiry,
-      status: 'DRIVER',
+      status: 'PENDING',
       rejectionReason: null,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // Also create driver profile
+    // Also create the driver profile now, but PENDING — the app already knows how to show
+    // a "your application is under review" state for this status and blocks going online
+    // until an admin approves it via PATCH /admin/driver-applications/:id/approve.
     await db.collection('drivers').doc(userId).set({
       userId,
       fullName: fullName.trim(),
@@ -519,7 +521,7 @@ app.post('/driver/register', async (req, res) => {
       vehicleType,
       vehiclePlate: vehiclePlate.toUpperCase(),
       licenseNumber: licenseNumber.trim(),
-      status: 'ACTIVE',
+      status: 'PENDING',
       earnings: 0,
       rating: 0,
       totalRides: 0,
@@ -1057,6 +1059,93 @@ app.get('/admin/dashboard', verifyToken, async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/admin/driver-applications', verifyToken, async (req, res) => {
+  try {
+    const statusFilter = req.query.status || 'PENDING';
+
+    const snapshot = await db.collection('driverApplications').get();
+    let applications = [];
+    snapshot.forEach(doc => applications.push({ id: doc.id, ...doc.data() }));
+
+    if (statusFilter !== 'ALL') {
+      applications = applications.filter((a) => a.status === statusFilter);
+    }
+    applications.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+
+    res.json({ success: true, data: { applications } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.patch('/admin/driver-applications/:applicationId/approve', verifyToken, async (req, res) => {
+  try {
+    const appRef = db.collection('driverApplications').doc(req.params.applicationId);
+    const appDoc = await appRef.get();
+    if (!appDoc.exists) return res.status(404).json({ success: false, message: 'Application not found' });
+
+    const appData = appDoc.data();
+    if (appData.status !== 'PENDING') {
+      return res.status(400).json({ success: false, message: `Application is already ${appData.status}` });
+    }
+
+    await appRef.update({ status: 'APPROVED', updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+    await db.collection('drivers').doc(appData.userId).set({
+      status: 'ACTIVE',
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    await createNotification(appData.userId, {
+      type: 'DRIVER_STATUS',
+      title: 'Application approved!',
+      titleAm: 'ማመልከቻ ጸድቋል!',
+      body: "You're all set — tap Spark Now to start receiving delivery offers.",
+      bodyAm: 'ተዘጋጅተዋል — ትዕዛዞችን ለመቀበል Spark Now ይጫኑ።',
+    }).catch((err) => console.error('Notification create failed:', err.message));
+
+    res.json({ success: true, message: 'Driver application approved' });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.patch('/admin/driver-applications/:applicationId/reject', verifyToken, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const appRef = db.collection('driverApplications').doc(req.params.applicationId);
+    const appDoc = await appRef.get();
+    if (!appDoc.exists) return res.status(404).json({ success: false, message: 'Application not found' });
+
+    const appData = appDoc.data();
+    if (appData.status !== 'PENDING') {
+      return res.status(400).json({ success: false, message: `Application is already ${appData.status}` });
+    }
+
+    await appRef.update({
+      status: 'REJECTED',
+      rejectionReason: reason || null,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    await db.collection('drivers').doc(appData.userId).set({
+      status: 'REJECTED',
+      rejectionReason: reason || null,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    await createNotification(appData.userId, {
+      type: 'DRIVER_STATUS',
+      title: 'Application not approved',
+      titleAm: 'ማመልከቻ አልጸደቀም',
+      body: reason || 'Contact support for more information.',
+      bodyAm: reason || 'ለተጨማሪ መረጃ ድጋፍን ያናጋሩ።',
+    }).catch((err) => console.error('Notification create failed:', err.message));
+
+    res.json({ success: true, message: 'Driver application rejected' });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
   }
 });
 

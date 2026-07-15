@@ -287,6 +287,10 @@ export default function HomeScreen({ navigation }) {
       Alert.alert('Pending Approval', 'Your driver application is still being reviewed.');
       return;
     }
+    if (driver?.status === 'REJECTED') {
+      Alert.alert('Application Not Approved', driver?.rejectionReason || 'Contact support for more information.');
+      return;
+    }
     try {
       setIsLoading(true);
       const { data } = await driverAPI.toggleOnline();
@@ -452,7 +456,7 @@ export default function HomeScreen({ navigation }) {
               (isLoading || offlineLoading) && { opacity: 0.7 },
             ]}
             onPress={isOnline ? openGoOfflineSheet : goOnline}
-            disabled={isLoading || offlineLoading || driver?.status === 'PENDING' || driver?.status === 'SUSPENDED'}
+            disabled={isLoading || offlineLoading || driver?.status === 'PENDING' || driver?.status === 'SUSPENDED' || driver?.status === 'REJECTED'}
             activeOpacity={0.88}
           >
             {(isLoading || offlineLoading)
@@ -485,6 +489,14 @@ export default function HomeScreen({ navigation }) {
         {driver?.status === 'PENDING' && (
           <View style={styles.pendingCard}>
             <Text style={styles.pendingText}>⏳ Application under review — you'll be notified once approved.</Text>
+          </View>
+        )}
+
+        {driver?.status === 'REJECTED' && (
+          <View style={styles.rejectedCard}>
+            <Text style={styles.rejectedText}>
+              ✕ Application not approved{driver?.rejectionReason ? `: ${driver.rejectionReason}` : '.'} Contact support for more information.
+            </Text>
           </View>
         )}
 
@@ -721,6 +733,8 @@ const styles = StyleSheet.create({
 
   pendingCard: { backgroundColor: '#FEF3C7', borderRadius: 12, padding: 14, marginBottom: 16 },
   pendingText: { color: '#92400E', fontSize: 13 },
+  rejectedCard: { backgroundColor: '#FEE2E2', borderRadius: 12, padding: 14, marginBottom: 16 },
+  rejectedText: { color: '#991B1B', fontSize: 13 },
 
   earningsCard: {
     backgroundColor: '#F9FAFB', borderRadius: 14, marginBottom: 16, overflow: 'hidden',

@@ -495,6 +495,103 @@
       background: rgba(239, 68, 68, 0.12);
       color: var(--color-critical);
     }
+
+    .pending-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: var(--color-critical);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      min-width: 20px;
+      height: 20px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 6px;
+    }
+
+    .modal-box.wide {
+      max-width: 640px;
+    }
+
+    .app-list-empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--color-text-muted);
+      font-size: 14px;
+    }
+
+    .app-card {
+      border: 1.5px solid var(--color-border);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .app-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+
+    .app-card-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--color-text-primary);
+    }
+
+    .app-card-sub {
+      font-size: 12px;
+      color: var(--color-text-muted);
+      margin-top: 2px;
+    }
+
+    .app-card-detail {
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      margin-bottom: 3px;
+    }
+
+    .app-card-detail b {
+      color: var(--color-text-primary);
+      font-weight: 600;
+    }
+
+    .app-card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .app-btn {
+      flex: 1;
+      padding: 9px;
+      border-radius: 8px;
+      border: none;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .app-btn-approve {
+      background: var(--color-success);
+      color: white;
+    }
+
+    .app-btn-reject {
+      background: var(--color-bg-page);
+      color: var(--color-critical);
+      border: 1.5px solid var(--color-critical);
+    }
+
+    .app-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -584,9 +681,25 @@
               <div class="feature-icon">🧪</div>
               <div class="feature-name">Create Test Order</div>
             </div>
+            <div class="feature-card" id="driverApplicationsCard" style="position: relative;">
+              <div class="feature-icon">📋</div>
+              <div class="feature-name">Driver Applications</div>
+              <div class="pending-badge" id="pendingAppsBadge" style="display: none;"></div>
+            </div>
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="driverAppsModal">
+    <div class="modal-box wide">
+      <div class="modal-header">
+        <h3>Driver Applications</h3>
+        <button class="modal-close" id="driverAppsClose">&times;</button>
+      </div>
+      <p class="modal-sub">Review pending driver sign-ups. Approving lets them go online in the app; rejecting sends them a reason.</p>
+      <div id="driverAppsList"></div>
     </div>
   </div>
 
@@ -705,6 +818,128 @@
       localStorage.clear();
       window.location.href = '/login.html';
     });
+
+    // ── Driver Applications ────────────────────────────────────────────────
+    const driverAppsModal = document.getElementById('driverAppsModal');
+    const driverAppsList = document.getElementById('driverAppsList');
+    const pendingAppsBadge = document.getElementById('pendingAppsBadge');
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str == null ? '' : String(str);
+      return div.innerHTML;
+    }
+
+    async function refreshPendingBadge() {
+      try {
+        const token = localStorage.getItem('accessToken');
+        const response = await fetch(`${API_URL}/admin/driver-applications?status=PENDING`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        const data = await response.json();
+        const count = data.success ? data.data.applications.length : 0;
+        if (count > 0) {
+          pendingAppsBadge.textContent = count;
+          pendingAppsBadge.style.display = 'flex';
+        } else {
+          pendingAppsBadge.style.display = 'none';
+        }
+      } catch (error) {
+        console.error('Failed to load pending applications count:', error);
+      }
+    }
+
+    async function loadDriverApplications() {
+      driverAppsList.innerHTML = '<div class="app-list-empty">Loading…</div>';
+      try {
+        const token = localStorage.getItem('accessToken');
+        const response = await fetch(`${API_URL}/admin/driver-applications?status=PENDING`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Failed to load applications');
+
+        const applications = data.data.applications;
+        if (applications.length === 0) {
+          driverAppsList.innerHTML = '<div class="app-list-empty">No pending applications right now.</div>';
+          return;
+        }
+
+        driverAppsList.innerHTML = applications.map((app) => `
+          <div class="app-card" data-app-id="${escapeHtml(app.id)}">
+            <div class="app-card-top">
+              <div>
+                <div class="app-card-name">${escapeHtml(app.fullName)}</div>
+                <div class="app-card-sub">${escapeHtml(app.city)} · Applied ${app.createdAt ? new Date(app.createdAt._seconds * 1000).toLocaleDateString() : ''}</div>
+              </div>
+            </div>
+            <div class="app-card-detail"><b>Vehicle:</b> ${escapeHtml(app.vehicleType)}${app.vehicleMake ? ' · ' + escapeHtml(app.vehicleMake) : ''} ${escapeHtml(app.vehicleModel || '')}</div>
+            <div class="app-card-detail"><b>Plate:</b> ${escapeHtml(app.vehiclePlate)}</div>
+            <div class="app-card-detail"><b>License:</b> ${escapeHtml(app.licenseNumber)} (expires ${escapeHtml(app.licenseExpiry)})</div>
+            <div class="app-card-detail"><b>Emergency contact:</b> ${escapeHtml(app.emergencyContactPhone)}</div>
+            <div class="app-card-actions">
+              <button class="app-btn app-btn-approve" data-action="approve">✓ Approve</button>
+              <button class="app-btn app-btn-reject" data-action="reject">✕ Reject</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        driverAppsList.innerHTML = '<div class="app-list-empty">⚠️ ' + escapeHtml(error.message) + '</div>';
+      }
+    }
+
+    driverAppsList.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.app-btn');
+      if (!btn) return;
+      const card = btn.closest('.app-card');
+      const appId = card.getAttribute('data-app-id');
+      const action = btn.getAttribute('data-action');
+
+      let reason = null;
+      if (action === 'reject') {
+        reason = window.prompt('Reason for rejection (shown to the applicant):', '');
+        if (reason === null) return; // cancelled
+      }
+
+      card.querySelectorAll('.app-btn').forEach((b) => b.disabled = true);
+      try {
+        const token = localStorage.getItem('accessToken');
+        const response = await fetch(`${API_URL}/admin/driver-applications/${appId}/${action}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: action === 'reject' ? JSON.stringify({ reason }) : undefined,
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Action failed');
+
+        card.remove();
+        if (!driverAppsList.querySelector('.app-card')) {
+          driverAppsList.innerHTML = '<div class="app-list-empty">No pending applications right now.</div>';
+        }
+        refreshPendingBadge();
+      } catch (error) {
+        alert('⚠️ ' + error.message);
+        card.querySelectorAll('.app-btn').forEach((b) => b.disabled = false);
+      }
+    });
+
+    document.getElementById('driverApplicationsCard').addEventListener('click', () => {
+      driverAppsModal.classList.add('open');
+      loadDriverApplications();
+    });
+
+    document.getElementById('driverAppsClose').addEventListener('click', () => {
+      driverAppsModal.classList.remove('open');
+    });
+
+    driverAppsModal.addEventListener('click', (e) => {
+      if (e.target === driverAppsModal) driverAppsModal.classList.remove('open');
+    });
+
+    refreshPendingBadge();
 
     // ── Create Test Order ──────────────────────────────────────────────────
     const testOrderModal = document.getElementById('testOrderModal');
