@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "ET Spark",
-    "slug": "et-spark",
+    "slug": "fetno",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -66,7 +66,7 @@
         }
       ]
     ],
-    "scheme": "et-spark",
+    "scheme": "fetno",
     "extra": {
       "googleMapsApiKey": "AIzaSyBT2_j5NhOa-rD-4tKX5kf1iPOuP1vtVJk",
       "eas": {
