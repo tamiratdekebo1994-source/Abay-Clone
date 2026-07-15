@@ -345,6 +345,156 @@
       color: var(--color-text-primary);
       line-height: 1.4;
     }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 20px;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--color-bg-card);
+      border-radius: 14px;
+      padding: 28px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 6px;
+    }
+
+    .modal-header h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--color-text-primary);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: var(--color-text-muted);
+      line-height: 1;
+    }
+
+    .modal-sub {
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      margin-bottom: 20px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .form-field {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .form-row .form-field {
+      margin-bottom: 0;
+    }
+
+    .form-field label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .form-field input {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1.5px solid var(--color-border);
+      background: var(--color-bg-page);
+      color: var(--color-text-primary);
+      font-size: 14px;
+      font-family: var(--font-sans);
+    }
+
+    .form-field input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+
+    .quick-fill-btn {
+      background: var(--color-bg-page);
+      border: 1.5px dashed var(--color-border);
+      color: var(--color-text-secondary);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      margin-bottom: 18px;
+    }
+
+    .quick-fill-btn:hover {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+    }
+
+    .modal-submit-btn {
+      background: var(--color-primary);
+      color: white;
+      border: none;
+      padding: 13px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .modal-submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .modal-feedback {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: none;
+    }
+
+    .modal-feedback.success {
+      display: block;
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--color-success);
+    }
+
+    .modal-feedback.error {
+      display: block;
+      background: rgba(239, 68, 68, 0.12);
+      color: var(--color-critical);
+    }
   </style>
 </head>
 <body>
@@ -430,9 +580,62 @@
               <div class="feature-icon">🚨</div>
               <div class="feature-name">Fraud Detection</div>
             </div>
+            <div class="feature-card" id="createTestOrderCard">
+              <div class="feature-icon">🧪</div>
+              <div class="feature-name">Create Test Order</div>
+            </div>
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="testOrderModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Create Test Order</h3>
+        <button class="modal-close" id="testOrderClose">&times;</button>
+      </div>
+      <p class="modal-sub">Creates a live order with status SEARCHING_DRIVER so it appears instantly as a delivery offer for any online driver within range.</p>
+
+      <button class="quick-fill-btn" id="testOrderQuickFill">📍 Use Addis Ababa test coordinates</button>
+
+      <form id="testOrderForm">
+        <div class="form-field">
+          <label>Pickup Address</label>
+          <input type="text" id="toPickupAddress" required placeholder="Bole Road, Addis Ababa" />
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Pickup Lat</label>
+            <input type="number" step="any" id="toPickupLat" required />
+          </div>
+          <div class="form-field">
+            <label>Pickup Lng</label>
+            <input type="number" step="any" id="toPickupLng" required />
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Delivery Address</label>
+          <input type="text" id="toDeliveryAddress" required placeholder="Piazza, Addis Ababa" />
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Delivery Lat</label>
+            <input type="number" step="any" id="toDeliveryLat" required />
+          </div>
+          <div class="form-field">
+            <label>Delivery Lng</label>
+            <input type="number" step="any" id="toDeliveryLng" required />
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Total Amount (ETB)</label>
+          <input type="number" step="any" id="toTotalAmount" required value="250" />
+        </div>
+        <button type="submit" class="modal-submit-btn" id="testOrderSubmit">Create Order</button>
+        <div class="modal-feedback" id="testOrderFeedback"></div>
+      </form>
     </div>
   </div>
 
@@ -501,6 +704,79 @@
     document.getElementById('logoutBtn').addEventListener('click', () => {
       localStorage.clear();
       window.location.href = '/login.html';
+    });
+
+    // ── Create Test Order ──────────────────────────────────────────────────
+    const testOrderModal = document.getElementById('testOrderModal');
+    const testOrderForm = document.getElementById('testOrderForm');
+    const testOrderFeedback = document.getElementById('testOrderFeedback');
+    const testOrderSubmit = document.getElementById('testOrderSubmit');
+
+    document.getElementById('createTestOrderCard').addEventListener('click', () => {
+      testOrderModal.classList.add('open');
+    });
+
+    document.getElementById('testOrderClose').addEventListener('click', () => {
+      testOrderModal.classList.remove('open');
+    });
+
+    testOrderModal.addEventListener('click', (e) => {
+      if (e.target === testOrderModal) testOrderModal.classList.remove('open');
+    });
+
+    document.getElementById('testOrderQuickFill').addEventListener('click', () => {
+      document.getElementById('toPickupAddress').value = 'Bole Road, Addis Ababa';
+      document.getElementById('toPickupLat').value = '9.0192';
+      document.getElementById('toPickupLng').value = '38.7525';
+      document.getElementById('toDeliveryAddress').value = 'Piazza, Addis Ababa';
+      document.getElementById('toDeliveryLat').value = '9.0350';
+      document.getElementById('toDeliveryLng').value = '38.7600';
+      document.getElementById('toTotalAmount').value = '250';
+    });
+
+    testOrderForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      testOrderFeedback.className = 'modal-feedback';
+      testOrderFeedback.textContent = '';
+      testOrderSubmit.disabled = true;
+      testOrderSubmit.textContent = 'Creating…';
+
+      const token = localStorage.getItem('accessToken');
+      const body = {
+        pickupAddress: document.getElementById('toPickupAddress').value,
+        pickupLat: parseFloat(document.getElementById('toPickupLat').value),
+        pickupLng: parseFloat(document.getElementById('toPickupLng').value),
+        deliveryAddress: document.getElementById('toDeliveryAddress').value,
+        deliveryLat: parseFloat(document.getElementById('toDeliveryLat').value),
+        deliveryLng: parseFloat(document.getElementById('toDeliveryLng').value),
+        totalAmount: parseFloat(document.getElementById('toTotalAmount').value),
+      };
+
+      try {
+        const response = await fetch(`${API_URL}/orders`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || `API error: ${response.status}`);
+        }
+
+        testOrderFeedback.className = 'modal-feedback success';
+        testOrderFeedback.textContent = `✓ Order created (id: ${data.data.id}). It will appear as a live offer for any online driver within range.`;
+        testOrderForm.reset();
+      } catch (error) {
+        testOrderFeedback.className = 'modal-feedback error';
+        testOrderFeedback.textContent = '⚠️ ' + error.message;
+      } finally {
+        testOrderSubmit.disabled = false;
+        testOrderSubmit.textContent = 'Create Order';
+      }
     });
 
     initialize();
