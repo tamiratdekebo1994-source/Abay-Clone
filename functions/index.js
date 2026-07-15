@@ -33,17 +33,24 @@ app.use((req, res, next) => {
 });
 
 // ─── Authentication Middleware ───────────────────────────────────────────────
-const verifyToken = (req, res, next) => {
+// Accepts either a JWT (web admin login) or a Firebase ID token (mobile phone auth).
+const verifyToken = async (req, res, next) => {
   const token = req.headers.authorization?.split('Bearer ')[1];
   if (!token) return res.status(401).json({ success: false, message: 'No token' });
 
   try {
-    const decodedToken = jwt.verify(token, 'et-spark-secret-key');
-    req.userId = decodedToken.uid;
-    next();
-  } catch (err) {
-    console.error('Token verification failed:', err.message);
-    res.status(401).json({ success: false, message: 'Invalid token' });
+    const decodedJWT = jwt.verify(token, 'et-spark-secret-key');
+    req.userId = decodedJWT.uid;
+    return next();
+  } catch (jwtErr) {
+    try {
+      const decodedFirebase = await admin.auth().verifyIdToken(token);
+      req.userId = decodedFirebase.uid;
+      return next();
+    } catch (firebaseErr) {
+      console.error('Token verification failed:', firebaseErr.message);
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
   }
 };
 
@@ -387,6 +394,143 @@ app.post('/driver/register', async (req, res) => {
   }
 });
 
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+app.get('/driver/earnings', verifyToken, async (req, res) => {
+  try {
+    const period = req.query.period || 'today';
+    const now = new Date();
+    let start;
+    if (period === 'week') {
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      start = new Date(now.getFullYear(), now.getMonth(), diff);
+    } else if (period === 'month') {
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else {
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    }
+
+    const snapshot = await db.collection('orders')
+      .where('driverId', '==', req.userId)
+      .get();
+
+    const delivered = snapshot.docs
+      .map((doc) => doc.data())
+      .filter((o) => o.status === 'DELIVERED' && o.createdAt?.toDate?.() >= start);
+
+    const totalEarnings = delivered.reduce((sum, o) => sum + (o.driverFee || 0), 0);
+    const totalDeliveries = delivered.length;
+    const avgPerTrip = totalDeliveries > 0 ? totalEarnings / totalDeliveries : 0;
+
+    res.json({
+      success: true,
+      data: { totalEarnings, totalDeliveries, avgPerTrip, period },
+    });
+  } catch (err) {
+    console.error('Driver earnings error:', err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/driver/orders/nearby', verifyToken, async (req, res) => {
+  try {
+    const lat = parseFloat(req.query.lat);
+    const lng = parseFloat(req.query.lng);
+    const radiusKm = parseFloat(req.query.radius) || 10;
+
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+      return res.status(400).json({ success: false, message: 'lat and lng are required' });
+    }
+
+    const commissionDoc = await db.collection('commissionSettings').doc('default').get();
+    const driverCommissionPercent = commissionDoc.exists
+      ? (commissionDoc.data().driverCommissionPercent ?? 85)
+      : 85;
+
+    const snapshot = await db.collection('orders')
+      .where('status', '==', 'SEARCHING_DRIVER')
+      .get();
+
+    const storeNameCache = {};
+    const nearby = [];
+
+    for (const doc of snapshot.docs) {
+      const order = doc.data();
+      if (typeof order.pickupLat !== 'number' || typeof order.pickupLng !== 'number') continue;
+
+      const distanceKm = haversineKm(lat, lng, order.pickupLat, order.pickupLng);
+      if (distanceKm > radiusKm) continue;
+
+      if (!(order.storeId in storeNameCache)) {
+        const storeSnap = await db.collection('stores').where('userId', '==', order.storeId).limit(1).get();
+        storeNameCache[order.storeId] = storeSnap.empty ? 'Store' : storeSnap.docs[0].data().storeName;
+      }
+
+      const driverFee = order.driverFee ?? Math.round((order.totalAmount || 0) * (driverCommissionPercent / 100));
+
+      nearby.push({
+        id: doc.id,
+        ...order,
+        driverFee,
+        distanceKm,
+        store: { storeName: storeNameCache[order.storeId] },
+      });
+    }
+
+    nearby.sort((a, b) => a.distanceKm - b.distanceKm);
+
+    res.json({ success: true, data: nearby });
+  } catch (err) {
+    console.error('Nearby orders error:', err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/driver/surge', verifyToken, async (req, res) => {
+  try {
+    const hour = new Date().getHours();
+    const peakWindows = [[7, 9], [12, 14], [17, 20]];
+    const isSurge = peakWindows.some(([start, end]) => hour >= start && hour < end);
+
+    res.json({
+      success: true,
+      data: {
+        city: req.query.city || 'Addis Ababa',
+        isSurge,
+        multiplier: isSurge ? 1.5 : 1.0,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/driver/push-token', verifyToken, async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+    if (!token) return res.status(400).json({ success: false, message: 'token is required' });
+
+    await db.collection('drivers').doc(req.userId).set({
+      pushToken: token,
+      pushPlatform: platform || null,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    res.json({ success: true, message: 'Push token registered' });
+  } catch (err) {
+    console.error('Push token error:', err.message);
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
 // ─── Store Routes ───────────────────────────────────────────────────────────
 
 app.get('/stores', async (req, res) => {
@@ -467,18 +611,44 @@ app.get('/orders/:orderId', async (req, res) => {
 
 app.get('/orders', verifyToken, async (req, res) => {
   try {
-    const snapshot = await db.collection('orders')
-      .where('storeId', '==', req.userId)
-      .orderBy('createdAt', 'desc')
-      .limit(50)
-      .get();
+    const userDoc = await db.collection('users').doc(req.userId).get();
+    const role = userDoc.exists ? userDoc.data().role : null;
+    const filterField = role === 'DRIVER' ? 'driverId' : 'storeId';
 
-    const orders = [];
+    let query = db.collection('orders').where(filterField, '==', req.userId);
+
+    const statusParam = req.query.status;
+    const statuses = typeof statusParam === 'string' && statusParam
+      ? statusParam.split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
+    if (statuses.length === 1) {
+      query = query.where('status', '==', statuses[0]);
+    }
+
+    const snapshot = await query.orderBy('createdAt', 'desc').get();
+
+    let orders = [];
     snapshot.forEach(doc => {
       orders.push({ id: doc.id, ...doc.data() });
     });
 
-    res.json({ success: true, data: orders });
+    if (statuses.length > 1) {
+      orders = orders.filter((o) => statuses.includes(o.status));
+    }
+
+    const total = orders.length;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit, 10) || 20);
+    const start = (page - 1) * limit;
+    const paged = orders.slice(start, start + limit);
+
+    res.json({
+      success: true,
+      data: {
+        orders: paged,
+        pagination: { total, page, limit },
+      },
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
