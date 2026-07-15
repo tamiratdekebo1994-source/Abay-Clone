@@ -10,6 +10,7 @@ import { useSelector } from 'react-redux';
 import { orderAPI, uploadAPI } from '../services/api';
 import { COLORS, ORDER_STATUS_LABELS, GOOGLE_MAPS_API_KEY } from '../utils/constants';
 import { getColors } from '../utils/theme';
+import SlideToConfirm from '../components/SlideToConfirm';
 
 function decodePolyline(encoded) {
   const points = [];
@@ -140,38 +141,27 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
   };
 
   const updateStatus = async (newStatus) => {
-    Alert.alert(
-      'Update Status',
-      `Mark order as "${ORDER_STATUS_LABELS[newStatus]?.en}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          onPress: async () => {
-            try {
-              setIsUpdating(true);
-              const { data } = await orderAPI.updateStatus(orderId, newStatus);
-              const updatedOrder = { ...order, status: data.data.status };
-              setOrder(updatedOrder);
-              setRouteCoords([]);
-              setNextStepText('');
-              if (newStatus !== 'DELIVERED') fetchRoute(updatedOrder);
-              if (newStatus === 'DELIVERED') {
-                Alert.alert(
-                  '🎉 Delivery Complete!',
-                  `You earned ETB ${order.driverFee}. Great job!`,
-                  [{ text: 'OK', onPress: () => navigation.navigate('Home') }]
-                );
-              }
-            } catch (err) {
-              Alert.alert('Error', err.response?.data?.message || 'Failed to update status');
-            } finally {
-              setIsUpdating(false);
-            }
-          },
-        },
-      ]
-    );
+    // The slide gesture itself is the confirmation — no separate "are you sure?" dialog needed.
+    try {
+      setIsUpdating(true);
+      const { data } = await orderAPI.updateStatus(orderId, newStatus);
+      const updatedOrder = { ...order, status: data.data.status };
+      setOrder(updatedOrder);
+      setRouteCoords([]);
+      setNextStepText('');
+      if (newStatus !== 'DELIVERED') fetchRoute(updatedOrder);
+      if (newStatus === 'DELIVERED') {
+        Alert.alert(
+          '🎉 Delivery Complete!',
+          `You earned ETB ${order.driverFee}. Great job!`,
+          [{ text: 'OK', onPress: () => navigation.navigate('Home') }]
+        );
+      }
+    } catch (err) {
+      Alert.alert('Error', err.response?.data?.message || 'Failed to update status');
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const getNextStatus = () => {
@@ -320,20 +310,18 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
         )}
 
         {nextStatus && (
-          <TouchableOpacity
-            style={[styles.actionButton, (isUpdating || (nextStatus === 'DELIVERED' && !podPhotoUri)) && styles.actionButtonDisabled]}
-            onPress={() => updateStatus(nextStatus)}
-            disabled={isUpdating || (nextStatus === 'DELIVERED' && !podPhotoUri)}
-          >
-            {isUpdating ? (
-              <ActivityIndicator color={COLORS.white} />
-            ) : (
-              <>
-                <Text style={styles.actionButtonText}>{nextStatusLabel?.en}</Text>
-                <Text style={styles.actionButtonTextAm}>{nextStatusLabel?.am}</Text>
-              </>
-            )}
-          </TouchableOpacity>
+          <View style={styles.slideWrap}>
+            <SlideToConfirm
+              key={nextStatus}
+              label={`Slide to ${nextStatusLabel?.en?.toLowerCase()}`}
+              labelAm={nextStatusLabel?.am}
+              loading={isUpdating}
+              disabled={nextStatus === 'DELIVERED' && !podPhotoUri}
+              color={COLORS.primary}
+              onConfirm={() => updateStatus(nextStatus)}
+            />
+          </View>
+        )}
         )}
 
         <View style={{ height: 32 }} />
@@ -369,15 +357,7 @@ const getStyles = (C) => StyleSheet.create({
   cargoText: { fontSize: 15, color: C.text },
   cargoDetail: { fontSize: 14, color: C.gray, marginTop: 4 },
   cargoWarning: { fontSize: 14, color: COLORS.error, marginTop: 6, fontWeight: '600' },
-  actionButton: {
-    margin: 16, backgroundColor: COLORS.primary,
-    borderRadius: 14, padding: 18, alignItems: 'center',
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25, shadowRadius: 8, elevation: 8,
-  },
-  actionButtonDisabled: { opacity: 0.7, shadowOpacity: 0 },
-  actionButtonText: { color: COLORS.white, fontSize: 18, fontWeight: '800' },
-  actionButtonTextAm: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 },
+  slideWrap: { margin: 16 },
   stepBanner: {
     position: 'absolute', top: 0, left: 0, right: 0,
     backgroundColor: 'rgba(17,24,39,0.90)', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12,
