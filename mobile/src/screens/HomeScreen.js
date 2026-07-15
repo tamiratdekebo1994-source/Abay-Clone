@@ -370,11 +370,11 @@ export default function HomeScreen({ navigation }) {
             activeOpacity={0.88}
           >
             {(isLoading || offlineLoading)
-              ? <ActivityIndicator color={COLORS.white} />
+              ? <ActivityIndicator color={isOnline ? COLORS.primary : COLORS.white} />
               : (
                 <View style={styles.sparkBtnInner}>
                   <Text style={styles.sparkBtnIcon}>{isOnline ? '⏸' : '⚡'}</Text>
-                  <Text style={styles.sparkBtnText}>{isOnline ? 'GO OFFLINE' : 'SPARK NOW'}</Text>
+                  <Text style={[styles.sparkBtnText, isOnline && styles.sparkBtnTextOnline]}>{isOnline ? 'GO OFFLINE' : 'SPARK NOW'}</Text>
                 </View>
               )
             }
@@ -425,7 +425,11 @@ export default function HomeScreen({ navigation }) {
               <View style={styles.goalTrack}>
                 <View style={[styles.goalFill, { width: `${goalPct}%` }]} />
               </View>
-              {goalPct >= 100 && <Text style={styles.goalComplete}>🎉 Daily goal reached!</Text>}
+              {goalPct >= 100 && (
+                <View style={styles.goalCompleteBadge}>
+                  <Text style={styles.goalCompleteText}>🎉 Daily goal reached!</Text>
+                </View>
+              )}
             </View>
           </View>
         )}
@@ -615,13 +619,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35, shadowRadius: 14, elevation: 8,
   },
   sparkBtnOnline: {
-    backgroundColor: '#1F2937',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
+    backgroundColor: COLORS.accent,
+    shadowColor: COLORS.accentDark,
+    shadowOpacity: 0.3,
   },
   sparkBtnInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   sparkBtnIcon: { fontSize: 18 },
   sparkBtnText: { color: COLORS.white, fontSize: 17, fontWeight: '900', letterSpacing: 1.5 },
+  sparkBtnTextOnline: { color: COLORS.primary },
 
   pendingCard: { backgroundColor: '#FEF3C7', borderRadius: 12, padding: 14, marginBottom: 16 },
   pendingText: { color: '#92400E', fontSize: 13 },
@@ -645,18 +650,22 @@ const styles = StyleSheet.create({
   goalPct: { fontSize: 11, color: COLORS.primary, fontWeight: '700' },
   goalTrack: { height: 6, backgroundColor: '#E5E7EB', borderRadius: 3, overflow: 'hidden' },
   goalFill: { height: '100%', backgroundColor: COLORS.primary, borderRadius: 3 },
-  goalComplete: { fontSize: 12, color: COLORS.primary, fontWeight: '600', marginTop: 6, textAlign: 'center' },
+  goalCompleteBadge: {
+    backgroundColor: COLORS.accent, borderRadius: 8,
+    paddingVertical: 7, marginTop: 8, alignItems: 'center',
+  },
+  goalCompleteText: { fontSize: 12, color: COLORS.primary, fontWeight: '800' },
 
   driverInfoRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   streakChip: {
-    flex: 1, backgroundColor: '#FFF7ED', borderRadius: 12,
+    flex: 1, backgroundColor: '#FFFBEB', borderRadius: 12,
     paddingVertical: 10, paddingHorizontal: 14,
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    borderWidth: 1, borderColor: '#FED7AA',
+    borderWidth: 1, borderColor: COLORS.accent,
   },
   chipIcon: { fontSize: 14 },
-  chipVal: { fontSize: 16, fontWeight: '800', color: '#92400E' },
-  chipLabel: { fontSize: 11, color: '#B45309' },
+  chipVal: { fontSize: 16, fontWeight: '800', color: COLORS.primary },
+  chipLabel: { fontSize: 11, color: COLORS.accentDark },
 
   storePin: { alignItems: 'center' },
   storePinText: { fontSize: 22 },

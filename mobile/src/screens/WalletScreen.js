@@ -299,7 +299,7 @@ export default function WalletScreen() {
                 activeOpacity={0.85}
               >
                 {isSubmitting
-                  ? <ActivityIndicator color="#FFFFFF" />
+                  ? <ActivityIndicator color="#1B4332" />
                   : <Text style={S.submitBtnText}>Submit Request</Text>
                 }
               </TouchableOpacity>
@@ -402,9 +402,9 @@ const S = StyleSheet.create({
     alignItems: 'center', backgroundColor: '#F3F4F6',
     borderWidth: 1.5, borderColor: '#E5E7EB',
   },
-  quickChipActive: { backgroundColor: '#DCFCE7', borderColor: '#16A34A' },
+  quickChipActive: { backgroundColor: '#FFFBEB', borderColor: '#FCBF49' },
   quickChipText: { fontSize: 14, fontWeight: '700', color: '#6B7280' },
-  quickChipTextActive: { color: '#15803D' },
+  quickChipTextActive: { color: '#B8860B' },
 
   input: {
     borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 12,
@@ -422,10 +422,10 @@ const S = StyleSheet.create({
   methodLabel: { fontSize: 13 },
 
   submitBtn: {
-    backgroundColor: '#1B4332', borderRadius: 50,
+    backgroundColor: '#FCBF49', borderRadius: 50,
     paddingVertical: 17, alignItems: 'center', marginTop: 24,
-    shadowColor: '#1B4332', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 10, elevation: 6,
+    shadowColor: '#FCBF49', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4, shadowRadius: 10, elevation: 6,
   },
-  submitBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
+  submitBtnText: { color: '#1B4332', fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
 });

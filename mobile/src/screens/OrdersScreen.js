@@ -314,9 +314,9 @@ const getStyles = (C) => StyleSheet.create({
   cardFooter: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   footerFee: { fontSize: 15, fontWeight: '800', color: COLORS.primary },
   earningsBadge: {
-    backgroundColor: '#DCFCE7', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4,
+    backgroundColor: '#FFFBEB', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4,
   },
-  earningsText: { fontSize: 14, fontWeight: '800', color: '#15803D' },
+  earningsText: { fontSize: 14, fontWeight: '800', color: '#B8860B' },
   footerChip: {
     backgroundColor: C.background, borderRadius: 8,
     paddingHorizontal: 8, paddingVertical: 3,

@@ -220,7 +220,7 @@ const getStyles = (C) => StyleSheet.create({
   weekCardRange: { color: 'rgba(255,255,255,0.55)', fontSize: 12 },
   weekCardSep: { height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginVertical: 14 },
   confirmedLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: '500', marginBottom: 6 },
-  confirmedAmt: { color: COLORS.white, fontSize: 34, fontWeight: '800', letterSpacing: -0.5, marginBottom: 20 },
+  confirmedAmt: { color: COLORS.accent, fontSize: 34, fontWeight: '800', letterSpacing: -0.5, marginBottom: 20 },
   statsRow: { flexDirection: 'row', alignItems: 'center' },
   statCell: { flex: 1, alignItems: 'center' },
   statVal: { color: COLORS.white, fontSize: 15, fontWeight: '700' },
