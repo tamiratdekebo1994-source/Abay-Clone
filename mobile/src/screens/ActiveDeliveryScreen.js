@@ -105,15 +105,7 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
     } catch (_) {}
   };
 
-  const handleTakePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Camera access is required for proof of delivery.');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7, allowsEditing: false });
-    if (result.canceled) return;
-    const uri = result.assets[0].uri;
+  const uploadPodPhoto = async (uri) => {
     setIsUploadingPhoto(true);
     try {
       await uploadAPI.cargoPhoto(orderId, uri);
@@ -123,6 +115,28 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
     } finally {
       setIsUploadingPhoto(false);
     }
+  };
+
+  const handleTakePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Camera access is required for proof of delivery.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7, allowsEditing: false });
+    if (result.canceled) return;
+    await uploadPodPhoto(result.assets[0].uri);
+  };
+
+  const handleChooseFromLibrary = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Photo library access is required for proof of delivery.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7, allowsEditing: false });
+    if (result.canceled) return;
+    await uploadPodPhoto(result.assets[0].uri);
   };
 
   const updateStatus = async (newStatus) => {
@@ -295,6 +309,13 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
                 </Text>
               )}
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.podLibraryLink}
+              onPress={handleChooseFromLibrary}
+              disabled={isUploadingPhoto}
+            >
+              <Text style={styles.podLibraryLinkText}>Or choose from photo library</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -380,4 +401,6 @@ const getStyles = (C) => StyleSheet.create({
   podButton: { backgroundColor: COLORS.primaryLight, borderRadius: 8, padding: 12, alignItems: 'center' },
   podButtonDisabled: { opacity: 0.6 },
   podButtonText: { color: COLORS.white, fontWeight: '700', fontSize: 14 },
+  podLibraryLink: { alignItems: 'center', paddingVertical: 10 },
+  podLibraryLinkText: { color: COLORS.primaryLight, fontWeight: '600', fontSize: 13 },
 });
