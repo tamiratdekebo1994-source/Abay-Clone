@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "9ec35099-d353-4072-bbbd-2504bcde96f6"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.tamiratdekebo1994.fetno",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
+  }
+}
