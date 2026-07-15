@@ -222,6 +222,11 @@ export default function DriverRegistrationScreen({ navigation }) {
         licenseExpiry,
       });
       await dispatch(loadUser());
+      Alert.alert(
+        '✓ Application Submitted',
+        'Your driver application has been submitted successfully.\n\nOur team will review your information within 24-48 hours. You will receive a notification once your status is updated.\n\nThank you for choosing ET Spark!',
+        [{ text: 'Got it', onPress: () => {} }]
+      );
     } catch (err) {
       const msg = err?.response?.data?.message || 'Registration failed. Please try again.';
       Alert.alert('Error', msg);
