@@ -4,6 +4,7 @@ import {
   StyleSheet, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as SecureStore from 'expo-secure-store';
 import { useDispatch } from 'react-redux';
 import api from '../../services/api';
 import { loadUser } from '../../store/authStore';
@@ -32,12 +33,13 @@ export default function CompleteProfileScreen({ navigation, route }) {
     setIsLoading(true);
     setError('');
     try {
-      await api.post('/auth/firebase/provision-simple', {
+      const { data } = await api.post('/auth/firebase/provision-simple', {
         fullName: fullName.trim(),
         role,
         phone,
         email: email.trim() || undefined,
       });
+      await SecureStore.setItemAsync('firebaseIdToken', data.data.accessToken);
       if (role === 'DRIVER') {
         navigation.replace('DriverRegistration');
       } else {
@@ -201,7 +203,7 @@ export default function CompleteProfileScreen({ navigation, route }) {
         </TouchableOpacity>
 
         <Text style={S.terms}>
-          By continuing you agree to Fetno's Terms of Service and Privacy Policy.
+          By continuing you agree to ET Spark's Terms of Service and Privacy Policy.
         </Text>
 
       </ScrollView>

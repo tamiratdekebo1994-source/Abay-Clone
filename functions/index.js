@@ -203,6 +203,131 @@ app.get('/auth/me', async (req, res) => {
   }
 });
 
+// ─── Mock OTP Routes ──────────────────────────────────────────────────────────
+// No SMS gateway is configured — every request/verify uses a fixed test code.
+// Good enough for development and QA; swap for a real SMS provider before
+// handling real driver/store sign-ups.
+const MOCK_OTP_CODE = '123456';
+const OTP_TTL_MS = 5 * 60 * 1000;
+
+app.post('/auth/otp/request', async (req, res) => {
+  try {
+    const { phone, purpose } = req.body;
+    if (!phone) return res.status(400).json({ success: false, message: 'Phone is required' });
+    const normalizedPurpose = purpose === 'REGISTER' ? 'REGISTER' : 'LOGIN';
+
+    if (normalizedPurpose === 'LOGIN') {
+      const userSnap = await db.collection('users').where('phone', '==', phone).limit(1).get();
+      if (userSnap.empty) {
+        return res.status(404).json({ success: false, message: 'No account found for this phone number' });
+      }
+    }
+
+    await db.collection('otpCodes').doc(phone).set({
+      code: MOCK_OTP_CODE,
+      purpose: normalizedPurpose,
+      expiresAt: Date.now() + OTP_TTL_MS,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    res.json({ success: true, data: { devCode: MOCK_OTP_CODE } });
+  } catch (err) {
+    console.error('OTP request error:', err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/auth/otp/verify-register', async (req, res) => {
+  try {
+    const { phone, code } = req.body;
+    if (!phone || !code) return res.status(400).json({ success: false, message: 'Phone and code are required' });
+
+    const otpDoc = await db.collection('otpCodes').doc(phone).get();
+    if (!otpDoc.exists) return res.status(400).json({ success: false, message: 'No code was requested for this phone' });
+    const otpData = otpDoc.data();
+    if (otpData.code !== code) return res.status(400).json({ success: false, message: 'Invalid code' });
+    if (Date.now() > otpData.expiresAt) return res.status(400).json({ success: false, message: 'Code expired. Request a new one.' });
+
+    await db.collection('otpCodes').doc(phone).delete();
+
+    const verificationToken = jwt.sign({ phone, purpose: 'REGISTER' }, 'et-spark-secret-key', { expiresIn: '15m' });
+    res.json({ success: true, data: { verificationToken } });
+  } catch (err) {
+    console.error('OTP verify-register error:', err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/auth/otp/verify-login', async (req, res) => {
+  try {
+    const { phone, code } = req.body;
+    if (!phone || !code) return res.status(400).json({ success: false, message: 'Phone and code are required' });
+
+    const otpDoc = await db.collection('otpCodes').doc(phone).get();
+    if (!otpDoc.exists) return res.status(400).json({ success: false, message: 'No code was requested for this phone' });
+    const otpData = otpDoc.data();
+    if (otpData.code !== code) return res.status(400).json({ success: false, message: 'Invalid code' });
+    if (Date.now() > otpData.expiresAt) return res.status(400).json({ success: false, message: 'Code expired. Request a new one.' });
+
+    const userSnap = await db.collection('users').where('phone', '==', phone).limit(1).get();
+    if (userSnap.empty) return res.status(404).json({ success: false, message: 'No account found for this phone number' });
+
+    await db.collection('otpCodes').doc(phone).delete();
+
+    const accessToken = jwt.sign({ uid: userSnap.docs[0].id, phone }, 'et-spark-secret-key', { expiresIn: '7d' });
+    res.json({ success: true, data: { accessToken } });
+  } catch (err) {
+    console.error('OTP verify-login error:', err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/auth/firebase/provision-simple', async (req, res) => {
+  try {
+    const { fullName, role, phone, email } = req.body;
+    if (!fullName || !role || !phone) {
+      return res.status(400).json({ success: false, message: 'fullName, role, and phone are required' });
+    }
+
+    const existing = await db.collection('users').where('phone', '==', phone).limit(1).get();
+    if (!existing.empty) {
+      return res.status(409).json({ success: false, message: 'An account with this phone number already exists' });
+    }
+
+    let userRecord;
+    try {
+      userRecord = await auth.createUser({
+        phoneNumber: phone,
+        email: email || undefined,
+        displayName: fullName,
+      });
+    } catch (createErr) {
+      if (createErr.code === 'auth/phone-number-already-exists') {
+        // Orphaned Firebase Auth account from earlier testing with no Firestore profile yet — reuse it.
+        userRecord = await auth.getUserByPhoneNumber(phone);
+      } else {
+        throw createErr;
+      }
+    }
+
+    await db.collection('users').doc(userRecord.uid).set({
+      phone,
+      fullName,
+      email: email || null,
+      role,
+      isVerified: true,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    const accessToken = jwt.sign({ uid: userRecord.uid, phone }, 'et-spark-secret-key', { expiresIn: '7d' });
+    res.json({ success: true, data: { accessToken, uid: userRecord.uid } });
+  } catch (err) {
+    console.error('Provision-simple error:', err.message);
+    res.status(400).json({ success: false, message: err.message || 'Registration failed' });
+  }
+});
+
 // ─── Driver Routes ──────────────────────────────────────────────────────────
 
 app.get('/drivers', async (req, res) => {
