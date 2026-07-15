@@ -1,4 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
 import Constants from 'expo-constants';
 
 const cfg = Constants.expoConfig?.extra?.firebase || {};
@@ -13,5 +14,6 @@ const firebaseConfig = {
 };
 
 export const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
+export const db = getFirestore(firebaseApp);
 
 export const FIREBASE_API_KEY = firebaseConfig.apiKey;

@@ -5,19 +5,30 @@ import {
   Platform, Animated, Dimensions, Modal,
 } from 'react-native';
 import MapView, { Marker, Polygon, PROVIDER_GOOGLE } from 'react-native-maps';
-import { io } from 'socket.io-client';
-import * as SecureStore from 'expo-secure-store';
+import { collection, query, where, onSnapshot, doc, getDoc, getDocs } from 'firebase/firestore';
 import { useSelector, useDispatch } from 'react-redux';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { driverAPI, orderAPI } from '../services/api';
 import { updateDriver } from '../store/authStore';
-import { COLORS, ORDER_STATUS_LABELS, SOCKET_URL } from '../utils/constants';
+import { COLORS, ORDER_STATUS_LABELS } from '../utils/constants';
 import { getColors } from '../utils/theme';
+import { db } from '../services/firebase';
 import OrderOfferCard from '../components/OrderOfferCard';
 import { startBackgroundTracking, stopBackgroundTracking, getCurrentLocation } from '../services/locationService';
 import * as Notifications from 'expo-notifications';
 
 const { height: SH } = Dimensions.get('window');
+
+const NEARBY_RADIUS_KM = 10;
+
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 const HOURS = ['6a','7a','8a','9a','10a','11a','12p','1p','2p','3p','4p','5p','6p','7p','8p','9p'];
 const ACTIVITY = [0.2,0.5,0.8,0.6,0.4,0.5,0.9,0.7,0.8,0.5,0.4,0.6,1.0,0.9,0.8,0.6];
@@ -77,7 +88,10 @@ export default function HomeScreen({ navigation }) {
 
   const mapRef = useRef(null);
   const scrollRef = useRef(null);
-  const socketRef = useRef(null);
+  const unsubscribeOrdersRef = useRef(null);
+  const storeNameCacheRef = useRef(new Map());
+  const driverCommissionPercentRef = useRef(85);
+  const declinedIdsRef = useRef(new Set());
   const isOnlineRef = useRef(driver?.status === 'ONLINE');
   const bannerAnim = useRef(new Animated.Value(0)).current;
   const sheetAnim = useRef(new Animated.Value(300)).current;
@@ -88,8 +102,8 @@ export default function HomeScreen({ navigation }) {
 
   useEffect(() => {
     setupLocation();
-    if (user?.role === 'DRIVER') { loadData(); connectSocket(); }
-    return () => { stopBackgroundTracking(); socketRef.current?.disconnect(); };
+    if (user?.role === 'DRIVER') loadData();
+    return () => { stopBackgroundTracking(); unsubscribeOrdersRef.current?.(); };
   }, []);
 
   useEffect(() => { isOnlineRef.current = isOnline; }, [isOnline]);
@@ -102,45 +116,6 @@ export default function HomeScreen({ navigation }) {
       bounciness: 6,
     }).start();
   }, [showFloatPill]);
-
-  const connectSocket = async () => {
-    if (user?.role !== 'DRIVER') return;
-    try {
-      const token = await SecureStore.getItemAsync('firebaseIdToken');
-      if (!token) return;
-      const socket = io(SOCKET_URL, { auth: { token }, transports: ['websocket'] });
-      // Targeted offer (nearest driver first routing)
-      socket.on('new_order_offer', (order) => {
-        if (isOnlineRef.current) {
-          setNearbyOrders((prev) => {
-            if (prev.find((o) => o.orderId === order.orderId || o.id === order.id)) return prev;
-            return [order, ...prev];
-          });
-          Notifications.scheduleNotificationAsync({
-            content: {
-              title: '⚡ New delivery offer!',
-              body: `ETB ${order.driverFee?.toFixed(2)} · ${order.distanceKm?.toFixed(1)} km away`,
-              sound: true,
-            },
-            trigger: null,
-          }).catch(() => {});
-        }
-      });
-      // Fallback broadcast (no nearby drivers)
-      socket.on('new_order_available', (order) => {
-        if (isOnlineRef.current) {
-          setNearbyOrders((prev) => {
-            if (prev.find((o) => o.orderId === order.orderId || o.id === order.id)) return prev;
-            return [order, ...prev];
-          });
-        }
-      });
-      socket.on('order_offer_expired', ({ orderId }) => setNearbyOrders((prev) => prev.filter((o) => o.id !== orderId)));
-      socket.on('driver_assigned', ({ orderId }) => setNearbyOrders((prev) => prev.filter((o) => o.id !== orderId)));
-      socket.on('no_driver_found', ({ orderId }) => setNearbyOrders((prev) => prev.filter((o) => o.id !== orderId)));
-      socketRef.current = socket;
-    } catch (err) { console.log('[Socket]', err.message); }
-  };
 
   const setupLocation = async () => {
     const loc = await getCurrentLocation();
@@ -162,18 +137,89 @@ export default function HomeScreen({ navigation }) {
     } catch {}
   };
 
-  const loadNearbyOrders = async () => {
-    if (user?.role !== 'DRIVER' || !isOnline || !location) return;
+  const resolveStoreName = async (storeId) => {
+    if (!storeId) return 'Store';
+    if (storeNameCacheRef.current.has(storeId)) return storeNameCacheRef.current.get(storeId);
     try {
-      const { data } = await driverAPI.getNearbyOrders(location.latitude, location.longitude, 10);
-      setNearbyOrders(data.data);
+      const snap = await getDocs(query(collection(db, 'stores'), where('userId', '==', storeId)));
+      const name = snap.empty ? 'Store' : snap.docs[0].data().storeName;
+      storeNameCacheRef.current.set(storeId, name);
+      return name;
+    } catch {
+      return 'Store';
+    }
+  };
+
+  const loadCommissionPercent = async () => {
+    try {
+      const snap = await getDoc(doc(db, 'commissionSettings', 'default'));
+      if (snap.exists()) driverCommissionPercentRef.current = snap.data().driverCommissionPercent ?? 85;
     } catch {}
   };
 
+  // Live delivery offers via a Firestore realtime listener (replaces the old socket.io approach,
+  // which required a persistent server that doesn't exist in this Cloud Functions setup).
   useEffect(() => {
     isOnlineRef.current = isOnline;
-    if (isOnline) loadNearbyOrders();
-    else setNearbyOrders([]);
+
+    if (!isOnline || !location || user?.role !== 'DRIVER') {
+      unsubscribeOrdersRef.current?.();
+      unsubscribeOrdersRef.current = null;
+      setNearbyOrders([]);
+      return;
+    }
+
+    let isInitialLoad = true;
+    loadCommissionPercent();
+
+    const handleChange = async (change) => {
+      const isInitial = isInitialLoad; // capture synchronously before any await below
+      const order = { id: change.doc.id, ...change.doc.data() };
+
+      if (change.type === 'removed' || order.status !== 'SEARCHING_DRIVER') {
+        setNearbyOrders((prev) => prev.filter((o) => o.id !== order.id));
+        return;
+      }
+      if (declinedIdsRef.current.has(order.id)) return;
+      if (order.rejectedByDriverIds?.includes(user?.uid)) return;
+      if (typeof order.pickupLat !== 'number' || typeof order.pickupLng !== 'number') return;
+
+      const distanceKm = haversineKm(location.latitude, location.longitude, order.pickupLat, order.pickupLng);
+      if (distanceKm > NEARBY_RADIUS_KM) {
+        setNearbyOrders((prev) => prev.filter((o) => o.id !== order.id));
+        return;
+      }
+
+      const storeName = await resolveStoreName(order.storeId);
+      const driverFee = order.driverFee ?? Math.round((order.totalAmount || 0) * (driverCommissionPercentRef.current / 100));
+      const enriched = { ...order, distanceKm, driverFee, store: { storeName } };
+
+      let wasNew = false;
+      setNearbyOrders((prev) => {
+        wasNew = !prev.find((o) => o.id === order.id);
+        return wasNew ? [enriched, ...prev] : prev.map((o) => (o.id === order.id ? enriched : o));
+      });
+
+      if (wasNew && !isInitial) {
+        Notifications.scheduleNotificationAsync({
+          content: {
+            title: '⚡ New delivery offer!',
+            body: `ETB ${driverFee.toFixed(2)} · ${distanceKm.toFixed(1)} km away`,
+            sound: true,
+          },
+          trigger: null,
+        }).catch(() => {});
+      }
+    };
+
+    const q = query(collection(db, 'orders'), where('status', '==', 'SEARCHING_DRIVER'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      snapshot.docChanges().forEach(handleChange);
+      isInitialLoad = false;
+    }, (err) => console.log('[Firestore listener]', err.message));
+
+    unsubscribeOrdersRef.current = unsubscribe;
+    return () => unsubscribe();
   }, [isOnline, location]);
 
   const showBanner = () => {
@@ -464,10 +510,12 @@ export default function HomeScreen({ navigation }) {
                 order={order}
                 onAccept={() => navigation.navigate('ActiveDelivery', { orderId: order.id, autoAccept: true })}
                 onDecline={() => {
+                  declinedIdsRef.current.add(order.id);
                   setNearbyOrders((prev) => prev.filter((o) => o.id !== order.id));
                   orderAPI.rejectOrder(order.id).catch(() => {});
                 }}
                 onExpire={() => {
+                  declinedIdsRef.current.add(order.id);
                   setNearbyOrders((prev) => prev.filter((o) => o.id !== order.id));
                 }}
               />
