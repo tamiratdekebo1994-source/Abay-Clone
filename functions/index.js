@@ -178,6 +178,17 @@ app.get('/auth/me', async (req, res) => {
       ...userDoc.data()
     };
 
+    // If user is a driver, fetch driver profile
+    if (userData.role === 'DRIVER') {
+      const driverDoc = await db.collection('drivers').doc(uid).get();
+      if (driverDoc.exists) {
+        userData.driver = {
+          uid,
+          ...driverDoc.data()
+        };
+      }
+    }
+
     res.json({ success: true, data: userData });
   } catch (err) {
     console.error('Auth/me error:', err.message);
