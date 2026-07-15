@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, Animated, Easing, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSelector, useDispatch } from 'react-redux';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
@@ -98,8 +99,8 @@ function MainTabs() {
         options={{
           headerShown: false,
           tabBarLabel: 'Home',
-          tabBarIcon: ({ focused }) => (
-            <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>🏠</Text>
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />
           ),
         }}
       />
@@ -109,8 +110,8 @@ function MainTabs() {
         options={{
           headerShown: false,
           tabBarLabel: 'Trips',
-          tabBarIcon: ({ focused }) => (
-            <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>🚗</Text>
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? 'car' : 'car-outline'} size={size} color={color} />
           ),
         }}
       />
@@ -120,8 +121,8 @@ function MainTabs() {
         options={{
           headerShown: false,
           tabBarLabel: 'Earnings',
-          tabBarIcon: ({ focused }) => (
-            <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>💲</Text>
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? 'cash' : 'cash-outline'} size={size} color={color} />
           ),
         }}
       />
@@ -131,8 +132,8 @@ function MainTabs() {
         options={{
           headerShown: false,
           tabBarLabel: 'Notifications',
-          tabBarIcon: ({ focused }) => (
-            <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>🔔</Text>
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? 'notifications' : 'notifications-outline'} size={size} color={color} />
           ),
         }}
       />
@@ -142,10 +143,8 @@ function MainTabs() {
         options={{
           headerShown: false,
           tabBarLabel: 'More',
-          tabBarIcon: ({ focused }) => (
-            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>•••</Text>
-            </View>
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? 'ellipsis-horizontal-circle' : 'ellipsis-horizontal-circle-outline'} size={size} color={color} />
           ),
         }}
       />
