@@ -37,7 +37,6 @@ export default function OrderOfferCard({ order, onAccept, onDecline, onExpire })
         }
         if (next <= 0) {
           clearInterval(interval);
-          onExpire?.();
           return 0;
         }
         return next;
@@ -46,6 +45,16 @@ export default function OrderOfferCard({ order, onAccept, onDecline, onExpire })
 
     return () => clearInterval(interval);
   }, []);
+
+  // Fire onExpire as its own effect once timeLeft actually hits 0, rather than from inside
+  // the setTimeLeft updater above — calling a parent setState from within another component's
+  // state updater during the render/commit cycle is what triggers React's "Cannot update a
+  // component while rendering a different component" warning.
+  useEffect(() => {
+    if (timeLeft === 0) {
+      onExpire?.();
+    }
+  }, [timeLeft]);
 
   const handleAccept = () => {
     Vibration.vibrate([0, 60, 40, 60]);
