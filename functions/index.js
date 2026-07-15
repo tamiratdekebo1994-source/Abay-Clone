@@ -4,6 +4,8 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const { v4: uuidv4 } = require('uuid');
 
 console.log('Initializing ET SPARK API...');
 
@@ -11,6 +13,18 @@ console.log('Initializing ET SPARK API...');
 admin.initializeApp();
 const db = admin.firestore();
 const auth = admin.auth();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+async function uploadImageBuffer(buffer, contentType, destinationPath) {
+  // getSignedUrl() needs iam.serviceAccounts.signBlob, which this project's runtime
+  // service account doesn't have (same issue hit earlier with Firebase custom tokens).
+  // makePublic() + the public object URL avoids that permission entirely.
+  const bucket = admin.storage().bucket();
+  const file = bucket.file(destinationPath);
+  await file.save(buffer, { metadata: { contentType } });
+  await file.makePublic();
+  return `https://storage.googleapis.com/${bucket.name}/${destinationPath}`;
+}
 
 console.log('Admin SDK initialized');
 
@@ -854,6 +868,17 @@ app.patch('/orders/:orderId/status', verifyToken, async (req, res) => {
     if (status === 'DELIVERED') update.deliveredAt = admin.firestore.FieldValue.serverTimestamp();
 
     await orderRef.update(update);
+
+    if (status === 'DELIVERED') {
+      await createNotification(req.userId, {
+        type: 'ORDER_DELIVERED',
+        title: 'Delivery completed',
+        titleAm: 'ማድረስ ተጠናቅቋል',
+        body: `You earned ETB ${(data.driverFee || 0).toFixed(2)} for this delivery.`,
+        bodyAm: `ለዚህ ማድረስ ${(data.driverFee || 0).toFixed(2)} ብር አግኝተዋል።`,
+      }).catch((err) => console.error('Notification create failed:', err.message));
+    }
+
     res.json({ success: true, data: { status } });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
@@ -901,6 +926,111 @@ app.get('/orders', verifyToken, async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── Upload Routes ──────────────────────────────────────────────────────────
+
+app.post('/upload/order/:orderId/cargo', verifyToken, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+
+    const orderRef = db.collection('orders').doc(req.params.orderId);
+    const orderDoc = await orderRef.get();
+    if (!orderDoc.exists) return res.status(404).json({ success: false, message: 'Order not found' });
+    if (orderDoc.data().driverId !== req.userId) {
+      return res.status(403).json({ success: false, message: 'Not assigned to this order' });
+    }
+
+    const path = `orders/${req.params.orderId}/pod-${uuidv4()}.jpg`;
+    const url = await uploadImageBuffer(req.file.buffer, req.file.mimetype || 'image/jpeg', path);
+
+    await orderRef.update({ podPhotoUrl: url });
+
+    res.json({ success: true, data: { url } });
+  } catch (err) {
+    console.error('Cargo upload error:', err.message);
+    res.status(400).json({ success: false, message: err.message || 'Upload failed' });
+  }
+});
+
+app.post('/upload/avatar', verifyToken, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+
+    const path = `avatars/${req.userId}-${uuidv4()}.jpg`;
+    const url = await uploadImageBuffer(req.file.buffer, req.file.mimetype || 'image/jpeg', path);
+
+    await db.collection('drivers').doc(req.userId).set({ profilePhotoUrl: url }, { merge: true });
+    await db.collection('users').doc(req.userId).set({ profilePhotoUrl: url }, { merge: true });
+
+    res.json({ success: true, data: { avatarUrl: url } });
+  } catch (err) {
+    console.error('Avatar upload error:', err.message);
+    res.status(400).json({ success: false, message: err.message || 'Upload failed' });
+  }
+});
+
+// ─── Notification Routes ────────────────────────────────────────────────────
+
+async function createNotification(userId, { type, title, titleAm, body, bodyAm }) {
+  await db.collection('notifications').add({
+    userId, type, title, titleAm: titleAm || null, body, bodyAm: bodyAm || null,
+    isRead: false,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+app.get('/notifications', verifyToken, async (req, res) => {
+  try {
+    const snapshot = await db.collection('notifications').where('userId', '==', req.userId).get();
+
+    let notifications = [];
+    snapshot.forEach(doc => notifications.push({ id: doc.id, ...doc.data() }));
+
+    notifications.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+
+    const limit = Math.max(1, parseInt(req.query.limit, 10) || 30);
+    const unreadCount = notifications.filter((n) => !n.isRead).length;
+    notifications = notifications.slice(0, limit);
+
+    res.json({ success: true, data: { notifications, unreadCount } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.patch('/notifications/read-all', verifyToken, async (req, res) => {
+  try {
+    // Single equality filter only, then filter unread in memory — chaining a second
+    // .where() here would need a manually-created composite index.
+    const snapshot = await db.collection('notifications').where('userId', '==', req.userId).get();
+
+    const batch = db.batch();
+    snapshot.forEach(doc => {
+      if (doc.data().isRead === false) batch.update(doc.ref, { isRead: true });
+    });
+    await batch.commit();
+
+    res.json({ success: true, message: 'All notifications marked as read' });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.patch('/notifications/:notificationId/read', verifyToken, async (req, res) => {
+  try {
+    const notifRef = db.collection('notifications').doc(req.params.notificationId);
+    const notifDoc = await notifRef.get();
+    if (!notifDoc.exists) return res.status(404).json({ success: false, message: 'Notification not found' });
+    if (notifDoc.data().userId !== req.userId) {
+      return res.status(403).json({ success: false, message: 'Not your notification' });
+    }
+
+    await notifRef.update({ isRead: true });
+    res.json({ success: true, message: 'Marked as read' });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
   }
 });
 
