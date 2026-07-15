@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, API_URL } from '../../utils/constants';
@@ -57,24 +57,37 @@ export default function PhoneEntryScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={S.safe} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView style={S.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={S.container}>
+    <KeyboardAvoidingView style={S.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
 
-          <TouchableOpacity style={S.back} onPress={() => navigation.goBack()}>
-            <Text style={S.backText}>←</Text>
-          </TouchableOpacity>
+        {/* ── Green header ── */}
+        <SafeAreaView style={S.headerBg} edges={['top']}>
+          <View style={S.headerInner}>
+            <TouchableOpacity style={S.backBtn} onPress={() => navigation.goBack()}>
+              <Text style={S.backArrow}>←</Text>
+            </TouchableOpacity>
+            <View style={S.headerCenter}>
+              <View style={S.iconCircle}>
+                <Text style={S.iconEmoji}>📱</Text>
+              </View>
+              <Text style={S.headerTitle}>What's your{'\n'}phone number?</Text>
+              <Text style={S.headerSub}>We'll send you a verification code</Text>
+            </View>
+          </View>
+          <View style={S.wave} />
+        </SafeAreaView>
+
+        {/* ── Body ── */}
+        <View style={S.body}>
+
+          {!!error && (
+            <View style={S.errorBox}>
+              <Text style={S.errorText}>⚠  {error}</Text>
+            </View>
+          )}
 
           <View style={S.content}>
-            <Text style={S.title}>What's your{'\n'}phone number?</Text>
-            <Text style={S.subtitle}>We'll send you a verification code</Text>
-
-            {!!error && (
-              <View style={S.errorBox}>
-                <Text style={S.errorText}>{error}</Text>
-              </View>
-            )}
-
+            <Text style={S.label}>Phone Number</Text>
             <TouchableOpacity
               style={S.phoneRow}
               onPress={() => inputRef.current?.focus()}
@@ -111,46 +124,63 @@ export default function PhoneEntryScreen({ navigation }) {
             }
           </TouchableOpacity>
 
+          <Text style={S.terms}>
+            By continuing, you agree to ET Spark's{'\n'}Terms of Service and Privacy Policy.
+          </Text>
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const S = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.white },
-  flex: { flex: 1 },
-  container: { flex: 1, paddingHorizontal: 28, paddingTop: 8, paddingBottom: 40 },
+  root: { flex: 1, backgroundColor: COLORS.white },
 
-  back: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: '#F2F2F2',
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 44, alignSelf: 'flex-start',
+  headerBg: { backgroundColor: COLORS.primary },
+  headerInner: { paddingHorizontal: 16, paddingBottom: 28 },
+  backBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 20,
   },
-  backText: { fontSize: 22, color: '#333' },
+  backArrow: { color: COLORS.white, fontSize: 22 },
+  headerCenter: { alignItems: 'center' },
+  iconCircle: {
+    width: 72, height: 72, borderRadius: 36,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 16,
+  },
+  iconEmoji: { fontSize: 32 },
+  headerTitle: {
+    color: COLORS.white, fontSize: 24, fontWeight: '800',
+    textAlign: 'center', lineHeight: 30, marginBottom: 8,
+  },
+  headerSub: { color: 'rgba(255,255,255,0.65)', fontSize: 14, textAlign: 'center' },
+  wave: {
+    height: 28, backgroundColor: COLORS.white,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+  },
 
+  body: { flex: 1, paddingHorizontal: 28, paddingTop: 8, paddingBottom: 32 },
   content: { flex: 1 },
-
-  title: {
-    fontSize: 34, fontWeight: '800', color: '#111',
-    lineHeight: 42, marginBottom: 10,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 15, color: '#999', marginBottom: 40, lineHeight: 22,
-  },
 
   errorBox: {
     backgroundColor: '#FEF2F2', borderRadius: 12,
-    padding: 14, marginBottom: 20,
-    borderWidth: 1, borderColor: '#FECACA',
+    padding: 14, marginBottom: 16,
+    borderLeftWidth: 3, borderLeftColor: COLORS.error,
   },
-  errorText: { color: '#991B1B', fontSize: 13, lineHeight: 18 },
+  errorText: { color: '#991B1B', fontSize: 13 },
+
+  label: {
+    fontSize: 12, fontWeight: '700', color: COLORS.gray,
+    textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10, marginTop: 8,
+  },
 
   phoneRow: {
     flexDirection: 'row', alignItems: 'center',
-    borderWidth: 2, borderColor: '#EBEBEB',
+    borderWidth: 2, borderColor: COLORS.border,
     borderRadius: 16, height: 66,
     backgroundColor: '#FAFAFA',
   },
@@ -159,10 +189,10 @@ const S = StyleSheet.create({
     paddingHorizontal: 16, gap: 8,
   },
   flag: { fontSize: 24 },
-  code: { fontSize: 17, fontWeight: '700', color: '#111' },
-  sep: { width: 1.5, height: 30, backgroundColor: '#E0E0E0' },
+  code: { fontSize: 17, fontWeight: '700', color: COLORS.text },
+  sep: { width: 1.5, height: 30, backgroundColor: COLORS.border },
   input: {
-    flex: 1, fontSize: 20, fontWeight: '600', color: '#111',
+    flex: 1, fontSize: 20, fontWeight: '600', color: COLORS.text,
     paddingHorizontal: 16, letterSpacing: 2,
   },
 
@@ -170,7 +200,14 @@ const S = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderRadius: 16, paddingVertical: 20,
     alignItems: 'center',
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
   },
-  ctaDisabled: { opacity: 0.3 },
+  ctaDisabled: { opacity: 0.35, shadowOpacity: 0 },
   ctaText: { fontSize: 17, fontWeight: '800', color: COLORS.white, letterSpacing: 0.3 },
+
+  terms: {
+    fontSize: 12, color: COLORS.gray, textAlign: 'center',
+    lineHeight: 17, marginTop: 16,
+  },
 });
