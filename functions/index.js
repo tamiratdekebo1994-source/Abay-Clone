@@ -6,6 +6,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
+const axios = require('axios');
 
 console.log('Initializing ET SPARK API...');
 
@@ -872,6 +873,14 @@ app.patch('/orders/:orderId/status', verifyToken, async (req, res) => {
     await orderRef.update(update);
 
     if (status === 'DELIVERED') {
+      // Roll up onto the driver's profile — /admin/drivers already sorts by this field,
+      // and per-driver earnings elsewhere are computed live from orders, but the admin
+      // leaderboard view needs a running total on the driver doc itself.
+      await db.collection('drivers').doc(req.userId).update({
+        earnings: admin.firestore.FieldValue.increment(data.driverFee || 0),
+        totalRides: admin.firestore.FieldValue.increment(1),
+      }).catch((err) => console.error('Driver earnings rollup failed:', err.message));
+
       await createNotification(req.userId, {
         type: 'ORDER_DELIVERED',
         title: 'Delivery completed',
@@ -1330,6 +1339,108 @@ app.patch('/admin/fraud-flags/:flagId/resolve', verifyToken, async (req, res) =>
 
     res.json({ success: true, message: 'Fraud flag resolved' });
   } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/admin/financial-reports', verifyToken, async (req, res) => {
+  try {
+    const snapshot = await db.collection('orders').get();
+    const orders = [];
+    snapshot.forEach(doc => orders.push(doc.data()));
+
+    const totalRevenue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    const delivered = orders.filter((o) => o.status === 'DELIVERED');
+    const cancelled = orders.filter((o) => o.status === 'CANCELLED' || o.status === 'FAILED');
+    const totalDriverPayouts = delivered.reduce((sum, o) => sum + (o.driverFee || 0), 0);
+    const platformEarnings = totalRevenue - totalDriverPayouts;
+
+    const dayBuckets = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      dayBuckets[key] = { date: key, revenue: 0, orders: 0 };
+    }
+    orders.forEach((o) => {
+      const ms = o.createdAt?.toMillis?.();
+      if (!ms) return;
+      const key = new Date(ms).toISOString().slice(0, 10);
+      if (dayBuckets[key]) {
+        dayBuckets[key].revenue += o.totalAmount || 0;
+        dayBuckets[key].orders += 1;
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        totalRevenue,
+        totalDriverPayouts,
+        platformEarnings,
+        totalOrders: orders.length,
+        deliveredOrders: delivered.length,
+        cancelledOrders: cancelled.length,
+        last7Days: Object.values(dayBuckets),
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/admin/push-notifications', verifyToken, async (req, res) => {
+  try {
+    const { title, body, titleAm, bodyAm } = req.body;
+    if (!title || !body) {
+      return res.status(400).json({ success: false, message: 'title and body are required' });
+    }
+
+    const snapshot = await db.collection('drivers').get();
+    const targets = [];
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.pushToken) targets.push({ uid: doc.id, pushToken: data.pushToken });
+    });
+
+    // Create the in-app notification for every driver regardless of push token,
+    // so it still shows in their Notifications tab even without a device push.
+    const allDrivers = [];
+    snapshot.forEach(doc => allDrivers.push(doc.id));
+    await Promise.all(allDrivers.map((uid) =>
+      createNotification(uid, { type: 'SYSTEM', title, titleAm, body, bodyAm })
+        .catch((err) => console.error('Notification create failed:', err.message))
+    ));
+
+    // Batch to Expo's push API in chunks of 100 messages per request.
+    let sent = 0;
+    for (let i = 0; i < targets.length; i += 100) {
+      const chunk = targets.slice(i, i + 100).map((t) => ({ to: t.pushToken, title, body, sound: 'default' }));
+      try {
+        await axios.post('https://exp.host/--/api/v2/push/send', chunk, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+        sent += chunk.length;
+      } catch (err) {
+        console.error('Expo push send failed:', err.message);
+      }
+    }
+
+    await db.collection('auditLogs').add({
+      userId: req.userId,
+      action: 'SEND_PUSH_NOTIFICATION',
+      resource: 'NOTIFICATION',
+      resourceId: null,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    res.json({
+      success: true,
+      message: `Notification created for ${allDrivers.length} drivers, push sent to ${sent} device(s)`,
+      data: { notifiedCount: allDrivers.length, pushSentCount: sent },
+    });
+  } catch (err) {
+    console.error('Push notification error:', err.message);
     res.status(400).json({ success: false, message: err.message });
   }
 });
