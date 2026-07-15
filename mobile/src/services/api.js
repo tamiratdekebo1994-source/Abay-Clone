@@ -23,7 +23,13 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => Promise.reject(error)
+  (error) => {
+    const status = error.response?.status;
+    const url = `${error.config?.method?.toUpperCase()} ${error.config?.baseURL || ''}${error.config?.url || ''}`;
+    const message = error.response?.data?.message || error.message;
+    console.log(`[API ERROR] ${status || 'NETWORK'} ${url} — ${message}`);
+    return Promise.reject(error);
+  }
 );
 
 // Auth

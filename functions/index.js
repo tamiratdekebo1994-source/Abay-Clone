@@ -40,6 +40,7 @@ const verifyToken = async (req, res, next) => {
 
   try {
     const decodedJWT = jwt.verify(token, 'et-spark-secret-key');
+    if (!decodedJWT.uid) return res.status(401).json({ success: false, message: 'Invalid token' });
     req.userId = decodedJWT.uid;
     return next();
   } catch (jwtErr) {
@@ -171,6 +172,11 @@ app.get('/auth/me', async (req, res) => {
         console.error('Token verification failed:', firebaseErr.message);
         return res.status(401).json({ success: false, message: 'Invalid token' });
       }
+    }
+
+    if (!uid) {
+      // Valid JWT (e.g. a REGISTER verificationToken) but not a session token — has no uid.
+      return res.status(401).json({ success: false, message: 'Invalid token' });
     }
 
     // Retrieve user from Firestore
