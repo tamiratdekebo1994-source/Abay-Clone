@@ -6,6 +6,8 @@ import {
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { orderAPI, uploadAPI } from '../services/api';
 import { COLORS, ORDER_STATUS_LABELS, GOOGLE_MAPS_API_KEY } from '../utils/constants';
@@ -33,6 +35,7 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
   const { orderId, autoAccept } = route.params || {};
   const theme = useSelector((s) => s.settings.theme);
   const C = getColors(theme);
+  const insets = useSafeAreaInsets();
   const [order, setOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -206,17 +209,49 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
         )}
       </MapView>
 
-      {(eta || nextStepText) ? (
-        <View style={styles.stepBanner}>
-          {eta && (
-            <View style={styles.etaBadge}>
-              <Text style={styles.etaIcon}>🕐</Text>
-              <Text style={styles.etaText}>{eta} away</Text>
-            </View>
-          )}
-          {nextStepText ? <Text style={styles.stepText} numberOfLines={2}>↗ {nextStepText}</Text> : null}
+      <View style={[styles.overlayTop, { paddingTop: insets.top + 8 }]}>
+        <View style={styles.topBar}>
+          <View style={styles.topBarTitleWrap}>
+            <Text style={styles.topBarTitle}>Active Delivery</Text>
+            <Text style={styles.topBarSubtitle}>Order #{order.orderNumber}</Text>
+          </View>
+          <View style={styles.topBarActions}>
+            <TouchableOpacity
+              style={styles.topBarBtn}
+              onPress={() => navigation.navigate('Notifications')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="notifications-outline" size={20} color="#111827" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.topBarBtn}
+              onPress={() => navigation.navigate('Chat', { orderId: order.id, orderNumber: order.orderNumber })}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="chatbubble-outline" size={20} color="#111827" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.topBarBtn}
+              onPress={() => Linking.openURL(`tel:${order.recipientPhone}`)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="call-outline" size={20} color="#111827" />
+            </TouchableOpacity>
+          </View>
         </View>
-      ) : null}
+
+        {(eta || nextStepText) ? (
+          <View style={styles.stepBanner}>
+            {eta && (
+              <View style={styles.etaBadge}>
+                <Text style={styles.etaIcon}>🕐</Text>
+                <Text style={styles.etaText}>{eta} away</Text>
+              </View>
+            )}
+            {nextStepText ? <Text style={styles.stepText} numberOfLines={2}>↗ {nextStepText}</Text> : null}
+          </View>
+        ) : null}
+      </View>
 
       <ScrollView style={styles.sheet}>
         <View style={[styles.statusHeader, { backgroundColor: ORDER_STATUS_LABELS[order.status]?.color || COLORS.primary }]}>
@@ -358,8 +393,31 @@ const getStyles = (C) => StyleSheet.create({
   cargoDetail: { fontSize: 14, color: C.gray, marginTop: 4 },
   cargoWarning: { fontSize: 14, color: COLORS.error, marginTop: 6, fontWeight: '600' },
   slideWrap: { margin: 16 },
-  stepBanner: {
+
+  overlayTop: {
     position: 'absolute', top: 0, left: 0, right: 0,
+    zIndex: 10,
+  },
+  topBar: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
+    paddingHorizontal: 16, paddingBottom: 10, gap: 10,
+  },
+  topBarTitleWrap: {
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 14, paddingHorizontal: 14, paddingVertical: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 4,
+  },
+  topBarTitle: { fontSize: 13, fontWeight: '800', color: '#111827' },
+  topBarSubtitle: { fontSize: 11, color: '#6B7280', marginTop: 1 },
+  topBarActions: { flexDirection: 'row', gap: 8 },
+  topBarBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 4,
+  },
+
+  stepBanner: {
     backgroundColor: 'rgba(17,24,39,0.90)', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12,
     gap: 6,
   },

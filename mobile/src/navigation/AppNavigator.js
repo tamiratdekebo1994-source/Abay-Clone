@@ -324,7 +324,7 @@ export default function AppNavigator() {
           <Stack.Screen
             name="ActiveDelivery"
             component={ActiveDeliveryScreen}
-            options={{ title: t('activeDelivery'), headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
+            options={{ headerShown: false, gestureEnabled: false }}
           />
           <Stack.Screen
             name="Chat"
