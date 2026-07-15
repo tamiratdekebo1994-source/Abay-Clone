@@ -866,26 +866,25 @@ app.get('/orders', verifyToken, async (req, res) => {
     const role = userDoc.exists ? userDoc.data().role : null;
     const filterField = role === 'DRIVER' ? 'driverId' : 'storeId';
 
-    let query = db.collection('orders').where(filterField, '==', req.userId);
-
-    const statusParam = req.query.status;
-    const statuses = typeof statusParam === 'string' && statusParam
-      ? statusParam.split(',').map((s) => s.trim()).filter(Boolean)
-      : [];
-    if (statuses.length === 1) {
-      query = query.where('status', '==', statuses[0]);
-    }
-
-    const snapshot = await query.orderBy('createdAt', 'desc').get();
+    // Single equality filter only — no orderBy/second filter in the Firestore query itself,
+    // since combining them requires a manually-created composite index. Filtering and sorting
+    // happen in memory instead, which is fine at this collection's current scale.
+    const snapshot = await db.collection('orders').where(filterField, '==', req.userId).get();
 
     let orders = [];
     snapshot.forEach(doc => {
       orders.push({ id: doc.id, ...doc.data() });
     });
 
-    if (statuses.length > 1) {
+    const statusParam = req.query.status;
+    const statuses = typeof statusParam === 'string' && statusParam
+      ? statusParam.split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
+    if (statuses.length > 0) {
       orders = orders.filter((o) => statuses.includes(o.status));
     }
+
+    orders.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
 
     const total = orders.length;
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -1049,21 +1048,21 @@ app.get('/admin/audit-logs', verifyToken, async (req, res) => {
 app.get('/admin/fraud-flags', verifyToken, async (req, res) => {
   try {
     const { status } = req.query;
-    let query = db.collection('fraudFlags');
 
-    if (status) {
-      query = query.where('status', '==', status);
-    }
+    // Equality filter + orderBy on a different field needs a composite index in Firestore —
+    // filter/sort/limit in memory instead so no manual index setup is required.
+    const snapshot = await db.collection('fraudFlags').get();
 
-    const snapshot = await query
-      .orderBy('createdAt', 'desc')
-      .limit(50)
-      .get();
-
-    const flags = [];
+    let flags = [];
     snapshot.forEach(doc => {
       flags.push({ id: doc.id, ...doc.data() });
     });
+
+    if (status) {
+      flags = flags.filter((f) => f.status === status);
+    }
+    flags.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+    flags = flags.slice(0, 50);
 
     res.json({ success: true, data: { flags, total: flags.length } });
   } catch (err) {
