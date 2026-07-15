@@ -3,12 +3,11 @@ import {
   View, Text, FlatList, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
-import { io } from 'socket.io-client';
-import * as SecureStore from 'expo-secure-store';
-import api from '../services/api';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useSelector } from 'react-redux';
-import { COLORS, SOCKET_URL } from '../utils/constants';
+import { COLORS } from '../utils/constants';
 import { getColors } from '../utils/theme';
+import { db } from '../services/firebase';
 import { t } from '../utils/i18n';
 
 export default function ChatScreen({ route }) {
@@ -20,39 +19,24 @@ export default function ChatScreen({ route }) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  const socketRef = useRef(null);
   const listRef = useRef(null);
 
   useEffect(() => {
-    loadMessages();
-    setupSocket();
-    return () => socketRef.current?.disconnect();
-  }, []);
-
-  const loadMessages = async () => {
-    try {
-      const { data } = await api.get(`/chat/order/${orderId}`);
-      setMessages(data.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const setupSocket = async () => {
-    const token = await SecureStore.getItemAsync('accessToken');
-    const socket = io(SOCKET_URL, { auth: { token } });
-    socket.emit('join_order', orderId);
-    socket.on('new_chat_message', (msg) => {
-      setMessages((prev) => {
-        if (prev.find((m) => m.id === msg.id)) return prev;
-        return [...prev, msg];
+    const q = query(collection(db, 'orders', orderId, 'messages'), orderBy('createdAt', 'asc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return { id: doc.id, ...data, createdAt: data.createdAt?.toDate?.() || new Date() };
       });
+      setMessages(msgs);
+      setIsLoading(false);
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+    }, (err) => {
+      console.error('[Chat listener]', err.message);
+      setIsLoading(false);
     });
-    socketRef.current = socket;
-  };
+    return () => unsubscribe();
+  }, [orderId]);
 
   const sendMessage = async () => {
     const text = input.trim();
@@ -60,9 +44,12 @@ export default function ChatScreen({ route }) {
     setIsSending(true);
     setInput('');
     try {
-      const { data } = await api.post(`/chat/order/${orderId}`, { message: text });
-      setMessages((prev) => [...prev, data.data]);
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+      await addDoc(collection(db, 'orders', orderId, 'messages'), {
+        senderId: user.uid,
+        senderName: user.fullName || 'Driver',
+        message: text,
+        createdAt: serverTimestamp(),
+      });
     } catch {
       setInput(text);
     } finally {
@@ -73,19 +60,19 @@ export default function ChatScreen({ route }) {
   const styles = getStyles(C);
 
   const renderMessage = ({ item }) => {
-    const isMe = item.senderId === user.id;
+    const isMe = item.senderId === user.uid;
     return (
       <View style={[styles.msgRow, isMe ? styles.msgRowMe : styles.msgRowThem]}>
         {!isMe && (
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{(item.sender?.fullName || 'D').charAt(0)}</Text>
+            <Text style={styles.avatarText}>{(item.senderName || 'D').charAt(0)}</Text>
           </View>
         )}
         <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleThem]}>
-          {!isMe && <Text style={styles.senderName}>{item.sender?.fullName || 'Driver'}</Text>}
+          {!isMe && <Text style={styles.senderName}>{item.senderName || 'Driver'}</Text>}
           <Text style={[styles.msgText, isMe && styles.msgTextMe]}>{item.message}</Text>
           <Text style={[styles.msgTime, isMe && styles.msgTimeMe]}>
-            {new Date(item.createdAt).toLocaleTimeString('en-ET', { hour: '2-digit', minute: '2-digit' })}
+            {item.createdAt.toLocaleTimeString('en-ET', { hour: '2-digit', minute: '2-digit' })}
           </Text>
         </View>
       </View>
