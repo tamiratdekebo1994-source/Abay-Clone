@@ -74,6 +74,12 @@ export const COLORS = {
   offline: '#6C757D',
 };
 
+// Floating glass tab bar layout — shared so screens can reserve enough
+// bottom clearance for their scrollable content.
+export const TAB_BAR_HEIGHT = 68;
+export const TAB_BAR_BOTTOM_OFFSET = 20;
+export const TAB_BAR_CLEARANCE = TAB_BAR_HEIGHT + TAB_BAR_BOTTOM_OFFSET + 20;
+
 export const FONTS = {
   regular: 'System',
   medium: 'System',

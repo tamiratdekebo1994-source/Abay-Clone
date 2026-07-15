@@ -10,7 +10,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { driverAPI, orderAPI } from '../services/api';
 import { updateDriver } from '../store/authStore';
-import { COLORS, ORDER_STATUS_LABELS } from '../utils/constants';
+import { COLORS, ORDER_STATUS_LABELS, TAB_BAR_CLEARANCE } from '../utils/constants';
 import { getColors } from '../utils/theme';
 import { db } from '../services/firebase';
 import OrderOfferCard from '../components/OrderOfferCard';
@@ -636,7 +636,7 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 12, fontWeight: '700', color: '#111827' },
 
   sheet: { flex: 1, backgroundColor: COLORS.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, marginTop: -20 },
-  sheetContent: { paddingHorizontal: 20, paddingBottom: 32 },
+  sheetContent: { paddingHorizontal: 20, paddingBottom: TAB_BAR_CLEARANCE },
   dragHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB', alignSelf: 'center', marginTop: 10, marginBottom: 16 },
 
   // You're Online banner
@@ -725,7 +725,7 @@ const styles = StyleSheet.create({
 
   floatPill: {
     position: 'absolute',
-    bottom: 16,
+    bottom: TAB_BAR_CLEARANCE - 20,
     alignSelf: 'center',
     zIndex: 99,
   },

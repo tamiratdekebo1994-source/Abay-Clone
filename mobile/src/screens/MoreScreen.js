@@ -9,7 +9,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { logout, updateDriver } from '../store/authStore';
 import { toggleTheme } from '../store/settingsStore';
 import { uploadAPI } from '../services/api';
-import { COLORS } from '../utils/constants';
+import { COLORS, TAB_BAR_CLEARANCE } from '../utils/constants';
 import { getColors } from '../utils/theme';
 import { t, setLanguage, getLanguage } from '../utils/i18n';
 
@@ -217,7 +217,7 @@ export default function MoreScreen({ navigation }) {
           <Text style={S.signOutText}>Sign Out</Text>
         </TouchableOpacity>
 
-        <Text style={[S.version, { color: C.gray }]}>Fetno Driver v1.0.0</Text>
+        <Text style={[S.version, { color: C.gray }]}>ET Spark Driver v1.0.0</Text>
       </ScrollView>
     </View>
   );
@@ -301,5 +301,5 @@ const S = StyleSheet.create({
   },
   signOutText: { flex: 1, fontSize: 15, fontWeight: '600', color: COLORS.error },
 
-  version: { textAlign: 'center', fontSize: 12, paddingBottom: 32, marginTop: 4 },
+  version: { textAlign: 'center', fontSize: 12, paddingBottom: TAB_BAR_CLEARANCE, marginTop: 4 },
 });

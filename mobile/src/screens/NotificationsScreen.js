@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { notificationAPI } from '../services/api';
-import { COLORS } from '../utils/constants';
+import { COLORS, TAB_BAR_CLEARANCE } from '../utils/constants';
 import { getColors } from '../utils/theme';
 import { t } from '../utils/i18n';
 
@@ -128,7 +128,7 @@ export default function NotificationsScreen() {
             <Text style={styles.emptySubtext}>No notifications yet</Text>
           </View>
         }
-        contentContainerStyle={notifications.length === 0 && styles.emptyContainer}
+        contentContainerStyle={notifications.length === 0 ? styles.emptyContainer : { paddingBottom: TAB_BAR_CLEARANCE }}
       />
     </View>
   );

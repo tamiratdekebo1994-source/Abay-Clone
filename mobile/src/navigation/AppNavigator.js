@@ -2,12 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, Animated, Easing, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Animated, Easing, Image, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { useSelector, useDispatch } from 'react-redux';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import { COLORS } from '../utils/constants';
+import { COLORS, TAB_BAR_HEIGHT, TAB_BAR_BOTTOM_OFFSET } from '../utils/constants';
 import { getColors } from '../utils/theme';
 import { driverAPI } from '../services/api';
 import { t } from '../utils/i18n';
@@ -66,30 +67,86 @@ async function registerPushToken() {
   }
 }
 
+function TabIcon({ name, focused }) {
+  return (
+    <View style={[tabStyles.iconWrap, focused && tabStyles.iconWrapActive]}>
+      <Ionicons name={name} size={22} color={focused ? COLORS.white : '#8A8A8E'} />
+    </View>
+  );
+}
+
+function FloatingGlassTabBar(props) {
+  const theme = useSelector((state) => state.settings.theme);
+  return (
+    <View style={tabStyles.floatingWrap} pointerEvents="box-none">
+      {/* Shadow lives on this outer view — overflow must stay visible here or iOS drops the shadow */}
+      <View style={tabStyles.shadowWrap}>
+        {/* Clipping lives on this inner view so the blur/content respect the pill shape */}
+        <View style={tabStyles.pill}>
+          <BlurView
+            intensity={Platform.OS === 'ios' ? 60 : 90}
+            tint={theme === 'dark' ? 'dark' : 'light'}
+            style={tabStyles.blur}
+          >
+            <View
+              style={[
+                tabStyles.tint,
+                { backgroundColor: theme === 'dark' ? 'rgba(24,24,27,0.55)' : 'rgba(255,255,255,0.55)' },
+              ]}
+            />
+            <BottomTabBarRow {...props} />
+          </BlurView>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function BottomTabBarRow({ state, descriptors, navigation }) {
+  return (
+    <View style={tabStyles.row}>
+      {state.routes.map((route, index) => {
+        const { options } = descriptors[route.key];
+        const focused = state.index === index;
+        const iconName = options.tabBarIconName
+          ? options.tabBarIconName(focused)
+          : 'ellipse-outline';
+
+        const onPress = () => {
+          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+          if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+        };
+
+        return (
+          <TouchableOpacity
+            key={route.key}
+            accessibilityRole="button"
+            accessibilityState={focused ? { selected: true } : {}}
+            accessibilityLabel={options.tabBarLabel || route.name}
+            onPress={onPress}
+            activeOpacity={0.75}
+            style={tabStyles.tabBtn}
+          >
+            <TabIcon name={iconName} focused={focused} />
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
 function MainTabs() {
   const theme = useSelector((state) => state.settings.theme);
   const C = getColors(theme);
   return (
     <Tab.Navigator
+      tabBar={(props) => <FloatingGlassTabBar {...props} />}
       screenOptions={{
         headerShown: true,
         headerStyle: { backgroundColor: COLORS.primary },
         headerTintColor: COLORS.white,
         headerTitleStyle: { fontWeight: '700', fontSize: 18 },
         headerShadowVisible: false,
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: '#999',
-        tabBarStyle: {
-          backgroundColor: COLORS.white,
-          paddingTop: 6, paddingBottom: 8,
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: '#E0E0E0',
-          height: 64,
-        },
-        tabBarBackground: () => (
-          <View style={{ flex: 1, backgroundColor: COLORS.white, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E0E0E0' }} />
-        ),
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: 2 },
         sceneStyle: { backgroundColor: C.background },
       }}
     >
@@ -99,9 +156,7 @@ function MainTabs() {
         options={{
           headerShown: false,
           tabBarLabel: 'Home',
-          tabBarIcon: ({ focused, color, size }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />
-          ),
+          tabBarIconName: (focused) => (focused ? 'home' : 'home-outline'),
         }}
       />
       <Tab.Screen
@@ -110,9 +165,7 @@ function MainTabs() {
         options={{
           headerShown: false,
           tabBarLabel: 'Trips',
-          tabBarIcon: ({ focused, color, size }) => (
-            <Ionicons name={focused ? 'car' : 'car-outline'} size={size} color={color} />
-          ),
+          tabBarIconName: (focused) => (focused ? 'car' : 'car-outline'),
         }}
       />
       <Tab.Screen
@@ -121,9 +174,7 @@ function MainTabs() {
         options={{
           headerShown: false,
           tabBarLabel: 'Earnings',
-          tabBarIcon: ({ focused, color, size }) => (
-            <Ionicons name={focused ? 'cash' : 'cash-outline'} size={size} color={color} />
-          ),
+          tabBarIconName: (focused) => (focused ? 'cash' : 'cash-outline'),
         }}
       />
       <Tab.Screen
@@ -132,9 +183,7 @@ function MainTabs() {
         options={{
           headerShown: false,
           tabBarLabel: 'Notifications',
-          tabBarIcon: ({ focused, color, size }) => (
-            <Ionicons name={focused ? 'notifications' : 'notifications-outline'} size={size} color={color} />
-          ),
+          tabBarIconName: (focused) => (focused ? 'notifications' : 'notifications-outline'),
         }}
       />
       <Tab.Screen
@@ -143,14 +192,45 @@ function MainTabs() {
         options={{
           headerShown: false,
           tabBarLabel: 'More',
-          tabBarIcon: ({ focused, color, size }) => (
-            <Ionicons name={focused ? 'ellipsis-horizontal-circle' : 'ellipsis-horizontal-circle-outline'} size={size} color={color} />
-          ),
+          tabBarIconName: (focused) => (focused ? 'ellipsis-horizontal-circle' : 'ellipsis-horizontal-circle-outline'),
         }}
       />
     </Tab.Navigator>
   );
 }
+
+const tabStyles = StyleSheet.create({
+  floatingWrap: {
+    position: 'absolute',
+    left: 20, right: 20, bottom: TAB_BAR_BOTTOM_OFFSET,
+  },
+  shadowWrap: {
+    height: TAB_BAR_HEIGHT,
+    borderRadius: TAB_BAR_HEIGHT / 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  pill: {
+    flex: 1,
+    borderRadius: TAB_BAR_HEIGHT / 2,
+    overflow: 'hidden',
+  },
+  blur: { flex: 1 },
+  tint: { ...StyleSheet.absoluteFillObject },
+  row: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', borderRadius: TAB_BAR_HEIGHT / 2,
+  },
+  tabBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', height: '100%' },
+  iconWrap: {
+    width: 42, height: 42, borderRadius: 21,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  iconWrapActive: { backgroundColor: COLORS.primary },
+});
 
 function AuthStack() {
   return (

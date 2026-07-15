@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { orderAPI } from '../services/api';
-import { COLORS, ORDER_STATUS_LABELS } from '../utils/constants';
+import { COLORS, ORDER_STATUS_LABELS, TAB_BAR_CLEARANCE } from '../utils/constants';
 import { getColors } from '../utils/theme';
 
 const FILTERS = [
@@ -225,7 +225,7 @@ export default function OrdersScreen({ navigation }) {
           }
           onEndReached={() => { if (orders.length < total) load(); }}
           onEndReachedThreshold={0.3}
-          contentContainerStyle={orders.length === 0 ? S.emptyContainer : { paddingBottom: 24 }}
+          contentContainerStyle={orders.length === 0 ? S.emptyContainer : { paddingBottom: TAB_BAR_CLEARANCE }}
           ListEmptyComponent={
             <View style={S.empty}>
               <Text style={S.emptyEmoji}>📦</Text>

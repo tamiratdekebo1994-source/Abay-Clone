@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { driverAPI } from '../services/api';
-import { COLORS } from '../utils/constants';
+import { COLORS, TAB_BAR_CLEARANCE } from '../utils/constants';
 import { getColors } from '../utils/theme';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -172,7 +172,7 @@ export default function EarningsScreen() {
           </View>
         ))}
 
-      <View style={{ height: 40 }} />
+      <View style={{ height: TAB_BAR_CLEARANCE }} />
     </ScrollView>
   );
 }
