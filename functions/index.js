@@ -424,7 +424,7 @@ app.get('/driver/earnings', verifyToken, async (req, res) => {
 
     const delivered = snapshot.docs
       .map((doc) => doc.data())
-      .filter((o) => o.status === 'DELIVERED' && o.createdAt?.toDate?.() >= start);
+      .filter((o) => o.status === 'DELIVERED' && (o.deliveredAt?.toDate?.() ?? o.createdAt?.toDate?.()) >= start);
 
     const totalEarnings = delivered.reduce((sum, o) => sum + (o.driverFee || 0), 0);
     const totalDeliveries = delivered.length;
@@ -465,6 +465,7 @@ app.get('/driver/orders/nearby', verifyToken, async (req, res) => {
     for (const doc of snapshot.docs) {
       const order = doc.data();
       if (typeof order.pickupLat !== 'number' || typeof order.pickupLng !== 'number') continue;
+      if (order.rejectedByDriverIds?.includes(req.userId)) continue;
 
       const distanceKm = haversineKm(lat, lng, order.pickupLat, order.pickupLng);
       if (distanceKm > radiusKm) continue;
@@ -572,6 +573,14 @@ app.post('/stores', verifyToken, async (req, res) => {
 
 // ─── Order Routes ───────────────────────────────────────────────────────────
 
+const ORDER_STATUS_FLOW = ['DRIVER_ASSIGNED', 'DRIVER_AT_STORE', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERED'];
+
+async function attachStoreName(order) {
+  if (!order.storeId) return order;
+  const storeSnap = await db.collection('stores').where('userId', '==', order.storeId).limit(1).get();
+  return { ...order, store: { storeName: storeSnap.empty ? 'Store' : storeSnap.docs[0].data().storeName } };
+}
+
 app.post('/orders', verifyToken, async (req, res) => {
   try {
     const { pickupAddress, deliveryAddress, totalAmount, pickupLat, pickupLng, deliveryLat, deliveryLng } = req.body;
@@ -603,9 +612,101 @@ app.get('/orders/:orderId', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    res.json({ success: true, data: { id: doc.id, ...doc.data() } });
+    const order = await attachStoreName({ id: doc.id, ...doc.data() });
+    res.json({ success: true, data: order });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/orders/:orderId/accept', verifyToken, async (req, res) => {
+  try {
+    const orderRef = db.collection('orders').doc(req.params.orderId);
+
+    const order = await db.runTransaction(async (tx) => {
+      const doc = await tx.get(orderRef);
+      if (!doc.exists) {
+        const err = new Error('Order not found');
+        err.status = 404;
+        throw err;
+      }
+      const data = doc.data();
+      if (data.status !== 'SEARCHING_DRIVER') {
+        const err = new Error('This order has already been taken');
+        err.status = 409;
+        throw err;
+      }
+
+      let driverFee = data.driverFee;
+      let distanceKm = data.distanceKm;
+      if (driverFee == null || distanceKm == null) {
+        const commissionDoc = await db.collection('commissionSettings').doc('default').get();
+        const driverCommissionPercent = commissionDoc.exists
+          ? (commissionDoc.data().driverCommissionPercent ?? 85)
+          : 85;
+        driverFee = driverFee ?? Math.round((data.totalAmount || 0) * (driverCommissionPercent / 100));
+        distanceKm = distanceKm ?? (
+          typeof data.pickupLat === 'number' && typeof data.deliveryLat === 'number'
+            ? haversineKm(data.pickupLat, data.pickupLng, data.deliveryLat, data.deliveryLng)
+            : null
+        );
+      }
+
+      const update = {
+        driverId: req.userId,
+        status: 'DRIVER_ASSIGNED',
+        driverFee,
+        distanceKm,
+        assignedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      tx.update(orderRef, update);
+      return { id: doc.id, ...data, ...update };
+    });
+
+    const enriched = await attachStoreName(order);
+    res.json({ success: true, data: enriched });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message || 'Failed to accept order' });
+  }
+});
+
+app.post('/driver/orders/:orderId/reject', verifyToken, async (req, res) => {
+  try {
+    await db.collection('orders').doc(req.params.orderId).update({
+      rejectedByDriverIds: admin.firestore.FieldValue.arrayUnion(req.userId),
+    });
+    res.json({ success: true, message: 'Order declined' });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.patch('/orders/:orderId/status', verifyToken, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const orderRef = db.collection('orders').doc(req.params.orderId);
+    const doc = await orderRef.get();
+
+    if (!doc.exists) return res.status(404).json({ success: false, message: 'Order not found' });
+    const data = doc.data();
+
+    if (data.driverId !== req.userId) {
+      return res.status(403).json({ success: false, message: 'Not assigned to this order' });
+    }
+
+    const currentIdx = ORDER_STATUS_FLOW.indexOf(data.status);
+    const nextIdx = ORDER_STATUS_FLOW.indexOf(status);
+    if (nextIdx === -1 || nextIdx !== currentIdx + 1) {
+      return res.status(400).json({ success: false, message: 'Invalid status transition' });
+    }
+
+    const update = { status, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+    if (status === 'DELIVERED') update.deliveredAt = admin.firestore.FieldValue.serverTimestamp();
+
+    await orderRef.update(update);
+    res.json({ success: true, data: { status } });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
   }
 });
 
