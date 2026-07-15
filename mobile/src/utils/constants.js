@@ -1,44 +1,18 @@
 import Constants from 'expo-constants';
 
-// Auto-detect the dev server host from Expo's own connection info.
-// Priority: explicit API_BASE_URL env var → Expo bundler host → localhost fallback.
-const _getDevBase = () => {
-  // 1. Derive IP from the Expo bundler connection — most reliable for physical devices
-  //    because the phone already reached this IP to load the bundle.
-  const hostUri =
-    Constants.expoGoConfig?.debuggerHost ||          // SDK 50+ in Expo Go
-    Constants.expoConfig?.hostUri ||                  // SDK 46–49
-    Constants.manifest2?.launchAsset?.url             // SDK 46 EAS Update URL
-      ?.match(/^https?:\/\/([^/:]+)/)?.[1] ||
-    Constants.manifest?.debuggerHost;                 // SDK < 46
-
-  if (hostUri) {
-    const ip = hostUri.split(':')[0];
-    if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
-      return `http://${ip}`;
-    }
-  }
-
-  // 2. Explicit override from mobile/.env (only if set and not a placeholder IP)
-  const envUrl = Constants.expoConfig?.extra?.apiBaseUrl;
-  const PLACEHOLDER_IPS = ['192.168.1.100', '10.0.0.1'];
-  if (envUrl && !PLACEHOLDER_IPS.some((p) => envUrl.includes(p))) return envUrl;
-
-  // 3. Localhost fallback (works in iOS Simulator / Android Emulator)
-  return 'http://localhost';
-};
-
-export const DEV_API_BASE = _getDevBase();
-
+// There is no local backend in this project — every environment (Expo Go, EAS
+// dev/preview/production builds) talks to the deployed Firebase Cloud Functions
+// API. An explicit override is still available via mobile/.env for the rare case
+// of running a local emulator.
 const PROD_API_BASE = 'https://europe-west1-abay-clone-project-36721.cloudfunctions.net';
+const envOverride = Constants.expoConfig?.extra?.apiBaseUrl;
+const API_BASE = (envOverride && envOverride !== 'http://localhost:5000') ? envOverride : PROD_API_BASE;
 
-export const API_URL = __DEV__
-  ? `${DEV_API_BASE}/api`
-  : `${PROD_API_BASE}/api`;
+export const DEV_API_BASE = API_BASE;
 
-export const SOCKET_URL = __DEV__
-  ? DEV_API_BASE
-  : PROD_API_BASE;
+export const API_URL = `${API_BASE}/api`;
+
+export const SOCKET_URL = API_BASE;
 
 // Google Maps API key — injected at build time via app.config.js from GOOGLE_MAPS_API_KEY env var
 // See: mobile/.env.example
