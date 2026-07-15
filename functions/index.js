@@ -532,6 +532,25 @@ app.post('/driver/push-token', verifyToken, async (req, res) => {
   }
 });
 
+app.patch('/driver/location', verifyToken, async (req, res) => {
+  try {
+    const { lat, lng } = req.body;
+    if (typeof lat !== 'number' || typeof lng !== 'number') {
+      return res.status(400).json({ success: false, message: 'lat and lng must be numbers' });
+    }
+
+    await db.collection('drivers').doc(req.userId).set({
+      location: { lat, lng },
+      locationUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    res.json({ success: true, message: 'Location updated' });
+  } catch (err) {
+    console.error('Driver location error:', err.message);
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
 // ─── Store Routes ───────────────────────────────────────────────────────────
 
 app.get('/stores', async (req, res) => {

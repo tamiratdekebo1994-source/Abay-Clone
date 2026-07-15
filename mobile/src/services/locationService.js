@@ -30,7 +30,7 @@ TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
     if (!location) return;
 
     try {
-      const token = await SecureStore.getItemAsync('accessToken');
+      const token = await SecureStore.getItemAsync('firebaseIdToken');
       if (!token) return;
 
       await fetch(`${apiBaseUrl}/driver/location`, {
@@ -75,7 +75,7 @@ export const startBackgroundTracking = async (baseUrl) => {
       distanceInterval: LOCATION_UPDATE_DISTANCE,
       showsBackgroundLocationIndicator: true,
       foregroundService: {
-        notificationTitle: 'Fetno',
+        notificationTitle: 'ET Spark',
         notificationBody: 'Your location is being shared for active delivery',
         notificationColor: '#1B4332',
       },

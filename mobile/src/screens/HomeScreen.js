@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   ScrollView, Alert, RefreshControl, ActivityIndicator,
-  Platform, Animated, Dimensions, Modal,
+  Platform, Animated, Dimensions, Modal, Linking,
 } from 'react-native';
 import MapView, { Marker, Polygon, PROVIDER_GOOGLE } from 'react-native-maps';
+import * as Location from 'expo-location';
 import { collection, query, where, onSnapshot, doc, getDoc, getDocs } from 'firebase/firestore';
 import { useSelector, useDispatch } from 'react-redux';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -120,6 +121,44 @@ export default function HomeScreen({ navigation }) {
   const setupLocation = async () => {
     const loc = await getCurrentLocation();
     if (loc) setLocation({ latitude: loc.lat, longitude: loc.lng });
+  };
+
+  const handleLocationTipPress = async () => {
+    try {
+      const fg = await Location.getForegroundPermissionsAsync();
+      if (fg.status !== 'granted' && !fg.canAskAgain) {
+        Alert.alert(
+          'Location Permission Needed',
+          'Please enable location access in Settings to receive more delivery offers.',
+          [{ text: 'Cancel', style: 'cancel' }, { text: 'Open Settings', onPress: () => Linking.openSettings() }]
+        );
+        return;
+      }
+
+      const bg = await Location.getBackgroundPermissionsAsync();
+      if (bg.status === 'granted') {
+        Alert.alert('Already Enabled', "You're all set — background location sharing is on.");
+        return;
+      }
+      if (!bg.canAskAgain) {
+        Alert.alert(
+          'Allow "Always" Location',
+          'Enable "Always" location access in Settings so you keep getting offers even when the app is in the background.',
+          [{ text: 'Cancel', style: 'cancel' }, { text: 'Open Settings', onPress: () => Linking.openSettings() }]
+        );
+        return;
+      }
+
+      const granted = await startBackgroundTracking();
+      Alert.alert(
+        granted ? 'Location Sharing Enabled' : 'Foreground Only',
+        granted
+          ? "You'll now get matched with more delivery offers, even in the background."
+          : "Background access wasn't granted, so your location only updates while the app is open."
+      );
+    } catch {
+      Alert.alert('Error', 'Could not update location settings. Please try again.');
+    }
   };
 
   const loadData = async () => {
@@ -482,7 +521,7 @@ export default function HomeScreen({ navigation }) {
 
         {/* Location tip (offline) */}
         {!isOnline && (
-          <TouchableOpacity style={styles.tipCard}>
+          <TouchableOpacity style={styles.tipCard} onPress={handleLocationTipPress} activeOpacity={0.75}>
             <View style={styles.tipIconWrap}>
               <Text style={styles.tipIcon}>⚙️</Text>
             </View>
