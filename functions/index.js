@@ -224,6 +224,25 @@ app.get('/auth/me', async (req, res) => {
   }
 });
 
+app.patch('/auth/profile', verifyToken, async (req, res) => {
+  try {
+    const { fullName, email } = req.body;
+    if (!fullName || !fullName.trim()) {
+      return res.status(400).json({ success: false, message: 'fullName is required' });
+    }
+
+    await db.collection('users').doc(req.userId).set({
+      fullName: fullName.trim(),
+      email: email || null,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    res.json({ success: true, message: 'Profile updated' });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
 // ─── Mock OTP Routes ──────────────────────────────────────────────────────────
 // No SMS gateway is configured — every request/verify uses a fixed test code.
 // Good enough for development and QA; swap for a real SMS provider before
@@ -891,6 +910,80 @@ app.patch('/orders/:orderId/status', verifyToken, async (req, res) => {
     }
 
     res.json({ success: true, data: { status } });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/orders/:orderId/review', verifyToken, async (req, res) => {
+  try {
+    const { rating, comment } = req.body;
+    const ratingNum = Number(rating);
+    if (!ratingNum || ratingNum < 1 || ratingNum > 5) {
+      return res.status(400).json({ success: false, message: 'rating must be between 1 and 5' });
+    }
+
+    const orderRef = db.collection('orders').doc(req.params.orderId);
+    const doc = await orderRef.get();
+    if (!doc.exists) return res.status(404).json({ success: false, message: 'Order not found' });
+    const data = doc.data();
+
+    if (data.driverId !== req.userId) {
+      return res.status(403).json({ success: false, message: 'Not assigned to this order' });
+    }
+    if (data.status !== 'DELIVERED') {
+      return res.status(400).json({ success: false, message: 'Order must be delivered before it can be reviewed' });
+    }
+    if (data.review) {
+      return res.status(400).json({ success: false, message: 'This order has already been reviewed' });
+    }
+
+    const review = { rating: ratingNum, comment: comment || null, createdAt: admin.firestore.FieldValue.serverTimestamp() };
+    await orderRef.update({ review });
+
+    // Roll the new rating into the driver's running average.
+    await db.runTransaction(async (tx) => {
+      const driverRef = db.collection('drivers').doc(req.userId);
+      const driverDoc = await tx.get(driverRef);
+      const current = driverDoc.data() || {};
+      const prevCount = current.ratingCount || 0;
+      const prevRating = current.rating || 0;
+      const newCount = prevCount + 1;
+      const newRating = (prevRating * prevCount + ratingNum) / newCount;
+      tx.update(driverRef, { rating: newRating, ratingCount: newCount });
+    }).catch((err) => console.error('Driver rating rollup failed:', err.message));
+
+    res.json({ success: true, message: 'Review submitted' });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+const CANCELLABLE_STATUSES = ['SEARCHING_DRIVER', 'DRIVER_ASSIGNED', 'DRIVER_AT_STORE', 'PICKED_UP', 'IN_TRANSIT'];
+
+app.post('/orders/:orderId/cancel', verifyToken, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const orderRef = db.collection('orders').doc(req.params.orderId);
+    const doc = await orderRef.get();
+    if (!doc.exists) return res.status(404).json({ success: false, message: 'Order not found' });
+    const data = doc.data();
+
+    if (data.driverId !== req.userId && data.storeId !== req.userId) {
+      return res.status(403).json({ success: false, message: 'Not authorized to cancel this order' });
+    }
+    if (!CANCELLABLE_STATUSES.includes(data.status)) {
+      return res.status(400).json({ success: false, message: `Order cannot be cancelled from status ${data.status}` });
+    }
+
+    await orderRef.update({
+      status: 'CANCELLED',
+      cancelReason: reason || null,
+      cancelledBy: req.userId,
+      cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    res.json({ success: true, message: 'Order cancelled' });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }
