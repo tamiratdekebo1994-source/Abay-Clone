@@ -81,7 +81,9 @@ export default function PhoneEntryScreen({ navigation }) {
               activeOpacity={1}
             >
               <View style={S.prefix}>
-                <Text style={S.flag}>🇪🇹</Text>
+                <View style={S.flagBadge}>
+                  <Text style={S.flagBadgeText}>ET</Text>
+                </View>
                 <Text style={S.code}>+251</Text>
               </View>
               <View style={S.sep} />
@@ -153,12 +155,17 @@ const S = StyleSheet.create({
     borderWidth: 2, borderColor: '#EBEBEB',
     borderRadius: 16, height: 66,
     backgroundColor: '#FAFAFA',
+    overflow: 'hidden',
   },
   prefix: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, gap: 8,
   },
-  flag: { fontSize: 24 },
+  flagBadge: {
+    paddingHorizontal: 7, paddingVertical: 3,
+    borderRadius: 6, backgroundColor: COLORS.primary,
+  },
+  flagBadgeText: { fontSize: 11, fontWeight: '800', color: COLORS.white, letterSpacing: 0.5 },
   code: { fontSize: 17, fontWeight: '700', color: '#111' },
   sep: { width: 1.5, height: 30, backgroundColor: '#E0E0E0' },
   input: {
