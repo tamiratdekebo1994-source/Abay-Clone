@@ -296,10 +296,25 @@ app.post('/driver/register', async (req, res) => {
       licenseNumber: licenseNumber.trim(),
       licenseClass: licenseClass || null,
       licenseExpiry,
-      status: 'PENDING',
+      status: 'DRIVER',
       rejectionReason: null,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Also create driver profile
+    await db.collection('drivers').doc(userId).set({
+      userId,
+      fullName: fullName.trim(),
+      city,
+      vehicleType,
+      vehiclePlate: vehiclePlate.toUpperCase(),
+      licenseNumber: licenseNumber.trim(),
+      status: 'ACTIVE',
+      earnings: 0,
+      rating: 0,
+      totalRides: 0,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
     console.log('[DRIVER/REGISTER] Success! Application ID:', docRef.id);
