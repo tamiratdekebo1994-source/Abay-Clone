@@ -16,15 +16,20 @@ const db = admin.firestore();
 const auth = admin.auth();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
+const FILE_BASE_URL = 'https://europe-west1-abay-clone-project-36721.cloudfunctions.net/api';
+
 async function uploadImageBuffer(buffer, contentType, destinationPath) {
-  // getSignedUrl() needs iam.serviceAccounts.signBlob, which this project's runtime
-  // service account doesn't have (same issue hit earlier with Firebase custom tokens).
-  // makePublic() + the public object URL avoids that permission entirely.
+  // Neither getSignedUrl() (needs iam.serviceAccounts.signBlob, which this project's
+  // runtime service account doesn't have) nor makePublic() (fails outright on buckets
+  // with Uniform Bucket-Level Access, the default for newly-created buckets, which this
+  // one is) are usable here. Simplest robust option: don't try to make the object public
+  // at all — just save it, and serve it back through our own /files/* route below using
+  // the Admin SDK, which always has full read access to the project's own bucket
+  // regardless of ACLs, signing permissions, or bucket-level access settings.
   const bucket = admin.storage().bucket();
   const file = bucket.file(destinationPath);
   await file.save(buffer, { metadata: { contentType } });
-  await file.makePublic();
-  return `https://storage.googleapis.com/${bucket.name}/${destinationPath}`;
+  return `${FILE_BASE_URL}/files/${destinationPath}`;
 }
 
 console.log('Admin SDK initialized');
@@ -1072,6 +1077,31 @@ app.post('/upload/avatar', verifyToken, upload.single('file'), async (req, res) 
   } catch (err) {
     console.error('Avatar upload error:', err.message);
     res.status(400).json({ success: false, message: err.message || 'Upload failed' });
+  }
+});
+
+app.get('/files/*', async (req, res) => {
+  try {
+    const filePath = req.params[0];
+    const bucket = admin.storage().bucket();
+    const file = bucket.file(filePath);
+
+    const [exists] = await file.exists();
+    if (!exists) return res.status(404).json({ success: false, message: 'File not found' });
+
+    const [metadata] = await file.getMetadata();
+    res.setHeader('Content-Type', metadata.contentType || 'application/octet-stream');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+
+    file.createReadStream()
+      .on('error', (err) => {
+        console.error('File stream error:', err.message);
+        if (!res.headersSent) res.status(500).end();
+      })
+      .pipe(res);
+  } catch (err) {
+    console.error('File serve error:', err.message);
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
