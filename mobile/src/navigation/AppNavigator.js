@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, Animated, Easing, Image, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { useSelector, useDispatch } from 'react-redux';
@@ -259,18 +259,9 @@ function AuthStack() {
 export default function AppNavigator() {
   const dispatch = useDispatch();
   const { isAuthenticated, isLoading, driver, user } = useSelector((state) => state.auth);
-  const spinValue = useRef(new Animated.Value(0)).current;
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    Animated.loop(
-      Animated.timing(spinValue, {
-        toValue: 1,
-        duration: 1800,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      })
-    ).start();
     const timer = setTimeout(() => setShowSplash(false), 5000);
     return () => clearTimeout(timer);
   }, []);
@@ -281,15 +272,10 @@ export default function AppNavigator() {
     }
   }, [isAuthenticated]);
 
-  const spin = spinValue.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-
   if (isLoading || showSplash) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary }}>
-        <Animated.Image
-          source={require('../../assets/icon.png')}
-          style={{ width: 220, height: 220, transform: [{ rotate: spin }] }}
-        />
+        <ActivityIndicator size="large" color={COLORS.accent} style={{ transform: [{ scale: 1.6 }] }} />
       </View>
     );
   }
