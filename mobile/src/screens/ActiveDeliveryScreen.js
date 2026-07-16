@@ -357,7 +357,6 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
             />
           </View>
         )}
-        )}
 
         <View style={{ height: 32 }} />
       </ScrollView>
