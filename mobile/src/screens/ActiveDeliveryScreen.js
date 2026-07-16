@@ -31,6 +31,14 @@ function decodePolyline(encoded) {
 
 const STATUS_FLOW = ['DRIVER_ASSIGNED', 'DRIVER_AT_STORE', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERED'];
 
+// Action-oriented slide labels for each step, rather than a generic "Slide to <status>".
+const SLIDE_ACTION_LABELS = {
+  DRIVER_AT_STORE: 'Confirm Arrival',
+  PICKED_UP: 'Complete Pickup',
+  IN_TRANSIT: 'Navigate to Destination',
+  DELIVERED: 'Complete Delivery',
+};
+
 export default function ActiveDeliveryScreen({ route, navigation }) {
   const { orderId, autoAccept } = route.params || {};
   const theme = useSelector((s) => s.settings.theme);
@@ -348,7 +356,7 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
           <View style={styles.slideWrap}>
             <SlideToConfirm
               key={nextStatus}
-              label={`Slide to ${nextStatusLabel?.en?.toLowerCase()}`}
+              label={SLIDE_ACTION_LABELS[nextStatus] || `Slide to ${nextStatusLabel?.en?.toLowerCase()}`}
               labelAm={nextStatusLabel?.am}
               loading={isUpdating}
               disabled={nextStatus === 'DELIVERED' && !podPhotoUri}
