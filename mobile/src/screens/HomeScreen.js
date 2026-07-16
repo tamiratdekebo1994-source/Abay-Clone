@@ -33,6 +33,12 @@ function haversineKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function formatHour12(hour24) {
+  const period = hour24 >= 12 ? 'PM' : 'AM';
+  const h = hour24 % 12 === 0 ? 12 : hour24 % 12;
+  return `${h} ${period}`;
+}
+
 const HOURS = ['6a','7a','8a','9a','10a','11a','12p','1p','2p','3p','4p','5p','6p','7p','8p','9p'];
 const HOURS_START = 6; // HOURS[i] corresponds to real hour-of-day (HOURS_START + i)
 const MIN_ORDERS_FOR_PATTERN = 10; // below this, show "not enough data" instead of a sparse/misleading chart
@@ -106,6 +112,16 @@ export default function HomeScreen({ navigation }) {
 
   const currentHour = new Date().getHours();
   const currentHourIdx = Math.max(0, Math.min(currentHour - 6, HOURS.length - 1));
+
+  const hasActivityPattern = !!activityHeatmap && activityHeatmap.totalOrders >= MIN_ORDERS_FOR_PATTERN;
+  let peakHourIdx = -1;
+  if (hasActivityPattern) {
+    let bestLevel = -1;
+    HOURS.forEach((_, i) => {
+      const level = activityHeatmap.normalized[HOURS_START + i] || 0;
+      if (level > bestLevel) { bestLevel = level; peakHourIdx = i; }
+    });
+  }
 
   useEffect(() => {
     setupLocation();
@@ -666,19 +682,37 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.chartTitle}>Popular offer times</Text>
             <Text style={styles.chartChev}>›</Text>
           </View>
-          {activityHeatmap && activityHeatmap.totalOrders >= MIN_ORDERS_FOR_PATTERN ? (
+          {hasActivityPattern ? (
             <>
-              <Text style={styles.chartSub}>Based on {activityHeatmap.totalOrders} past orders.</Text>
+              <View style={styles.chartSubRow}>
+                <Text style={styles.chartSub}>Based on {activityHeatmap.totalOrders} past orders</Text>
+                {peakHourIdx >= 0 && (
+                  <View style={styles.peakPill}>
+                    <Text style={styles.peakPillText}>
+                      🔥 Peak {formatHour12(HOURS_START + peakHourIdx)}–{formatHour12(HOURS_START + peakHourIdx + 1)}
+                    </Text>
+                  </View>
+                )}
+              </View>
               <View style={styles.chart}>
                 {HOURS.map((h, i) => {
                   const isCurrent = i === currentHourIdx;
+                  const isPeak = i === peakHourIdx;
                   const level = activityHeatmap.normalized[HOURS_START + i] || 0;
-                  const fillH = Math.max(4, level * 72);
+                  const fillH = Math.max(6, level * 72);
                   return (
                     <View key={h} style={styles.barWrap}>
                       <View style={styles.barTrack}>
-                        <View style={[styles.barFill, { height: fillH },
-                          isCurrent ? styles.barActive : styles.barInactive]} />
+                        <View style={[
+                          styles.barFill,
+                          { height: fillH },
+                          isCurrent ? styles.barActive : (isPeak ? styles.barPeak : styles.barInactive),
+                        ]}>
+                          <View style={styles.barSheen} />
+                        </View>
+                      </View>
+                      <View style={styles.nowDotSlot}>
+                        {isCurrent && <View style={styles.nowDot} />}
                       </View>
                       <View style={styles.barLabelSlot}>
                         {(i % 4 === 0) && (
@@ -933,19 +967,34 @@ const styles = StyleSheet.create({
   chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   chartTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
   chartChev: { fontSize: 20, color: '#9CA3AF' },
-  chartSub: { fontSize: 12, color: '#6B7280', marginTop: 2, marginBottom: 14 },
+  chartSubRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginTop: 2, marginBottom: 14,
+  },
+  chartSub: { fontSize: 12, color: '#6B7280' },
+  peakPill: {
+    backgroundColor: '#FFF4E0', borderRadius: 20,
+    paddingHorizontal: 10, paddingVertical: 4,
+  },
+  peakPillText: { fontSize: 11, fontWeight: '700', color: '#B45309' },
   chart: { flexDirection: 'row', alignItems: 'flex-end', paddingTop: 4 },
   barWrap: { flex: 1, alignItems: 'center' },
   barTrack: {
-    width: '55%', height: 72,
-    backgroundColor: '#EAECEF', borderRadius: 6,
+    width: '62%', height: 72,
+    backgroundColor: '#EEF0F3', borderRadius: 9,
     justifyContent: 'flex-end', overflow: 'hidden',
-    borderBottomWidth: 2, borderBottomColor: '#D8DCE1',
   },
-  barFill: { width: '100%', borderTopLeftRadius: 6, borderTopRightRadius: 6 },
+  barFill: { width: '100%', borderRadius: 9, overflow: 'hidden' },
+  barSheen: {
+    height: '35%', backgroundColor: 'rgba(255,255,255,0.35)',
+    borderTopLeftRadius: 9, borderTopRightRadius: 9,
+  },
   barActive: { backgroundColor: COLORS.primary },
-  barInactive: { backgroundColor: '#B8BFC7' },
-  barLabelSlot: { height: 16, marginTop: 5, alignItems: 'center' },
+  barPeak: { backgroundColor: COLORS.accent || '#F0A93A' },
+  barInactive: { backgroundColor: '#C7CDD4' },
+  nowDotSlot: { height: 8, marginTop: 3, alignItems: 'center', justifyContent: 'center' },
+  nowDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: COLORS.primary },
+  barLabelSlot: { height: 16, marginTop: 3, alignItems: 'center' },
   barLabel: { fontSize: 9, color: '#9CA3AF' },
   barLabelActive: { color: COLORS.primary, fontWeight: '700' },
   chartEmpty: { alignItems: 'center', paddingVertical: 24 },
