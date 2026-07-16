@@ -280,20 +280,27 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📦 Pickup Location</Text>
-          <Text style={styles.address}>{order.store?.storeName}</Text>
-          <Text style={styles.addressSub}>{order.pickupAddress}</Text>
-          {order.pickupNotes && <Text style={styles.notes}>Note: {order.pickupNotes}</Text>}
-          <TouchableOpacity
-            style={styles.navBtn}
-            onPress={() => Linking.openURL(`https://maps.google.com/?q=${order.pickupLat},${order.pickupLng}`)}
-          >
-            <Text style={styles.navBtnText}>🗺️ Navigate to Pickup</Text>
-          </TouchableOpacity>
-        </View>
+        {isPickup ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>📦 Pickup Location</Text>
+            <Text style={styles.address}>{order.store?.storeName}</Text>
+            <Text style={styles.addressSub}>{order.pickupAddress}</Text>
+            {order.pickupNotes && <Text style={styles.notes}>Note: {order.pickupNotes}</Text>}
+            <TouchableOpacity
+              style={styles.navBtn}
+              onPress={() => Linking.openURL(`https://maps.google.com/?q=${order.pickupLat},${order.pickupLng}`)}
+            >
+              <Text style={styles.navBtnText}>🗺️ Navigate to Pickup</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.pickupDoneRow}>
+            <Text style={styles.pickupDoneIcon}>✓</Text>
+            <Text style={styles.pickupDoneText}>Picked up from {order.store?.storeName}</Text>
+          </View>
+        )}
 
-        <View style={styles.section}>
+        <View style={[styles.section, !isPickup && styles.sectionActive]}>
           <Text style={styles.sectionTitle}>🏠 Delivery Location</Text>
           <Text style={styles.address}>{order.recipientName}</Text>
           <Text style={styles.addressSub}>{order.deliveryAddress}</Text>
@@ -388,7 +395,18 @@ const getStyles = (C) => StyleSheet.create({
   earningLabel: { fontSize: 12, color: C.gray, marginTop: 2 },
   earningDivider: { width: 1, backgroundColor: C.border },
   section: { padding: 16, borderBottomWidth: 1, borderBottomColor: C.grayLight },
+  sectionActive: { backgroundColor: '#F0FDF4' },
   sectionTitle: { fontSize: 14, fontWeight: '700', color: C.gray, marginBottom: 8 },
+  pickupDoneRow: {
+    flexDirection: 'row', alignItems: 'center', padding: 16,
+    borderBottomWidth: 1, borderBottomColor: C.grayLight, backgroundColor: '#F9FAFB',
+  },
+  pickupDoneIcon: {
+    width: 22, height: 22, borderRadius: 11, backgroundColor: COLORS.primary,
+    color: COLORS.white, fontSize: 13, fontWeight: '900', textAlign: 'center',
+    lineHeight: 22, marginRight: 10, overflow: 'hidden',
+  },
+  pickupDoneText: { fontSize: 14, color: C.gray, fontWeight: '600' },
   address: { fontSize: 16, fontWeight: '600', color: C.text },
   addressSub: { fontSize: 14, color: C.gray, marginTop: 2 },
   notes: { fontSize: 13, color: COLORS.primaryLight, marginTop: 6, fontStyle: 'italic' },
