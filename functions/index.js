@@ -716,6 +716,35 @@ app.get('/driver/surge', verifyToken, async (req, res) => {
   }
 });
 
+app.get('/driver/activity-heatmap', verifyToken, async (req, res) => {
+  try {
+    // Aggregates ALL historical orders by hour-of-day (not just "today"), same approach
+    // real "popular times"-style charts use — a single day's data isn't a pattern, a
+    // typical-hour distribution built from everything seen so far is.
+    const snapshot = await db.collection('orders').get();
+
+    const hourCounts = new Array(24).fill(0);
+    let totalOrders = 0;
+
+    snapshot.forEach((doc) => {
+      const date = doc.data().createdAt?.toDate?.();
+      if (!date) return;
+      hourCounts[date.getHours()] += 1;
+      totalOrders += 1;
+    });
+
+    const maxCount = Math.max(...hourCounts);
+    const normalized = hourCounts.map((count) => (maxCount > 0 ? count / maxCount : 0));
+
+    res.json({
+      success: true,
+      data: { hourCounts, normalized, totalOrders },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 app.post('/driver/push-token', verifyToken, async (req, res) => {
   try {
     const { token, platform } = req.body;

@@ -34,7 +34,8 @@ function haversineKm(lat1, lng1, lat2, lng2) {
 }
 
 const HOURS = ['6a','7a','8a','9a','10a','11a','12p','1p','2p','3p','4p','5p','6p','7p','8p','9p'];
-const ACTIVITY = [0.2,0.5,0.8,0.6,0.4,0.5,0.9,0.7,0.8,0.5,0.4,0.6,1.0,0.9,0.8,0.6];
+const HOURS_START = 6; // HOURS[i] corresponds to real hour-of-day (HOURS_START + i)
+const MIN_ORDERS_FOR_PATTERN = 10; // below this, show "not enough data" instead of a sparse/misleading chart
 const DAILY_GOAL = 500;
 
 // Simulated surge zones around Addis Ababa
@@ -86,6 +87,7 @@ export default function HomeScreen({ navigation }) {
   const [goOfflineSheet, setGoOfflineSheet] = useState(false);
   const [showOnlineBanner, setShowOnlineBanner] = useState(false);
   const [surgeZones, setSurgeZones] = useState([]);
+  const [activityHeatmap, setActivityHeatmap] = useState(null);
 
   const [scrollY, setScrollY] = useState(0);
 
@@ -196,15 +198,17 @@ export default function HomeScreen({ navigation }) {
   const loadData = async () => {
     if (user?.role !== 'DRIVER') return;
     try {
-      const [earningsRes, ordersRes] = await Promise.all([
+      const [earningsRes, ordersRes, heatmapRes] = await Promise.all([
         driverAPI.getEarnings('today'),
         orderAPI.getMyOrders({ status: 'DRIVER_ASSIGNED,DRIVER_AT_STORE,PICKED_UP,IN_TRANSIT' }),
+        driverAPI.getActivityHeatmap().catch(() => null),
       ]);
       setTodayEarnings(earningsRes.data.data);
       const active = ordersRes.data.data.orders?.find((o) =>
         ['DRIVER_ASSIGNED','DRIVER_AT_STORE','PICKED_UP','IN_TRANSIT'].includes(o.status)
       );
       setActiveOrder(active || null);
+      if (heatmapRes) setActivityHeatmap(heatmapRes.data.data);
     } catch {}
   };
 
@@ -659,27 +663,41 @@ export default function HomeScreen({ navigation }) {
         {/* Activity chart */}
         <View style={styles.chartSection}>
           <View style={styles.chartHeader}>
-            <Text style={styles.chartTitle}>Popular offer times: today</Text>
+            <Text style={styles.chartTitle}>Popular offer times</Text>
             <Text style={styles.chartChev}>›</Text>
           </View>
-          <Text style={styles.chartSub}>Explore additional days to drive this week.</Text>
-          <View style={styles.chart}>
-            {HOURS.map((h, i) => {
-              const isCurrent = i === currentHourIdx;
-              const fillH = Math.max(4, ACTIVITY[i] * 72);
-              return (
-                <View key={h} style={styles.barWrap}>
-                  <View style={styles.barTrack}>
-                    <View style={[styles.barFill, { height: fillH },
-                      isCurrent ? styles.barActive : styles.barInactive]} />
-                  </View>
-                  {(i % 4 === 0) && (
-                    <Text style={[styles.barLabel, isCurrent && styles.barLabelActive]}>{h}</Text>
-                  )}
-                </View>
-              );
-            })}
-          </View>
+          {activityHeatmap && activityHeatmap.totalOrders >= MIN_ORDERS_FOR_PATTERN ? (
+            <>
+              <Text style={styles.chartSub}>Based on {activityHeatmap.totalOrders} past orders.</Text>
+              <View style={styles.chart}>
+                {HOURS.map((h, i) => {
+                  const isCurrent = i === currentHourIdx;
+                  const level = activityHeatmap.normalized[HOURS_START + i] || 0;
+                  const fillH = Math.max(4, level * 72);
+                  return (
+                    <View key={h} style={styles.barWrap}>
+                      <View style={styles.barTrack}>
+                        <View style={[styles.barFill, { height: fillH },
+                          isCurrent ? styles.barActive : styles.barInactive]} />
+                      </View>
+                      <View style={styles.barLabelSlot}>
+                        {(i % 4 === 0) && (
+                          <Text style={[styles.barLabel, isCurrent && styles.barLabelActive]}>{h}</Text>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            </>
+          ) : (
+            <View style={styles.chartEmpty}>
+              <Text style={styles.chartEmptyIcon}>📊</Text>
+              <Text style={styles.chartEmptyText}>
+                Not enough delivery history yet to show popular times.{'\n'}Check back once more orders come through.
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -916,18 +934,23 @@ const styles = StyleSheet.create({
   chartTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
   chartChev: { fontSize: 20, color: '#9CA3AF' },
   chartSub: { fontSize: 12, color: '#6B7280', marginTop: 2, marginBottom: 14 },
-  chart: { flexDirection: 'row', alignItems: 'flex-end', height: 96, paddingTop: 4 },
-  barWrap: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
+  chart: { flexDirection: 'row', alignItems: 'flex-end', paddingTop: 4 },
+  barWrap: { flex: 1, alignItems: 'center' },
   barTrack: {
-    width: 5, height: 72,
-    backgroundColor: '#EAECEF', borderRadius: 3,
+    width: '55%', height: 72,
+    backgroundColor: '#EAECEF', borderRadius: 6,
     justifyContent: 'flex-end', overflow: 'hidden',
+    borderBottomWidth: 2, borderBottomColor: '#D8DCE1',
   },
-  barFill: { width: '100%', borderRadius: 3 },
+  barFill: { width: '100%', borderTopLeftRadius: 6, borderTopRightRadius: 6 },
   barActive: { backgroundColor: COLORS.primary },
-  barInactive: { backgroundColor: '#C9CDD4' },
-  barLabel: { fontSize: 9, color: '#9CA3AF', marginTop: 5 },
+  barInactive: { backgroundColor: '#B8BFC7' },
+  barLabelSlot: { height: 16, marginTop: 5, alignItems: 'center' },
+  barLabel: { fontSize: 9, color: '#9CA3AF' },
   barLabelActive: { color: COLORS.primary, fontWeight: '700' },
+  chartEmpty: { alignItems: 'center', paddingVertical: 24 },
+  chartEmptyIcon: { fontSize: 26, marginBottom: 8 },
+  chartEmptyText: { fontSize: 12, color: '#6B7280', textAlign: 'center', lineHeight: 18 },
 
   // Go Offline Modal
   modalOverlay: {

@@ -57,6 +57,7 @@ export const driverAPI = {
   getEarnings: (period) => api.get('/driver/earnings', { params: { period } }),
   registerPushToken: (token) => api.post('/driver/push-token', { token, platform: Platform.OS }),
   getSurge: (city) => api.get('/driver/surge', { params: { city } }),
+  getActivityHeatmap: () => api.get('/driver/activity-heatmap'),
 };
 
 // Orders
