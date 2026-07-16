@@ -33,12 +33,6 @@ function haversineKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function formatHour12(hour24) {
-  const period = hour24 >= 12 ? 'PM' : 'AM';
-  const h = hour24 % 12 === 0 ? 12 : hour24 % 12;
-  return `${h} ${period}`;
-}
-
 const HOURS = ['6a','7a','8a','9a','10a','11a','12p','1p','2p','3p','4p','5p','6p','7p','8p','9p'];
 const HOURS_START = 6; // HOURS[i] corresponds to real hour-of-day (HOURS_START + i)
 const MIN_ORDERS_FOR_PATTERN = 10; // below this, fall back to the general typical-hours guide
@@ -47,9 +41,6 @@ const MIN_ORDERS_FOR_PATTERN = 10; // below this, fall back to the general typic
 // a morning-commute bump, a lunch rush, and the largest dinner-time peak. Shown until a driver
 // has enough of their own completed orders (MIN_ORDERS_FOR_PATTERN) for a real personal chart.
 const TYPICAL_HOURLY_PATTERN = [0.2, 0.55, 0.75, 0.5, 0.3, 0.35, 0.7, 0.85, 0.5, 0.3, 0.35, 0.6, 0.85, 1.0, 0.75, 0.4];
-const TYPICAL_PEAK_IDX = TYPICAL_HOURLY_PATTERN.reduce(
-  (bestIdx, level, i) => (level > TYPICAL_HOURLY_PATTERN[bestIdx] ? i : bestIdx), 0
-);
 const DAILY_GOAL = 500;
 
 // Simulated surge zones around Addis Ababa
@@ -122,14 +113,6 @@ export default function HomeScreen({ navigation }) {
   const currentHourIdx = Math.max(0, Math.min(currentHour - 6, HOURS.length - 1));
 
   const hasActivityPattern = !!activityHeatmap && activityHeatmap.totalOrders >= MIN_ORDERS_FOR_PATTERN;
-  let peakHourIdx = TYPICAL_PEAK_IDX;
-  if (hasActivityPattern) {
-    let bestLevel = -1;
-    HOURS.forEach((_, i) => {
-      const level = activityHeatmap.normalized[HOURS_START + i] || 0;
-      if (level > bestLevel) { bestLevel = level; peakHourIdx = i; }
-    });
-  }
 
   useEffect(() => {
     setupLocation();
@@ -687,41 +670,29 @@ export default function HomeScreen({ navigation }) {
         {/* Activity chart */}
         <View style={styles.chartSection}>
           <View style={styles.chartHeader}>
-            <Text style={styles.chartTitle}>Popular offer times</Text>
+            <Text style={styles.chartTitle}>Popular offer times: Today</Text>
             <Text style={styles.chartChev}>›</Text>
           </View>
-          <View style={styles.chartSubRow}>
-            <Text style={styles.chartSub}>
-              {hasActivityPattern ? `Based on ${activityHeatmap.totalOrders} past orders` : 'Typical busy hours (general guide)'}
-            </Text>
-            <View style={[styles.peakPill, !hasActivityPattern && styles.peakPillMuted]}>
-              <Text style={[styles.peakPillText, !hasActivityPattern && styles.peakPillTextMuted]}>
-                🔥 Peak {formatHour12(HOURS_START + peakHourIdx)}–{formatHour12(HOURS_START + peakHourIdx + 1)}
-              </Text>
-            </View>
-          </View>
+          <Text style={styles.chartSub}>
+            {hasActivityPattern ? `Based on ${activityHeatmap.totalOrders} past orders` : 'Typical busy hours (general guide)'}
+          </Text>
           <View style={styles.chart}>
             {HOURS.map((h, i) => {
               const isCurrent = i === currentHourIdx;
-              const isPeak = i === peakHourIdx;
               const level = hasActivityPattern
                 ? (activityHeatmap.normalized[HOURS_START + i] || 0)
                 : TYPICAL_HOURLY_PATTERN[i];
-              const fillH = Math.max(6, level * 72);
+              const fillH = 44 + level * 28; // compressed range — a calm near-uniform wall, not spiky
               return (
                 <View key={h} style={styles.barWrap}>
                   <View style={styles.barTrack}>
+                    {isCurrent && <View style={styles.nowNeedle} />}
                     <View style={[
                       styles.barFill,
                       { height: fillH },
-                      isCurrent ? styles.barActive : (isPeak ? styles.barPeak : styles.barInactive),
+                      isCurrent ? styles.barActive : styles.barInactive,
                       !hasActivityPattern && styles.barEstimated,
-                    ]}>
-                      <View style={styles.barSheen} />
-                    </View>
-                  </View>
-                  <View style={styles.nowDotSlot}>
-                    {isCurrent && <View style={styles.nowDot} />}
+                    ]} />
                   </View>
                   <View style={styles.barLabelSlot}>
                     {(i % 4 === 0) && (
@@ -972,37 +943,22 @@ const styles = StyleSheet.create({
   chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   chartTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
   chartChev: { fontSize: 20, color: '#9CA3AF' },
-  chartSubRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginTop: 2, marginBottom: 14,
-  },
-  chartSub: { fontSize: 12, color: '#6B7280' },
-  peakPill: {
-    backgroundColor: '#E8F3ED', borderRadius: 20,
-    paddingHorizontal: 10, paddingVertical: 4,
-  },
-  peakPillText: { fontSize: 11, fontWeight: '700', color: COLORS.primary },
-  peakPillMuted: { backgroundColor: '#EEF0F3' },
-  peakPillTextMuted: { color: '#6B7280' },
-  chart: { flexDirection: 'row', alignItems: 'flex-end', paddingTop: 4 },
+  chartSub: { fontSize: 12, color: '#6B7280', marginTop: 2, marginBottom: 16 },
+  chart: { flexDirection: 'row', alignItems: 'flex-end', paddingTop: 14 },
   barWrap: { flex: 1, alignItems: 'center' },
   barTrack: {
     width: '62%', height: 72,
-    backgroundColor: '#EEF0F3', borderRadius: 9,
-    justifyContent: 'flex-end', overflow: 'hidden',
+    justifyContent: 'flex-end', overflow: 'visible',
   },
-  barFill: { width: '100%', borderRadius: 9, overflow: 'hidden' },
-  barSheen: {
-    height: '35%', backgroundColor: 'rgba(255,255,255,0.35)',
-    borderTopLeftRadius: 9, borderTopRightRadius: 9,
-  },
+  barFill: { width: '100%', borderRadius: 9 },
   barActive: { backgroundColor: COLORS.primary },
-  barPeak: { backgroundColor: COLORS.primaryLighter },
-  barInactive: { backgroundColor: '#C7CDD4' },
+  barInactive: { backgroundColor: '#D8DCE1' },
   barEstimated: { opacity: 0.55 },
-  nowDotSlot: { height: 8, marginTop: 3, alignItems: 'center', justifyContent: 'center' },
-  nowDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: COLORS.primary },
-  barLabelSlot: { height: 16, marginTop: 3, alignItems: 'center' },
+  nowNeedle: {
+    position: 'absolute', top: -14, left: '50%', marginLeft: -1,
+    width: 2, height: 86, borderRadius: 1, backgroundColor: COLORS.primary,
+  },
+  barLabelSlot: { height: 16, marginTop: 6, alignItems: 'center' },
   barLabel: { fontSize: 9, color: '#9CA3AF' },
   barLabelActive: { color: COLORS.primary, fontWeight: '700' },
   chartFootnote: { fontSize: 11, color: '#9CA3AF', textAlign: 'center', marginTop: 12 },
