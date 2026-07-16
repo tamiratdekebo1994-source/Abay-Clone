@@ -415,11 +415,23 @@ export default function HomeScreen({ navigation }) {
           ))}
         </MapView>
 
-        <View style={[styles.statusBadge, { top: 16 + insets.top },
-          isOnline ? styles.onlineBadge : styles.offlineBadge]}>
-          <View style={[styles.statusDot, { backgroundColor: isOnline ? '#22C55E' : '#9CA3AF' }]} />
-          <Text style={styles.statusText}>{isOnline ? 'ONLINE' : 'OFFLINE'}</Text>
-        </View>
+        {isOnline ? (
+          <TouchableOpacity
+            style={[styles.statusBadge, { top: 16 + insets.top }, styles.onlineBadge, offlineLoading && { opacity: 0.6 }]}
+            onPress={openGoOfflineSheet}
+            disabled={offlineLoading}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.statusDot, { backgroundColor: '#22C55E' }]} />
+            <Text style={styles.statusText}>ONLINE</Text>
+            <Ionicons name="pause" size={12} color="#111827" style={{ marginLeft: 5 }} />
+          </TouchableOpacity>
+        ) : (
+          <View style={[styles.statusBadge, { top: 16 + insets.top }, styles.offlineBadge]}>
+            <View style={[styles.statusDot, { backgroundColor: '#9CA3AF' }]} />
+            <Text style={styles.statusText}>OFFLINE</Text>
+          </View>
+        )}
       </View>
 
       {/* ── Bottom Sheet ── */}
@@ -460,8 +472,10 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
-        {/* ── SPARK NOW / GO OFFLINE button ── */}
-        {!activeOrder && (
+        {/* ── SPARK NOW button — only shown while offline (or mid-transition). Once online,
+             the compact ONLINE badge on the map handles going offline instead, so this large
+             CTA doesn't sit around taking up space. ── */}
+        {!activeOrder && (!isOnline || offlineLoading) && (
           <TouchableOpacity
             style={[
               styles.sparkBtn,
