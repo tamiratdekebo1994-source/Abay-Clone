@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   ScrollView, Alert, RefreshControl, ActivityIndicator,
-  Platform, Animated, Dimensions, Modal, Linking,
+  Platform, Animated, Dimensions, Modal, Linking, Easing,
 } from 'react-native';
 import MapView, { Marker, Polygon, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
@@ -99,6 +99,8 @@ export default function HomeScreen({ navigation }) {
   const bannerAnim = useRef(new Animated.Value(0)).current;
   const sheetAnim = useRef(new Animated.Value(300)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
+  const radarAnim1 = useRef(new Animated.Value(0)).current;
+  const radarAnim2 = useRef(new Animated.Value(0)).current;
 
   const currentHour = new Date().getHours();
   const currentHourIdx = Math.max(0, Math.min(currentHour - 6, HOURS.length - 1));
@@ -120,6 +122,33 @@ export default function HomeScreen({ navigation }) {
       bounciness: 6,
     }).start();
   }, [showFloatPill]);
+
+  // Pulsing radar rings for the "Looking for offers" waiting state, so it reads as actively
+  // searching instead of a static, possibly-frozen-looking card.
+  const showWaiting = isOnline && !activeOrder && nearbyOrders.length === 0 && !showOnlineBanner;
+  useEffect(() => {
+    if (!showWaiting) return;
+
+    const makeRingLoop = (val, delay) => Animated.loop(
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(val, { toValue: 1, duration: 1800, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        Animated.timing(val, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ])
+    );
+
+    const loop1 = makeRingLoop(radarAnim1, 0);
+    const loop2 = makeRingLoop(radarAnim2, 900);
+    loop1.start();
+    loop2.start();
+
+    return () => {
+      loop1.stop();
+      loop2.stop();
+      radarAnim1.setValue(0);
+      radarAnim2.setValue(0);
+    };
+  }, [showWaiting]);
 
   const setupLocation = async () => {
     const loc = await getCurrentLocation();
@@ -607,9 +636,21 @@ export default function HomeScreen({ navigation }) {
         )}
 
         {/* ── Waiting for offers (online, no offers) ── */}
-        {isOnline && !activeOrder && nearbyOrders.length === 0 && !showOnlineBanner && (
+        {showWaiting && (
           <View style={styles.waitingCard}>
-            <Text style={styles.waitingEmoji}>📡</Text>
+            <View style={styles.radarWrap}>
+              <Animated.View style={[styles.radarRing, {
+                opacity: radarAnim1.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0] }),
+                transform: [{ scale: radarAnim1.interpolate({ inputRange: [0, 1], outputRange: [1, 2.4] }) }],
+              }]} />
+              <Animated.View style={[styles.radarRing, {
+                opacity: radarAnim2.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0] }),
+                transform: [{ scale: radarAnim2.interpolate({ inputRange: [0, 1], outputRange: [1, 2.4] }) }],
+              }]} />
+              <View style={styles.radarCore}>
+                <Text style={styles.waitingEmoji}>📡</Text>
+              </View>
+            </View>
             <Text style={styles.waitingTitle}>Looking for offers</Text>
             <Text style={styles.waitingBody}>Stay in a busy area to receive more delivery offers.</Text>
           </View>
@@ -851,7 +892,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB', borderRadius: 14,
     padding: 20, marginBottom: 16, alignItems: 'center',
   },
-  waitingEmoji: { fontSize: 32, marginBottom: 10 },
+  radarWrap: {
+    width: 64, height: 64,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 10,
+  },
+  radarRing: {
+    position: 'absolute',
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: COLORS.primary,
+  },
+  radarCore: {
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  waitingEmoji: { fontSize: 26 },
   waitingTitle: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 4 },
   waitingBody: { fontSize: 13, color: '#6B7280', textAlign: 'center', lineHeight: 19 },
 
