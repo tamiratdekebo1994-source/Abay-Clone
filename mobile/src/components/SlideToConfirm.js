@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated, PanResponder, ActivityIndicator } from 'react-native';
 import { COLORS } from '../utils/constants';
 
@@ -16,26 +16,32 @@ export default function SlideToConfirm({
 
   const maxTranslate = Math.max(1, trackWidth - THUMB_SIZE - TRACK_PADDING * 2);
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => !disabled && !loading && !completed,
-      onMoveShouldSetPanResponder: () => !disabled && !loading && !completed,
-      onPanResponderMove: (evt, gestureState) => {
-        const x = Math.min(Math.max(0, gestureState.dx), maxTranslate);
-        translateX.setValue(x);
-      },
-      onPanResponderRelease: (evt, gestureState) => {
-        const x = Math.min(Math.max(0, gestureState.dx), maxTranslate);
-        if (x >= maxTranslate * 0.75) {
-          Animated.timing(translateX, { toValue: maxTranslate, duration: 120, useNativeDriver: false }).start();
-          setCompleted(true);
-          onConfirm?.();
-        } else {
-          Animated.spring(translateX, { toValue: 0, useNativeDriver: false, bounciness: 8 }).start();
-        }
-      },
-    })
-  ).current;
+  // Recreated whenever disabled/loading/completed/maxTranslate change — a PanResponder built
+  // once via useRef would freeze these values in its closures at first render (e.g. `disabled`
+  // captured as true before a proof-of-delivery photo exists) and never see later updates,
+  // even though the component keeps re-rendering with the correct current props.
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => !disabled && !loading && !completed,
+        onMoveShouldSetPanResponder: () => !disabled && !loading && !completed,
+        onPanResponderMove: (evt, gestureState) => {
+          const x = Math.min(Math.max(0, gestureState.dx), maxTranslate);
+          translateX.setValue(x);
+        },
+        onPanResponderRelease: (evt, gestureState) => {
+          const x = Math.min(Math.max(0, gestureState.dx), maxTranslate);
+          if (x >= maxTranslate * 0.75) {
+            Animated.timing(translateX, { toValue: maxTranslate, duration: 120, useNativeDriver: false }).start();
+            setCompleted(true);
+            onConfirm?.();
+          } else {
+            Animated.spring(translateX, { toValue: 0, useNativeDriver: false, bounciness: 8 }).start();
+          }
+        },
+      }),
+    [disabled, loading, completed, maxTranslate]
+  );
 
   const fillWidth = Animated.add(translateX, THUMB_SIZE + TRACK_PADDING);
   const labelOpacity = translateX.interpolate({
