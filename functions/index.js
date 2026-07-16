@@ -82,6 +82,27 @@ app.use((req, res, next) => {
   next();
 });
 
+// Firestore Timestamp fields (createdAt, updatedAt, deliveredAt, ...) come back from doc.data()
+// as Timestamp instances, not strings. JSON.stringify-ing them directly produces
+// {_seconds, _nanoseconds} objects that `new Date(...)` on the client can't parse ("Invalid Date").
+// Converting every response through this before it goes out means no individual route handler
+// has to remember to call .toDate() on every timestamp field it happens to pass through.
+function sanitizeTimestamps(value) {
+  if (value instanceof admin.firestore.Timestamp) return value.toDate().toISOString();
+  if (Array.isArray(value)) return value.map(sanitizeTimestamps);
+  if (value && typeof value === 'object' && value.constructor === Object) {
+    const out = {};
+    for (const key of Object.keys(value)) out[key] = sanitizeTimestamps(value[key]);
+    return out;
+  }
+  return value;
+}
+app.use((req, res, next) => {
+  const originalJson = res.json.bind(res);
+  res.json = (body) => originalJson(sanitizeTimestamps(body));
+  next();
+});
+
 // ─── Authentication Middleware ───────────────────────────────────────────────
 // Accepts either a JWT (web admin login) or a Firebase ID token (mobile phone auth).
 const verifyToken = async (req, res, next) => {
