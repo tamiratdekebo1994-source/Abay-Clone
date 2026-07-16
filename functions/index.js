@@ -4,7 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const multer = require('multer');
+const Busboy = require('busboy');
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 
@@ -14,7 +14,37 @@ console.log('Initializing ET SPARK API...');
 admin.initializeApp();
 const db = admin.firestore();
 const auth = admin.auth();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+// Cloud Functions (1st gen) already buffers the full request body into req.rawBody before
+// Express sees it, so multer's usual approach of streaming directly off `req` finds an
+// already-drained stream and fails with "Unexpected end of form". Parsing req.rawBody
+// directly with busboy sidesteps that entirely.
+function parseSingleFileUpload(req, maxBytes = 10 * 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    const busboy = Busboy({ headers: req.headers, limits: { fileSize: maxBytes } });
+    let fileBuffer = null;
+    let fileMimetype = null;
+    let sawFile = false;
+    let tooLarge = false;
+
+    busboy.on('file', (fieldname, fileStream, info) => {
+      sawFile = true;
+      fileMimetype = info.mimeType;
+      const chunks = [];
+      fileStream.on('data', (chunk) => chunks.push(chunk));
+      fileStream.on('limit', () => { tooLarge = true; });
+      fileStream.on('end', () => { fileBuffer = Buffer.concat(chunks); });
+    });
+
+    busboy.on('error', (err) => reject(err));
+    busboy.on('finish', () => {
+      if (tooLarge) return reject(new Error('File exceeds the maximum allowed size'));
+      if (!sawFile || !fileBuffer) return reject(new Error('No file uploaded'));
+      resolve({ buffer: fileBuffer, mimetype: fileMimetype });
+    });
+
+    busboy.end(req.rawBody);
+  });
+}
 
 const FILE_BASE_URL = 'https://europe-west1-abay-clone-project-36721.cloudfunctions.net/api';
 
@@ -1040,9 +1070,9 @@ app.get('/orders', verifyToken, async (req, res) => {
 
 // ─── Upload Routes ──────────────────────────────────────────────────────────
 
-app.post('/upload/order/:orderId/cargo', verifyToken, upload.single('file'), async (req, res) => {
+app.post('/upload/order/:orderId/cargo', verifyToken, async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+    const { buffer, mimetype } = await parseSingleFileUpload(req);
 
     const orderRef = db.collection('orders').doc(req.params.orderId);
     const orderDoc = await orderRef.get();
@@ -1052,7 +1082,7 @@ app.post('/upload/order/:orderId/cargo', verifyToken, upload.single('file'), asy
     }
 
     const path = `orders/${req.params.orderId}/pod-${uuidv4()}.jpg`;
-    const url = await uploadImageBuffer(req.file.buffer, req.file.mimetype || 'image/jpeg', path);
+    const url = await uploadImageBuffer(buffer, mimetype || 'image/jpeg', path);
 
     await orderRef.update({ podPhotoUrl: url });
 
@@ -1063,12 +1093,12 @@ app.post('/upload/order/:orderId/cargo', verifyToken, upload.single('file'), asy
   }
 });
 
-app.post('/upload/avatar', verifyToken, upload.single('file'), async (req, res) => {
+app.post('/upload/avatar', verifyToken, async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+    const { buffer, mimetype } = await parseSingleFileUpload(req);
 
     const path = `avatars/${req.userId}-${uuidv4()}.jpg`;
-    const url = await uploadImageBuffer(req.file.buffer, req.file.mimetype || 'image/jpeg', path);
+    const url = await uploadImageBuffer(buffer, mimetype || 'image/jpeg', path);
 
     await db.collection('drivers').doc(req.userId).set({ profilePhotoUrl: url }, { merge: true });
     await db.collection('users').doc(req.userId).set({ profilePhotoUrl: url }, { merge: true });
