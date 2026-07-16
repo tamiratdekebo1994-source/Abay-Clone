@@ -41,7 +41,15 @@ function formatHour12(hour24) {
 
 const HOURS = ['6a','7a','8a','9a','10a','11a','12p','1p','2p','3p','4p','5p','6p','7p','8p','9p'];
 const HOURS_START = 6; // HOURS[i] corresponds to real hour-of-day (HOURS_START + i)
-const MIN_ORDERS_FOR_PATTERN = 10; // below this, show "not enough data" instead of a sparse/misleading chart
+const MIN_ORDERS_FOR_PATTERN = 10; // below this, fall back to the general typical-hours guide
+
+// General guide only (not this driver's data) — approximate Addis Ababa delivery demand shape:
+// a morning-commute bump, a lunch rush, and the largest dinner-time peak. Shown until a driver
+// has enough of their own completed orders (MIN_ORDERS_FOR_PATTERN) for a real personal chart.
+const TYPICAL_HOURLY_PATTERN = [0.2, 0.55, 0.75, 0.5, 0.3, 0.35, 0.7, 0.85, 0.5, 0.3, 0.35, 0.6, 0.85, 1.0, 0.75, 0.4];
+const TYPICAL_PEAK_IDX = TYPICAL_HOURLY_PATTERN.reduce(
+  (bestIdx, level, i) => (level > TYPICAL_HOURLY_PATTERN[bestIdx] ? i : bestIdx), 0
+);
 const DAILY_GOAL = 500;
 
 // Simulated surge zones around Addis Ababa
@@ -114,7 +122,7 @@ export default function HomeScreen({ navigation }) {
   const currentHourIdx = Math.max(0, Math.min(currentHour - 6, HOURS.length - 1));
 
   const hasActivityPattern = !!activityHeatmap && activityHeatmap.totalOrders >= MIN_ORDERS_FOR_PATTERN;
-  let peakHourIdx = -1;
+  let peakHourIdx = TYPICAL_PEAK_IDX;
   if (hasActivityPattern) {
     let bestLevel = -1;
     HOURS.forEach((_, i) => {
@@ -682,55 +690,52 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.chartTitle}>Popular offer times</Text>
             <Text style={styles.chartChev}>›</Text>
           </View>
-          {hasActivityPattern ? (
-            <>
-              <View style={styles.chartSubRow}>
-                <Text style={styles.chartSub}>Based on {activityHeatmap.totalOrders} past orders</Text>
-                {peakHourIdx >= 0 && (
-                  <View style={styles.peakPill}>
-                    <Text style={styles.peakPillText}>
-                      🔥 Peak {formatHour12(HOURS_START + peakHourIdx)}–{formatHour12(HOURS_START + peakHourIdx + 1)}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.chart}>
-                {HOURS.map((h, i) => {
-                  const isCurrent = i === currentHourIdx;
-                  const isPeak = i === peakHourIdx;
-                  const level = activityHeatmap.normalized[HOURS_START + i] || 0;
-                  const fillH = Math.max(6, level * 72);
-                  return (
-                    <View key={h} style={styles.barWrap}>
-                      <View style={styles.barTrack}>
-                        <View style={[
-                          styles.barFill,
-                          { height: fillH },
-                          isCurrent ? styles.barActive : (isPeak ? styles.barPeak : styles.barInactive),
-                        ]}>
-                          <View style={styles.barSheen} />
-                        </View>
-                      </View>
-                      <View style={styles.nowDotSlot}>
-                        {isCurrent && <View style={styles.nowDot} />}
-                      </View>
-                      <View style={styles.barLabelSlot}>
-                        {(i % 4 === 0) && (
-                          <Text style={[styles.barLabel, isCurrent && styles.barLabelActive]}>{h}</Text>
-                        )}
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            </>
-          ) : (
-            <View style={styles.chartEmpty}>
-              <Text style={styles.chartEmptyIcon}>📊</Text>
-              <Text style={styles.chartEmptyText}>
-                Not enough delivery history yet to show popular times.{'\n'}Check back once more orders come through.
+          <View style={styles.chartSubRow}>
+            <Text style={styles.chartSub}>
+              {hasActivityPattern ? `Based on ${activityHeatmap.totalOrders} past orders` : 'Typical busy hours (general guide)'}
+            </Text>
+            <View style={[styles.peakPill, !hasActivityPattern && styles.peakPillMuted]}>
+              <Text style={[styles.peakPillText, !hasActivityPattern && styles.peakPillTextMuted]}>
+                🔥 Peak {formatHour12(HOURS_START + peakHourIdx)}–{formatHour12(HOURS_START + peakHourIdx + 1)}
               </Text>
             </View>
+          </View>
+          <View style={styles.chart}>
+            {HOURS.map((h, i) => {
+              const isCurrent = i === currentHourIdx;
+              const isPeak = i === peakHourIdx;
+              const level = hasActivityPattern
+                ? (activityHeatmap.normalized[HOURS_START + i] || 0)
+                : TYPICAL_HOURLY_PATTERN[i];
+              const fillH = Math.max(6, level * 72);
+              return (
+                <View key={h} style={styles.barWrap}>
+                  <View style={styles.barTrack}>
+                    <View style={[
+                      styles.barFill,
+                      { height: fillH },
+                      isCurrent ? styles.barActive : (isPeak ? styles.barPeak : styles.barInactive),
+                      !hasActivityPattern && styles.barEstimated,
+                    ]}>
+                      <View style={styles.barSheen} />
+                    </View>
+                  </View>
+                  <View style={styles.nowDotSlot}>
+                    {isCurrent && <View style={styles.nowDot} />}
+                  </View>
+                  <View style={styles.barLabelSlot}>
+                    {(i % 4 === 0) && (
+                      <Text style={[styles.barLabel, isCurrent && styles.barLabelActive]}>{h}</Text>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+          {!hasActivityPattern && (
+            <Text style={styles.chartFootnote}>
+              Complete {MIN_ORDERS_FOR_PATTERN}+ deliveries to see your own pattern instead of this general guide.
+            </Text>
           )}
         </View>
       </ScrollView>
@@ -977,6 +982,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 4,
   },
   peakPillText: { fontSize: 11, fontWeight: '700', color: '#B45309' },
+  peakPillMuted: { backgroundColor: '#EEF0F3' },
+  peakPillTextMuted: { color: '#6B7280' },
   chart: { flexDirection: 'row', alignItems: 'flex-end', paddingTop: 4 },
   barWrap: { flex: 1, alignItems: 'center' },
   barTrack: {
@@ -992,14 +999,13 @@ const styles = StyleSheet.create({
   barActive: { backgroundColor: COLORS.primary },
   barPeak: { backgroundColor: COLORS.accent || '#F0A93A' },
   barInactive: { backgroundColor: '#C7CDD4' },
+  barEstimated: { opacity: 0.55 },
   nowDotSlot: { height: 8, marginTop: 3, alignItems: 'center', justifyContent: 'center' },
   nowDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: COLORS.primary },
   barLabelSlot: { height: 16, marginTop: 3, alignItems: 'center' },
   barLabel: { fontSize: 9, color: '#9CA3AF' },
   barLabelActive: { color: COLORS.primary, fontWeight: '700' },
-  chartEmpty: { alignItems: 'center', paddingVertical: 24 },
-  chartEmptyIcon: { fontSize: 26, marginBottom: 8 },
-  chartEmptyText: { fontSize: 12, color: '#6B7280', textAlign: 'center', lineHeight: 18 },
+  chartFootnote: { fontSize: 11, color: '#9CA3AF', textAlign: 'center', marginTop: 12 },
 
   // Go Offline Modal
   modalOverlay: {
