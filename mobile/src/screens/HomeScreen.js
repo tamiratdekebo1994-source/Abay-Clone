@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   ScrollView, Alert, RefreshControl, ActivityIndicator,
@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { collection, query, where, onSnapshot, doc, getDoc, getDocs } from 'firebase/firestore';
 import { useSelector, useDispatch } from 'react-redux';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { driverAPI, orderAPI } from '../services/api';
 import { updateDriver } from '../store/authStore';
@@ -104,7 +105,8 @@ export default function HomeScreen({ navigation }) {
 
   useEffect(() => {
     setupLocation();
-    if (user?.role === 'DRIVER') loadData();
+    // loadData() is handled by the useFocusEffect below instead, which also covers this
+    // initial mount — keeping it only in one place avoids double-fetching on first load.
     return () => { stopBackgroundTracking(); unsubscribeOrdersRef.current?.(); };
   }, []);
 
@@ -176,6 +178,17 @@ export default function HomeScreen({ navigation }) {
       setActiveOrder(active || null);
     } catch {}
   };
+
+  // loadData() in the mount effect above only runs once — without this, completing a
+  // delivery and navigating back to Home leaves activeOrder stuck referencing the order
+  // that was just marked DELIVERED, since nothing ever re-fetches it. Refresh whenever
+  // this screen regains focus (e.g. returning from ActiveDeliveryScreen) so a driver is
+  // correctly shown as free to receive a new order.
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.role === 'DRIVER') loadData();
+    }, [user?.role])
+  );
 
   const resolveStoreName = async (storeId) => {
     if (!storeId) return 'Store';
