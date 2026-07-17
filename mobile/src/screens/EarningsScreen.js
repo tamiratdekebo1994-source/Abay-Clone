@@ -8,8 +8,9 @@ import { useSelector } from 'react-redux';
 import { driverAPI } from '../services/api';
 import { COLORS, TAB_BAR_CLEARANCE } from '../utils/constants';
 import { getColors } from '../utils/theme';
+import { t } from '../utils/i18n';
 
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const DAY_KEYS = ['dayMon', 'dayTue', 'dayWed', 'dayThu', 'dayFri', 'daySat', 'daySun'];
 const BAR_MAX_H = 52;
 
 function getTodayIndex() {
@@ -42,6 +43,7 @@ const WEEK_BARS = [0.35, 0.60, 0.80, 0.50, 1.00, 0.45, 0.20];
 
 export default function EarningsScreen() {
   const theme = useSelector((state) => state.settings.theme);
+  const language = useSelector((state) => state.settings.language);
   const C = getColors(theme);
   const S = getStyles(C);
 
@@ -99,10 +101,10 @@ export default function EarningsScreen() {
     >
       {/* ── Green header + weekly bar chart ── */}
       <SafeAreaView style={S.chartSection} edges={['top']}>
-        <Text style={S.earningsTitle}>Earnings</Text>
+        <Text style={S.earningsTitle}>{t('earnings', language)}</Text>
         <View style={S.chartRow}>
-          {DAYS.map((day, i) => (
-            <View key={day} style={S.barCol}>
+          {DAY_KEYS.map((dayKey, i) => (
+            <View key={dayKey} style={S.barCol}>
               <View style={S.barTrack}>
                 <View
                   style={[
@@ -112,7 +114,7 @@ export default function EarningsScreen() {
                   ]}
                 />
               </View>
-              <Text style={[S.barDay, i === todayIdx && S.barDayActive]}>{day}</Text>
+              <Text style={[S.barDay, i === todayIdx && S.barDayActive]}>{t(dayKey, language)}</Text>
             </View>
           ))}
         </View>
@@ -121,36 +123,36 @@ export default function EarningsScreen() {
       {/* ── Current week dark card ── */}
       <View style={S.weekCard}>
         <View style={S.weekCardTop}>
-          <Text style={S.weekCardTitle}>Current Week</Text>
+          <Text style={S.weekCardTitle}>{t('currentWeek', language)}</Text>
           <Text style={S.weekCardRange}>{currentWeek.label}</Text>
         </View>
 
         <View style={S.weekCardSep} />
 
-        <Text style={S.confirmedLabel}>Confirmed Earnings</Text>
+        <Text style={S.confirmedLabel}>{t('confirmedEarnings', language)}</Text>
         <Text style={S.confirmedAmt}>ETB {totalEarnings}</Text>
 
         <View style={S.statsRow}>
           <View style={S.statCell}>
             <Text style={S.statVal}>{trips}</Text>
-            <Text style={S.statKey}>Trips</Text>
+            <Text style={S.statKey}>{t('trips', language)}</Text>
           </View>
           <View style={S.statLine} />
           <View style={S.statCell}>
             <Text style={S.statVal}>ETB {avgPerTrip}</Text>
-            <Text style={S.statKey}>Avg / Trip</Text>
+            <Text style={S.statKey}>{t('avgPerTrip', language)}</Text>
           </View>
           <View style={S.statLine} />
           <View style={S.statCell}>
             <Text style={S.statVal}>0h 0m</Text>
-            <Text style={S.statKey}>Online Time</Text>
+            <Text style={S.statKey}>{t('onlineTime', language)}</Text>
           </View>
         </View>
       </View>
 
       {/* ── Weekly Earnings Summary header ── */}
       <View style={S.histHead}>
-        <Text style={S.histTitle}>Weekly Earnings Summary</Text>
+        <Text style={S.histTitle}>{t('weeklyEarningsSummary', language)}</Text>
         <Text style={S.infoIcon}>ⓘ</Text>
       </View>
 

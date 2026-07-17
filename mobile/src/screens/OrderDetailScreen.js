@@ -7,14 +7,15 @@ import { useSelector } from 'react-redux';
 import { orderAPI } from '../services/api';
 import { COLORS, ORDER_STATUS_LABELS, PAYMENT_METHODS } from '../utils/constants';
 import { getColors } from '../utils/theme';
+import { t, tf } from '../utils/i18n';
 
 const TIMELINE_STEPS = [
-  { status: 'SEARCHING_DRIVER', label: 'Order placed',        icon: '📋' },
-  { status: 'DRIVER_ASSIGNED',  label: 'Driver assigned',     icon: '🚗' },
-  { status: 'DRIVER_AT_STORE',  label: 'Driver at store',     icon: '🏪' },
-  { status: 'PICKED_UP',        label: 'Package picked up',   icon: '📦' },
-  { status: 'IN_TRANSIT',       label: 'On the way',          icon: '🛣️' },
-  { status: 'DELIVERED',        label: 'Delivered',           icon: '✅' },
+  { status: 'SEARCHING_DRIVER', labelKey: 'tl_orderPlaced',    icon: '📋' },
+  { status: 'DRIVER_ASSIGNED',  labelKey: 'tl_driverAssigned', icon: '🚗' },
+  { status: 'DRIVER_AT_STORE',  labelKey: 'tl_driverAtStore',  icon: '🏪' },
+  { status: 'PICKED_UP',        labelKey: 'tl_pickedUp',       icon: '📦' },
+  { status: 'IN_TRANSIT',       labelKey: 'tl_onTheWay',       icon: '🛣️' },
+  { status: 'DELIVERED',        labelKey: 'tl_delivered',      icon: '✅' },
 ];
 
 const STATUS_ORDER = [
@@ -30,6 +31,7 @@ function stepReached(orderStatus, stepStatus) {
 export default function OrderDetailScreen({ route, navigation }) {
   const { orderId } = route.params;
   const theme = useSelector((s) => s.settings.theme);
+  const language = useSelector((s) => s.settings.language);
   const C = getColors(theme);
   const [order, setOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,19 +46,19 @@ export default function OrderDetailScreen({ route, navigation }) {
 
   const handleCancel = () => {
     Alert.alert(
-      'Cancel Order',
-      'Are you sure you want to cancel this order?\nይህን ትዕዛዝ መሰረዝ ይፈልጋሉ?',
+      t('cancelOrderTitle', language),
+      t('cancelOrderConfirmBody', language),
       [
-        { text: 'No', style: 'cancel' },
+        { text: t('no', language), style: 'cancel' },
         {
-          text: 'Yes, Cancel', style: 'destructive',
+          text: t('yesCancelBtn', language), style: 'destructive',
           onPress: async () => {
             setCancelling(true);
             try {
               await orderAPI.cancelOrder(orderId, 'Cancelled by driver');
               setOrder((prev) => ({ ...prev, status: 'CANCELLED' }));
             } catch (err) {
-              Alert.alert('Error', err.response?.data?.message || 'Failed to cancel');
+              Alert.alert(t('errorTitle', language), err.response?.data?.message || t('failedToCancel', language));
             } finally {
               setCancelling(false);
             }
@@ -73,7 +75,7 @@ export default function OrderDetailScreen({ route, navigation }) {
   }
 
   if (!order) {
-    return <View style={styles.center}><Text style={styles.errorText}>Order not found</Text></View>;
+    return <View style={styles.center}><Text style={styles.errorText}>{t('orderNotFound', language)}</Text></View>;
   }
 
   const statusInfo = ORDER_STATUS_LABELS[order.status] || { en: order.status, am: '', color: COLORS.gray };
@@ -89,7 +91,7 @@ export default function OrderDetailScreen({ route, navigation }) {
         <Text style={styles.statusEmoji}>{isCancelled ? '❌' : isDelivered ? '🎉' : '📦'}</Text>
         <Text style={styles.statusLabel}>{statusInfo.en}</Text>
         <Text style={styles.statusLabelAm}>{statusInfo.am}</Text>
-        <Text style={styles.orderNum}>Order #{order.orderNumber}</Text>
+        <Text style={styles.orderNum}>{t('orderNumber', language)} #{order.orderNumber}</Text>
       </View>
 
       {/* Earnings */}
@@ -97,12 +99,12 @@ export default function OrderDetailScreen({ route, navigation }) {
         <View style={styles.earningsRow}>
           <View style={styles.earningsItem}>
             <Text style={styles.earningsValue}>ETB {order.driverFee?.toFixed(2)}</Text>
-            <Text style={styles.earningsLabel}>Your Earnings</Text>
+            <Text style={styles.earningsLabel}>{t('yourEarnings', language)}</Text>
           </View>
           <View style={styles.earningsDivider} />
           <View style={styles.earningsItem}>
             <Text style={styles.earningsValue}>{order.distanceKm?.toFixed(1)} km</Text>
-            <Text style={styles.earningsLabel}>Distance</Text>
+            <Text style={styles.earningsLabel}>{t('distance', language)}</Text>
           </View>
           <View style={styles.earningsDivider} />
           <View style={styles.earningsItem}>
@@ -114,12 +116,12 @@ export default function OrderDetailScreen({ route, navigation }) {
 
       {/* Route */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Route</Text>
+        <Text style={styles.sectionTitle}>{t('route', language)}</Text>
         <View style={styles.card}>
           <View style={styles.routeRow}>
             <View style={[styles.routeDot, { backgroundColor: COLORS.primary }]} />
             <View style={styles.routeInfo}>
-              <Text style={styles.routeLabel}>Pickup / መነሻ</Text>
+              <Text style={styles.routeLabel}>{t('pickup', language)}</Text>
               <Text style={styles.routeAddress}>{order.pickupAddress}</Text>
               {order.pickupNotes ? <Text style={styles.routeNote}>{order.pickupNotes}</Text> : null}
             </View>
@@ -128,7 +130,7 @@ export default function OrderDetailScreen({ route, navigation }) {
           <View style={styles.routeRow}>
             <View style={[styles.routeDot, { backgroundColor: COLORS.error }]} />
             <View style={styles.routeInfo}>
-              <Text style={styles.routeLabel}>Delivery / መድረሻ</Text>
+              <Text style={styles.routeLabel}>{t('delivery', language)}</Text>
               <Text style={styles.routeAddress}>{order.deliveryAddress}</Text>
               {order.deliveryNotes ? <Text style={styles.routeNote}>{order.deliveryNotes}</Text> : null}
             </View>
@@ -138,28 +140,28 @@ export default function OrderDetailScreen({ route, navigation }) {
 
       {/* Recipient */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recipient / ተቀባይ</Text>
+        <Text style={styles.sectionTitle}>{t('recipient', language)}</Text>
         <View style={styles.card}>
-          <InfoRow icon="👤" label="Name" value={order.recipientName} C={C} />
-          <InfoRow icon="📞" label="Phone" value={order.recipientPhone} C={C} />
+          <InfoRow icon="👤" label={t('name', language)} value={order.recipientName} C={C} />
+          <InfoRow icon="📞" label={t('phone', language)} value={order.recipientPhone} C={C} />
         </View>
       </View>
 
       {/* Package */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Package / ጥቅል</Text>
+        <Text style={styles.sectionTitle}>{t('package', language)}</Text>
         <View style={styles.card}>
-          <InfoRow icon="📝" label="Description" value={order.description} C={C} />
-          {order.weight ? <InfoRow icon="⚖️" label="Weight" value={`${order.weight} kg`} C={C} /> : null}
-          {order.isFragile ? <InfoRow icon="⚠️" label="Special" value="Fragile — handle with care" C={C} /> : null}
-          {order.requiresRefrigeration ? <InfoRow icon="❄️" label="Special" value="Requires refrigeration" C={C} /> : null}
+          <InfoRow icon="📝" label={t('description', language)} value={order.description} C={C} />
+          {order.weight ? <InfoRow icon="⚖️" label={t('weight', language)} value={`${order.weight} kg`} C={C} /> : null}
+          {order.isFragile ? <InfoRow icon="⚠️" label={t('special', language)} value={t('fragileHandleCare', language)} C={C} /> : null}
+          {order.requiresRefrigeration ? <InfoRow icon="❄️" label={t('special', language)} value={t('requiresRefrigerationShort', language)} C={C} /> : null}
         </View>
       </View>
 
       {/* Timeline */}
       {!isCancelled && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Timeline / ሂደት</Text>
+          <Text style={styles.sectionTitle}>{t('timeline', language)}</Text>
           <View style={styles.card}>
             {TIMELINE_STEPS.map((step, i) => {
               const done = stepReached(order.status, step.status);
@@ -182,7 +184,7 @@ export default function OrderDetailScreen({ route, navigation }) {
                   </View>
                   <View style={styles.timelineContent}>
                     <Text style={[styles.timelineLabel, done && styles.timelineLabelDone]}>
-                      {step.icon} {step.label}
+                      {step.icon} {t(step.labelKey, language)}
                     </Text>
                   </View>
                 </View>
@@ -196,7 +198,7 @@ export default function OrderDetailScreen({ route, navigation }) {
       {isCancelled && order.cancelReason && (
         <View style={styles.section}>
           <View style={styles.cancelBanner}>
-            <Text style={styles.cancelTitle}>Cancellation Reason</Text>
+            <Text style={styles.cancelTitle}>{t('cancellationReason', language)}</Text>
             <Text style={styles.cancelReason}>{order.cancelReason}</Text>
           </View>
         </View>
@@ -209,7 +211,7 @@ export default function OrderDetailScreen({ route, navigation }) {
             style={styles.trackBtn}
             onPress={() => navigation.navigate('ActiveDelivery', { orderId: order.id })}
           >
-            <Text style={styles.trackBtnText}>📍 Track Delivery</Text>
+            <Text style={styles.trackBtnText}>{t('trackDelivery', language)}</Text>
           </TouchableOpacity>
         )}
         {isActive && (
@@ -217,7 +219,7 @@ export default function OrderDetailScreen({ route, navigation }) {
             style={styles.chatBtn}
             onPress={() => navigation.navigate('Chat', { orderId: order.id, orderNumber: order.orderNumber })}
           >
-            <Text style={styles.chatBtnText}>💬 Chat</Text>
+            <Text style={styles.chatBtnText}>💬 {t('chat', language)}</Text>
           </TouchableOpacity>
         )}
         {isDelivered && !order.review && (
@@ -225,17 +227,17 @@ export default function OrderDetailScreen({ route, navigation }) {
             style={styles.reviewBtn}
             onPress={() => navigation.navigate('Review', { orderId: order.id, order })}
           >
-            <Text style={styles.reviewBtnText}>⭐ Rate this Delivery</Text>
+            <Text style={styles.reviewBtnText}>{t('rateThisDelivery', language)}</Text>
           </TouchableOpacity>
         )}
         {isDelivered && order.review && (
           <View style={styles.reviewedBadge}>
-            <Text style={styles.reviewedText}>⭐ You rated {order.review.rating}/5</Text>
+            <Text style={styles.reviewedText}>{tf('youRatedTemplate', language, { rating: order.review.rating })}</Text>
           </View>
         )}
         {isActive && (
           <TouchableOpacity style={styles.cancelBtn} onPress={handleCancel} disabled={cancelling}>
-            <Text style={styles.cancelBtnText}>{cancelling ? 'Cancelling...' : 'Cancel Order'}</Text>
+            <Text style={styles.cancelBtnText}>{cancelling ? t('cancelling', language) : t('cancelOrderBtn', language)}</Text>
           </TouchableOpacity>
         )}
       </View>

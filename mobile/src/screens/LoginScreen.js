@@ -6,6 +6,7 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { login, clearError } from '../store/authStore';
 import { COLORS } from '../utils/constants';
+import { t } from '../utils/i18n';
 
 export default function LoginScreen({ navigation }) {
   const [phone, setPhone] = useState('');
@@ -14,10 +15,11 @@ export default function LoginScreen({ navigation }) {
 
   const dispatch = useDispatch();
   const { isLoading, error } = useSelector((state) => state.auth);
+  const language = useSelector((state) => state.settings.language);
 
   const handleLogin = async () => {
     if (!phone.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please enter phone number and password');
+      Alert.alert(t('errorTitle', language), t('pleaseEnterPhonePassword', language));
       return;
     }
     dispatch(login({ phone: phone.trim(), password }));
@@ -35,13 +37,12 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.logoText}>Fetno</Text>
           </View>
           <Text style={styles.appName}>Fetno</Text>
-          <Text style={styles.tagline}>Ethiopia's Delivery Network</Text>
-          <Text style={styles.taglineAm}>የኢትዮጵያ የማድረስ አውታር</Text>
+          <Text style={styles.tagline}>{t('tagline', language)}</Text>
         </View>
 
         {/* Form */}
         <View style={styles.form}>
-          <Text style={styles.formTitle}>Welcome Back / እንኳን ደህና መጡ</Text>
+          <Text style={styles.formTitle}>{t('welcomeBack', language)}</Text>
 
           {error && (
             <View style={styles.errorBox}>
@@ -50,25 +51,25 @@ export default function LoginScreen({ navigation }) {
           )}
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Phone Number / ስልክ ቁጥር</Text>
+            <Text style={styles.label}>{t('phoneNumber', language)}</Text>
             <TextInput
               style={styles.input}
-              placeholder="+251 9XX XXX XXX"
+              placeholder={t('phonePlaceholder', language)}
               value={phone}
-              onChangeText={(t) => { setPhone(t); if (error) dispatch(clearError()); }}
+              onChangeText={(v) => { setPhone(v); if (error) dispatch(clearError()); }}
               keyboardType="phone-pad"
               autoComplete="tel"
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password / የምስጢር ቃል</Text>
+            <Text style={styles.label}>{t('password', language)}</Text>
             <View style={styles.passwordContainer}>
               <TextInput
                 style={[styles.input, styles.passwordInput]}
                 placeholder="••••••••"
                 value={password}
-                onChangeText={(t) => { setPassword(t); if (error) dispatch(clearError()); }}
+                onChangeText={(v) => { setPassword(v); if (error) dispatch(clearError()); }}
                 secureTextEntry={!showPassword}
               />
               <TouchableOpacity
@@ -88,7 +89,7 @@ export default function LoginScreen({ navigation }) {
             {isLoading ? (
               <ActivityIndicator color={COLORS.white} />
             ) : (
-              <Text style={styles.loginButtonText}>Login / ግባ</Text>
+              <Text style={styles.loginButtonText}>{t('login', language)}</Text>
             )}
           </TouchableOpacity>
 
@@ -97,14 +98,14 @@ export default function LoginScreen({ navigation }) {
             onPress={() => navigation.navigate('Register')}
           >
             <Text style={styles.registerLinkText}>
-              New driver? Register here / አዲስ ሾፌር? እዚህ ይመዝገቡ
+              {t('newDriverRegisterHere', language)}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>🇪🇹 Made for Ethiopia</Text>
+          <Text style={styles.footerText}>{t('madeForEthiopia', language)}</Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -127,7 +128,6 @@ const styles = StyleSheet.create({
   logoText: { color: COLORS.white, fontSize: 26, fontWeight: '900', letterSpacing: 1 },
   appName: { fontSize: 32, fontWeight: '900', color: COLORS.black, marginTop: 12 },
   tagline: { fontSize: 16, fontWeight: '600', color: COLORS.black, marginTop: 4 },
-  taglineAm: { fontSize: 14, color: COLORS.gray, marginTop: 4 },
   form: { backgroundColor: COLORS.white, borderRadius: 16, padding: 24, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
   formTitle: { fontSize: 16, fontWeight: '600', color: COLORS.black, marginBottom: 20, textAlign: 'center' },
   errorBox: { backgroundColor: '#FEE2E2', borderRadius: 8, padding: 12, marginBottom: 16 },

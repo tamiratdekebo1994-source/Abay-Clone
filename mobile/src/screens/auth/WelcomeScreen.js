@@ -1,9 +1,12 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSelector } from 'react-redux';
 import { COLORS } from '../../utils/constants';
+import { t } from '../../utils/i18n';
 
 export default function WelcomeScreen({ navigation }) {
+  const language = useSelector((s) => s.settings.language);
   const goToPhone = () => navigation.navigate('PhoneEntry');
 
   return (
@@ -14,15 +17,15 @@ export default function WelcomeScreen({ navigation }) {
         <View style={S.center}>
           <Image source={require('../../../assets/icon.png')} style={S.icon} />
           <Text style={S.brand}>ET SPARK</Text>
-          <Text style={S.tagline}>Ethiopia's Delivery Network</Text>
+          <Text style={S.tagline}>{t('tagline', language)}</Text>
         </View>
 
         <View style={S.bottom}>
           <TouchableOpacity style={S.btnPrimary} onPress={goToPhone} activeOpacity={0.85}>
-            <Text style={S.btnPrimaryText}>Get Started</Text>
+            <Text style={S.btnPrimaryText}>{t('getStarted', language)}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={S.btnSecondary} onPress={goToPhone} activeOpacity={0.85}>
-            <Text style={S.btnSecondaryText}>I already have an account</Text>
+            <Text style={S.btnSecondaryText}>{t('alreadyHaveAccount', language)}</Text>
           </TouchableOpacity>
         </View>
 

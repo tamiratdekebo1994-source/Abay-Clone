@@ -6,9 +6,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { loadUser } from '../../store/authStore';
 import { COLORS, API_URL } from '../../utils/constants';
+import { t, tf } from '../../utils/i18n';
 
 const CODE_LEN = 6;
 const { width: SW } = Dimensions.get('window');
@@ -21,6 +22,7 @@ function maskPhone(p) {
 export default function OtpVerificationScreen({ navigation, route }) {
   const { phone, purpose, devCode } = route.params;
   const dispatch = useDispatch();
+  const language = useSelector((s) => s.settings.language);
 
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,8 +32,8 @@ export default function OtpVerificationScreen({ navigation, route }) {
 
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 300);
-    const t = setInterval(() => setCountdown(c => c > 0 ? c - 1 : 0), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setCountdown(c => c > 0 ? c - 1 : 0), 1000);
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -39,7 +41,7 @@ export default function OtpVerificationScreen({ navigation, route }) {
   }, [code]);
 
   const verify = async (value = code) => {
-    if (value.length !== CODE_LEN) { setError('Enter the 6-digit code.'); return; }
+    if (value.length !== CODE_LEN) { setError(t('enterSixDigitCode', language)); return; }
     setLoading(true);
     setError('');
     try {
@@ -51,7 +53,7 @@ export default function OtpVerificationScreen({ navigation, route }) {
           body: JSON.stringify({ phone, code: value }),
         });
         const data = await res.json();
-        if (!res.ok) { setError(data.message || 'Invalid code. Try again.'); return; }
+        if (!res.ok) { setError(data.message || t('invalidCode', language)); return; }
         navigation.navigate('CompleteProfile', {
           phone,
           verificationToken: data.data.verificationToken,
@@ -64,7 +66,7 @@ export default function OtpVerificationScreen({ navigation, route }) {
           body: JSON.stringify({ phone, code: value }),
         });
         const data = await res.json();
-        if (!res.ok) { setError(data.message || 'Invalid code. Try again.'); return; }
+        if (!res.ok) { setError(data.message || t('invalidCode', language)); return; }
         await SecureStore.setItemAsync('firebaseIdToken', data.data.accessToken);
         if (data.data.refreshToken) {
           await SecureStore.setItemAsync('refreshToken', data.data.refreshToken);
@@ -72,7 +74,7 @@ export default function OtpVerificationScreen({ navigation, route }) {
         dispatch(loadUser());
       }
     } catch {
-      setError('Network error. Check your connection.');
+      setError(t('networkError', language));
     } finally {
       setLoading(false);
     }
@@ -108,14 +110,14 @@ export default function OtpVerificationScreen({ navigation, route }) {
             <View style={S.iconCircle}>
               <Text style={S.iconEmoji}>📲</Text>
             </View>
-            <Text style={S.headerTitle}>Verify your number</Text>
-            <Text style={S.headerSub}>ET Spark sent a code to</Text>
+            <Text style={S.headerTitle}>{t('verifyYourNumber', language)}</Text>
+            <Text style={S.headerSub}>{t('etSparkSentCode', language)}</Text>
             <View style={S.phonePill}>
               <Text style={S.phonePillText}>{maskPhone(phone)}</Text>
             </View>
             {purpose === 'REGISTER' && (
               <View style={S.purposeBadge}>
-                <Text style={S.purposeText}>New account registration</Text>
+                <Text style={S.purposeText}>{t('newAccountRegistration', language)}</Text>
               </View>
             )}
           </View>
@@ -135,16 +137,16 @@ export default function OtpVerificationScreen({ navigation, route }) {
         {/* Dev code banner */}
         {__DEV__ && !!devCode && (
           <View style={S.devBanner}>
-            <Text style={S.devBannerText}>🔢 Test code: {devCode}</Text>
+            <Text style={S.devBannerText}>{tf('testCodeTemplate', language, { code: devCode })}</Text>
           </View>
         )}
         {__DEV__ && !devCode && (
           <View style={S.devBanner}>
-            <Text style={S.devBannerText}>🛠 Check backend terminal for OTP code</Text>
+            <Text style={S.devBannerText}>{t('checkBackendTerminal', language)}</Text>
           </View>
         )}
 
-        <Text style={S.instruction}>Enter the 6-digit code below</Text>
+        <Text style={S.instruction}>{t('enterCodeBelow', language)}</Text>
 
         {/* Hidden input */}
         <TextInput
@@ -175,33 +177,35 @@ export default function OtpVerificationScreen({ navigation, route }) {
         {loading && (
           <View style={S.loadingRow}>
             <ActivityIndicator color={COLORS.primary} size="small" />
-            <Text style={S.loadingText}>Verifying...</Text>
+            <Text style={S.loadingText}>{t('verifying', language)}</Text>
           </View>
         )}
 
         {!loading && code.length === CODE_LEN && (
           <TouchableOpacity style={S.verifyBtn} onPress={() => verify()} activeOpacity={0.88}>
-            <Text style={S.verifyBtnText}>Verify & Continue →</Text>
+            <Text style={S.verifyBtnText}>{t('verifyAndContinue', language)}</Text>
           </TouchableOpacity>
         )}
 
         {!loading && code.length < CODE_LEN && (
           <View style={[S.verifyBtn, S.verifyBtnGhost]}>
-            <Text style={S.verifyBtnGhostText}>{CODE_LEN - code.length} digit{CODE_LEN - code.length !== 1 ? 's' : ''} remaining</Text>
+            <Text style={S.verifyBtnGhostText}>
+              {CODE_LEN - code.length} {t('digitWord', language)}{language === 'en' && CODE_LEN - code.length !== 1 ? 's' : ''} {t('remainingWord', language)}
+            </Text>
           </View>
         )}
 
         {/* Resend */}
         <View style={S.resendRow}>
-          <Text style={S.resendLabel}>Didn't receive it? </Text>
+          <Text style={S.resendLabel}>{t('didntReceiveItLabel', language)}</Text>
           {countdown > 0
             ? <View style={S.countdownBadge}><Text style={S.countdownText}>{countdown}s</Text></View>
-            : <TouchableOpacity onPress={resend}><Text style={S.resendLink}>Resend code</Text></TouchableOpacity>
+            : <TouchableOpacity onPress={resend}><Text style={S.resendLink}>{t('resendCode', language)}</Text></TouchableOpacity>
           }
         </View>
 
         <Text style={S.footerNote}>
-          Code expires in 5 minutes.{'\n'}Check your SMS inbox.
+          {t('codeExpiresFooter', language)}
         </Text>
       </View>
       </ScrollView>

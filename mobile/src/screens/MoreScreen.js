@@ -11,28 +11,29 @@ import { toggleTheme, changeLanguage } from '../store/settingsStore';
 import { uploadAPI } from '../services/api';
 import { COLORS, TAB_BAR_CLEARANCE } from '../utils/constants';
 import { getColors } from '../utils/theme';
+import { t } from '../utils/i18n';
 
 const MENU_SECTIONS = [
   {
     items: [
-      { id: 'metrics',    icon: '📊', label: 'My Metrics',              screen: null },
-      { id: 'incentives', icon: '🎁', label: 'Incentive Programs',      screen: null },
-      { id: 'resources',  icon: '📚', label: 'Resource Center',         screen: null },
-      { id: 'certs',      icon: '🏅', label: 'Certifications',          screen: null },
+      { id: 'metrics',    icon: '📊', labelKey: 'myMetrics',         screen: null },
+      { id: 'incentives', icon: '🎁', labelKey: 'incentivePrograms', screen: null },
+      { id: 'resources',  icon: '📚', labelKey: 'resourceCenter',    screen: null },
+      { id: 'certs',      icon: '🏅', labelKey: 'certifications',    screen: null },
     ],
   },
   {
     items: [
-      { id: 'help',       icon: '❓', label: 'Help',                    screen: 'HelpSupport' },
-      { id: 'license',    icon: '🪪', label: "Driver's License",        screen: null },
-      { id: 'vehicles',   icon: '🚗', label: 'Vehicles',                screen: null },
+      { id: 'help',       icon: '❓', labelKey: 'help',            screen: 'HelpSupport' },
+      { id: 'license',    icon: '🪪', labelKey: 'driversLicense',  screen: null },
+      { id: 'vehicles',   icon: '🚗', labelKey: 'vehicles',        screen: null },
     ],
   },
   {
     items: [
-      { id: 'wallet',     icon: '💰', label: 'Wallet',                  screen: 'Wallet' },
-      { id: 'account',    icon: '👤', label: 'Account',                 screen: null },
-      { id: 'settings',   icon: '⚙️',  label: 'Settings',               screen: null },
+      { id: 'wallet',     icon: '💰', labelKey: 'wallet',   screen: 'Wallet' },
+      { id: 'account',    icon: '👤', labelKey: 'account',  screen: null },
+      { id: 'settings',   icon: '⚙️',  labelKey: 'settings', screen: null },
     ],
   },
 ];
@@ -49,7 +50,7 @@ export default function MoreScreen({ navigation }) {
   const pickPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Allow photo access to update your profile picture.');
+      Alert.alert(t('permissionNeededTitle', lang), t('allowPhotoAccessBody', lang));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -65,7 +66,7 @@ export default function MoreScreen({ navigation }) {
       const { data } = await uploadAPI.avatar(uri);
       dispatch(updateDriver({ profilePhotoUrl: data.data.avatarUrl }));
     } catch {
-      Alert.alert('Upload failed', 'Could not update your profile photo. Try again.');
+      Alert.alert(t('uploadFailedTitle', lang), t('profilePhotoFailedBody', lang));
     } finally {
       setUploadingPhoto(false);
     }
@@ -84,27 +85,27 @@ export default function MoreScreen({ navigation }) {
       showSettings();
       return;
     }
-    Alert.alert(item.label, 'Coming soon');
+    Alert.alert(t(item.labelKey, lang), t('comingSoon', lang));
   };
 
   const showSettings = () => {
-    Alert.alert('Settings / ቅንብሮች', 'Choose an option', [
+    Alert.alert(t('settings', lang), t('chooseAnOption', lang), [
       {
-        text: isDark ? '☀️ Light Mode' : '🌙 Dark Mode',
+        text: isDark ? t('lightMode', lang) : t('darkMode', lang),
         onPress: () => dispatch(toggleTheme()),
       },
       {
         text: lang === 'am' ? '🇬🇧 English' : '🇪🇹 አማርኛ',
         onPress: () => dispatch(changeLanguage(lang === 'am' ? 'en' : 'am')),
       },
-      { text: 'Cancel', style: 'cancel' },
+      { text: t('cancel', lang), style: 'cancel' },
     ]);
   };
 
   const handleLogout = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: () => dispatch(logout()) },
+    Alert.alert(t('signOut', lang), t('signOutConfirm', lang), [
+      { text: t('cancel', lang), style: 'cancel' },
+      { text: t('signOut', lang), style: 'destructive', onPress: () => dispatch(logout()) },
     ]);
   };
 
@@ -133,12 +134,12 @@ export default function MoreScreen({ navigation }) {
             </View>
           </TouchableOpacity>
           <View style={S.profileInfo}>
-            <Text style={S.profileName}>{user?.fullName?.toUpperCase() || 'DRIVER'}</Text>
+            <Text style={S.profileName}>{user?.fullName?.toUpperCase() || t('driverFallback', lang)}</Text>
             <Text style={S.profilePhone}>{user?.phone}</Text>
             {driver?.status && (
               <View style={[S.statusPill, driver.status === 'ONLINE' && S.statusOnline]}>
                 <Text style={S.statusPillText}>
-                  {driver.status === 'ONLINE' ? '🟢 Online' : '⚫ Offline'}
+                  {driver.status === 'ONLINE' ? `🟢 ${t('online', lang)}` : `⚫ ${t('offline', lang)}`}
                 </Text>
               </View>
             )}
@@ -148,10 +149,10 @@ export default function MoreScreen({ navigation }) {
         {/* Nav app selector */}
         <TouchableOpacity
           style={S.navAppRow}
-          onPress={() => Alert.alert('Navigation App', 'Coming soon — Google Maps, Waze, Apple Maps')}
+          onPress={() => Alert.alert(t('navAppTitle', lang), t('navAppComingSoonBody', lang))}
         >
           <Text style={S.navAppIcon}>🧭</Text>
-          <Text style={S.navAppText}>Select my default navigation app</Text>
+          <Text style={S.navAppText}>{t('selectNavApp', lang)}</Text>
           <Text style={S.chevron}>›</Text>
         </TouchableOpacity>
 
@@ -160,7 +161,7 @@ export default function MoreScreen({ navigation }) {
           <View style={S.statsStrip}>
             <View style={S.statCell}>
               <Text style={S.statVal}>{driver.totalDeliveries ?? 0}</Text>
-              <Text style={S.statKey}>Trips</Text>
+              <Text style={S.statKey}>{t('trips', lang)}</Text>
             </View>
             <View style={S.statLine} />
             <View style={S.statCell}>
@@ -169,19 +170,19 @@ export default function MoreScreen({ navigation }) {
               ) : (
                 <Text style={S.statVal}>—</Text>
               )}
-              <Text style={S.statKey}>Rating</Text>
+              <Text style={S.statKey}>{t('rating', lang)}</Text>
             </View>
             <View style={S.statLine} />
             <View style={S.statCell}>
               <Text style={S.statVal}>
                 {(driver.deliveryStreak ?? 0) >= 3 ? `🔥 ${driver.deliveryStreak}` : driver.deliveryStreak ?? 0}
               </Text>
-              <Text style={S.statKey}>Day Streak</Text>
+              <Text style={S.statKey}>{t('dayStreak', lang)}</Text>
             </View>
             <View style={S.statLine} />
             <View style={S.statCell}>
               <Text style={S.statVal}>ETB {driver.totalEarnings?.toFixed(0) ?? '0'}</Text>
-              <Text style={S.statKey}>Earned</Text>
+              <Text style={S.statKey}>{t('earned', lang)}</Text>
             </View>
           </View>
         )}
@@ -199,7 +200,7 @@ export default function MoreScreen({ navigation }) {
                 activeOpacity={0.7}
               >
                 <Text style={S.menuIcon}>{item.icon}</Text>
-                <Text style={[S.menuLabel, { color: C.text }]}>{item.label}</Text>
+                <Text style={[S.menuLabel, { color: C.text }]}>{t(item.labelKey, lang)}</Text>
                 <Text style={[S.chevron, { color: C.gray }]}>›</Text>
               </TouchableOpacity>
             ))}
@@ -209,7 +210,7 @@ export default function MoreScreen({ navigation }) {
         {/* Sign Out */}
         <TouchableOpacity style={[S.signOutBtn, { backgroundColor: C.white }]} onPress={handleLogout}>
           <Text style={S.menuIcon}>🚪</Text>
-          <Text style={S.signOutText}>Sign Out</Text>
+          <Text style={S.signOutText}>{t('signOut', lang)}</Text>
         </TouchableOpacity>
 
         <Text style={[S.version, { color: C.gray }]}>ET Spark Driver v1.0.0</Text>

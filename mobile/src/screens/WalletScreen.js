@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import api from '../services/api';
 import { COLORS, PAYMENT_METHODS } from '../utils/constants';
+import { t, tf } from '../utils/i18n';
 
 const QUICK_AMOUNTS = [100, 200, 500, 1000];
 
@@ -19,16 +20,17 @@ const METHOD_COLORS = {
 };
 
 const STATUS_CONFIG = {
-  PENDING:   { label: 'Pending',   bg: '#FEF3C7', color: '#92400E' },
-  APPROVED:  { label: 'Approved',  bg: '#DBEAFE', color: '#1D4ED8' },
-  COMPLETED: { label: 'Completed', bg: '#DCFCE7', color: '#15803D' },
-  FAILED:    { label: 'Failed',    bg: '#FEE2E2', color: '#DC2626' },
+  PENDING:   { labelKey: 'pending',         bg: '#FEF3C7', color: '#92400E' },
+  APPROVED:  { labelKey: 'statusApproved',  bg: '#DBEAFE', color: '#1D4ED8' },
+  COMPLETED: { labelKey: 'statusCompleted', bg: '#DCFCE7', color: '#15803D' },
+  FAILED:    { labelKey: 'status_FAILED',   bg: '#FEE2E2', color: '#DC2626' },
 };
 
 const WITHDRAW_METHODS = PAYMENT_METHODS.filter((m) => m.value !== 'CASH');
 
 export default function WalletScreen() {
   const theme = useSelector((s) => s.settings.theme);
+  const language = useSelector((s) => s.settings.language);
   const isDark = theme === 'dark';
 
   const [wallet, setWallet] = useState(null);
@@ -71,23 +73,23 @@ export default function WalletScreen() {
     const { amount, method, accountNumber, accountName } = form;
     const amt = parseFloat(amount);
     if (!amount || isNaN(amt) || amt < 100) {
-      Alert.alert('Minimum withdrawal is ETB 100'); return;
+      Alert.alert(t('minWithdrawalAlert', language)); return;
     }
     if (amt > (wallet?.balance || 0)) {
-      Alert.alert('Insufficient balance'); return;
+      Alert.alert(t('insufficientBalance', language)); return;
     }
     if (!accountNumber.trim() || !accountName.trim()) {
-      Alert.alert('Please fill in all fields'); return;
+      Alert.alert(t('fillAllFields', language)); return;
     }
     setIsSubmitting(true);
     try {
       await api.post('/wallet/withdraw', { amount: amt, method, accountNumber, accountName });
-      Alert.alert('✅ Request submitted', 'Your withdrawal will be processed within 24 hours.');
+      Alert.alert(t('requestSubmittedTitle', language), t('requestSubmittedBody', language));
       closeSheet();
       setForm({ amount: '', method: 'TELEBIRR', accountNumber: '', accountName: '' });
       loadWallet();
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.message || 'Failed to submit withdrawal');
+      Alert.alert(t('errorTitle', language), err.response?.data?.message || t('withdrawFailedBody', language));
     } finally {
       setIsSubmitting(false);
     }
@@ -112,16 +114,16 @@ export default function WalletScreen() {
     <View style={[S.root, { backgroundColor: bg }]}>
       {/* ── Balance header ── */}
       <SafeAreaView style={S.header} edges={['top']}>
-        <Text style={S.headerTitle}>My Wallet</Text>
+        <Text style={S.headerTitle}>{t('myWallet', language)}</Text>
 
         <View style={S.balanceCard}>
-          <Text style={S.balanceLabel}>Available Balance</Text>
+          <Text style={S.balanceLabel}>{t('balance', language)}</Text>
           <Text style={S.balanceAmount}>
             ETB {wallet?.balance?.toLocaleString('en-ET', { minimumFractionDigits: 2 }) ?? '0.00'}
           </Text>
           {wallet?.pendingAmount > 0 && (
             <View style={S.pendingChip}>
-              <Text style={S.pendingChipText}>⏳ ETB {wallet.pendingAmount.toFixed(2)} pending</Text>
+              <Text style={S.pendingChipText}>{tf('pendingAmountTemplate', language, { amount: wallet.pendingAmount.toFixed(2) })}</Text>
             </View>
           )}
           <TouchableOpacity
@@ -130,7 +132,7 @@ export default function WalletScreen() {
             disabled={!wallet?.balance || wallet.balance < 100}
             activeOpacity={0.85}
           >
-            <Text style={S.withdrawBtnText}>💸  Withdraw Funds</Text>
+            <Text style={S.withdrawBtnText}>💸  {t('withdrawFunds', language)}</Text>
           </TouchableOpacity>
         </View>
 
@@ -138,17 +140,17 @@ export default function WalletScreen() {
         <View style={S.statsRow}>
           <View style={S.statItem}>
             <Text style={S.statVal}>ETB {wallet?.lifetimeEarnings?.toFixed(0) ?? '0'}</Text>
-            <Text style={S.statLabel}>Lifetime Earned</Text>
+            <Text style={S.statLabel}>{t('lifetimeEarned', language)}</Text>
           </View>
           <View style={S.statDivider} />
           <View style={S.statItem}>
             <Text style={S.statVal}>ETB {totalWithdrawn.toFixed(0)}</Text>
-            <Text style={S.statLabel}>Total Withdrawn</Text>
+            <Text style={S.statLabel}>{t('totalWithdrawn', language)}</Text>
           </View>
           <View style={S.statDivider} />
           <View style={S.statItem}>
             <Text style={S.statVal}>{wallet?.withdrawals?.length ?? 0}</Text>
-            <Text style={S.statLabel}>Requests</Text>
+            <Text style={S.statLabel}>{t('requests', language)}</Text>
           </View>
         </View>
       </SafeAreaView>
@@ -165,21 +167,22 @@ export default function WalletScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={[S.sectionTitle, { color: isDark ? '#94A3B8' : '#6B7280' }]}>
-          Withdrawal History
+          {t('withdrawalHistory', language)}
         </Text>
 
         {!wallet?.withdrawals?.length ? (
           <View style={[S.emptyCard, { backgroundColor: card }]}>
             <Text style={S.emptyEmoji}>💳</Text>
-            <Text style={[S.emptyText, { color: isDark ? '#CBD5E1' : '#374151' }]}>No withdrawals yet</Text>
+            <Text style={[S.emptyText, { color: isDark ? '#CBD5E1' : '#374151' }]}>{t('noWithdrawalsYet', language)}</Text>
             <Text style={[S.emptySub, { color: isDark ? '#64748B' : '#9CA3AF' }]}>
-              Your withdrawal history will appear here
+              {t('withdrawalHistoryEmptyBody', language)}
             </Text>
           </View>
         ) : (
           wallet.withdrawals.map((w) => {
             const mc = METHOD_COLORS[w.method] || { bg: '#6B7280', light: '#F3F4F6', label: w.method };
-            const sc = STATUS_CONFIG[w.status] || { label: w.status, bg: '#F3F4F6', color: '#6B7280' };
+            const sc = STATUS_CONFIG[w.status] || { labelKey: null, bg: '#F3F4F6', color: '#6B7280' };
+            const statusLabel = sc.labelKey ? t(sc.labelKey, language) : w.status;
             return (
               <View key={w.id} style={[S.txCard, { backgroundColor: card }]}>
                 <View style={[S.txMethodBadge, { backgroundColor: mc.bg }]}>
@@ -199,7 +202,7 @@ export default function WalletScreen() {
                     ETB {w.amount.toFixed(2)}
                   </Text>
                   <View style={[S.statusBadge, { backgroundColor: sc.bg }]}>
-                    <Text style={[S.statusText, { color: sc.color }]}>{sc.label}</Text>
+                    <Text style={[S.statusText, { color: sc.color }]}>{statusLabel}</Text>
                   </View>
                 </View>
               </View>
@@ -208,7 +211,7 @@ export default function WalletScreen() {
         )}
 
         <Text style={[S.footerNote, { color: isDark ? '#475569' : '#9CA3AF' }]}>
-          Minimum withdrawal: ETB 100 · Processed within 24 hours
+          {t('withdrawalFooterNote', language)}
         </Text>
       </ScrollView>
 
@@ -221,14 +224,14 @@ export default function WalletScreen() {
           <TouchableOpacity style={S.overlay} activeOpacity={1} onPress={closeSheet} />
           <Animated.View style={[S.sheet, { transform: [{ translateY: sheetAnim }] }]}>
             <View style={S.sheetHandle} />
-            <Text style={S.sheetTitle}>Withdraw Funds</Text>
+            <Text style={S.sheetTitle}>{t('withdrawFunds', language)}</Text>
             <Text style={S.sheetBalance}>
-              Available: ETB {wallet?.balance?.toFixed(2) ?? '0.00'}
+              {tf('availableAmountTemplate', language, { amount: wallet?.balance?.toFixed(2) ?? '0.00' })}
             </Text>
 
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {/* Quick amount chips */}
-              <Text style={S.fieldLabel}>Amount (ETB)</Text>
+              <Text style={S.fieldLabel}>{t('amountEtb', language)}</Text>
               <View style={S.quickRow}>
                 {QUICK_AMOUNTS.map((q) => (
                   <TouchableOpacity
@@ -246,13 +249,13 @@ export default function WalletScreen() {
                 style={S.input}
                 value={form.amount}
                 onChangeText={(v) => setForm((p) => ({ ...p, amount: v }))}
-                placeholder="Or enter custom amount"
+                placeholder={t('enterCustomAmount', language)}
                 placeholderTextColor="#9CA3AF"
                 keyboardType="decimal-pad"
               />
 
               {/* Method */}
-              <Text style={[S.fieldLabel, { marginTop: 16 }]}>Payment Method</Text>
+              <Text style={[S.fieldLabel, { marginTop: 16 }]}>{t('paymentMethod', language)}</Text>
               <View style={S.methodGrid}>
                 {WITHDRAW_METHODS.map((m) => {
                   const mc = METHOD_COLORS[m.value] || { bg: '#6B7280', light: '#F3F4F6' };
@@ -273,22 +276,22 @@ export default function WalletScreen() {
               </View>
 
               {/* Account fields */}
-              <Text style={[S.fieldLabel, { marginTop: 16 }]}>Account Number</Text>
+              <Text style={[S.fieldLabel, { marginTop: 16 }]}>{t('accountNumberShort', language)}</Text>
               <TextInput
                 style={S.input}
                 value={form.accountNumber}
                 onChangeText={(v) => setForm((p) => ({ ...p, accountNumber: v }))}
-                placeholder="+251XXXXXXXXX or account number"
+                placeholder={t('accountNumberPlaceholder', language)}
                 placeholderTextColor="#9CA3AF"
                 keyboardType="phone-pad"
               />
 
-              <Text style={[S.fieldLabel, { marginTop: 12 }]}>Account Name</Text>
+              <Text style={[S.fieldLabel, { marginTop: 12 }]}>{t('accountNameShort', language)}</Text>
               <TextInput
                 style={S.input}
                 value={form.accountName}
                 onChangeText={(v) => setForm((p) => ({ ...p, accountName: v }))}
-                placeholder="Name on account"
+                placeholder={t('accountNamePlaceholder', language)}
                 placeholderTextColor="#9CA3AF"
               />
 
@@ -300,7 +303,7 @@ export default function WalletScreen() {
               >
                 {isSubmitting
                   ? <ActivityIndicator color="#1B4332" />
-                  : <Text style={S.submitBtnText}>Submit Request</Text>
+                  : <Text style={S.submitBtnText}>{t('submitRequest', language)}</Text>
                 }
               </TouchableOpacity>
               <View style={{ height: 24 }} />

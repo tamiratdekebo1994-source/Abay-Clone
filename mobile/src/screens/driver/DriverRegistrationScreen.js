@@ -5,10 +5,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { loadUser } from '../../store/authStore';
 import { driverAPI } from '../../services/api';
 import { COLORS } from '../../utils/constants';
+import { t } from '../../utils/i18n';
 
 const TOTAL_STEPS = 5;
 
@@ -19,11 +20,11 @@ const ETHIOPIAN_CITIES = [
 ];
 
 const VEHICLE_TYPES = [
-  { key: 'MOTORCYCLE', label: 'Motorcycle', icon: '🏍️' },
+  { key: 'MOTORCYCLE', labelKey: 'vehicleTypeMotorcycle', icon: '🏍️' },
   { key: 'BAJAJ', label: 'Bajaj', icon: '🛺' },
-  { key: 'CAR', label: 'Car', icon: '🚗' },
-  { key: 'VAN', label: 'Van', icon: '🚐' },
-  { key: 'TRUCK', label: 'Truck', icon: '🚚' },
+  { key: 'CAR', labelKey: 'vehicleTypeCar', icon: '🚗' },
+  { key: 'VAN', labelKey: 'vehicleTypeVan', icon: '🚐' },
+  { key: 'TRUCK', labelKey: 'vehicleTypeTruck', icon: '🚚' },
 ];
 
 const VEHICLE_MAKES = {
@@ -37,16 +38,16 @@ const VEHICLE_MAKES = {
 const LICENSE_CLASSES = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 const GENDERS = [
-  { key: 'MALE', label: 'Male' },
-  { key: 'FEMALE', label: 'Female' },
+  { key: 'MALE', labelKey: 'genderMale' },
+  { key: 'FEMALE', labelKey: 'genderFemale' },
 ];
 
 const STEP_META = [
-  { icon: '👤', title: 'Personal Info', titleAm: 'የግል መረጃ' },
-  { icon: '📍', title: 'Location', titleAm: 'መኖሪያ ቦታ' },
-  { icon: '🚗', title: 'Vehicle', titleAm: 'ተሽከርካሪ' },
-  { icon: '📋', title: 'License', titleAm: 'ፍቃድ' },
-  { icon: '📸', title: 'Documents', titleAm: 'ሰነዶች' },
+  { icon: '👤', titleKey: 'personalInfo' },
+  { icon: '📍', titleKey: 'stepLocation' },
+  { icon: '🚗', titleKey: 'vehicle' },
+  { icon: '📋', titleKey: 'stepLicense' },
+  { icon: '📸', titleKey: 'documents' },
 ];
 
 function FieldLabel({ label }) {
@@ -71,12 +72,12 @@ function StyledInput({ value, onChangeText, placeholder, keyboardType, maxLength
   );
 }
 
-function ChipRow({ options, selected, onSelect, keyField = 'key', labelField = 'label' }) {
+function ChipRow({ options, selected, onSelect, keyField = 'key', labelField = 'label', language }) {
   return (
     <View style={S.chipRow}>
       {options.map((opt) => {
         const k = typeof opt === 'string' ? opt : opt[keyField];
-        const l = typeof opt === 'string' ? opt : opt[labelField];
+        const l = typeof opt === 'string' ? opt : (opt.labelKey ? t(opt.labelKey, language) : opt[labelField]);
         const active = selected === k;
         return (
           <TouchableOpacity
@@ -93,16 +94,16 @@ function ChipRow({ options, selected, onSelect, keyField = 'key', labelField = '
   );
 }
 
-function PhotoBlock({ label, uri, onPick }) {
+function PhotoBlock({ label, uri, onPick, language }) {
   return (
     <View style={S.photoBlock}>
       <TouchableOpacity style={[S.photoBox, uri && S.photoBoxFilled]} onPress={onPick} activeOpacity={0.8}>
         {uri ? (
-          <Text style={S.photoCheck}>✓ Uploaded</Text>
+          <Text style={S.photoCheck}>{t('uploaded', language)}</Text>
         ) : (
           <>
             <Text style={S.photoPlus}>+</Text>
-            <Text style={S.photoHint}>Tap to upload</Text>
+            <Text style={S.photoHint}>{t('tapToUploadShort', language)}</Text>
           </>
         )}
       </TouchableOpacity>
@@ -113,6 +114,7 @@ function PhotoBlock({ label, uri, onPick }) {
 
 export default function DriverRegistrationScreen({ navigation }) {
   const dispatch = useDispatch();
+  const language = useSelector((s) => s.settings.language);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -150,7 +152,7 @@ export default function DriverRegistrationScreen({ navigation }) {
   const pickImage = async (setter) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow photo access to upload documents.');
+      Alert.alert(t('permissionNeededTitle', language), t('allowPhotoAccessDocsBody', language));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -165,25 +167,25 @@ export default function DriverRegistrationScreen({ navigation }) {
 
   const validateStep = () => {
     if (step === 1) {
-      if (!fullName.trim()) { Alert.alert('Required', 'Full name is required.'); return false; }
-      if (!emergencyContactPhone.trim()) { Alert.alert('Required', 'Emergency contact phone is required.'); return false; }
+      if (!fullName.trim()) { Alert.alert(t('requiredTitle', language), t('fullNameRequiredBody', language)); return false; }
+      if (!emergencyContactPhone.trim()) { Alert.alert(t('requiredTitle', language), t('emergencyPhoneRequiredBody', language)); return false; }
       return true;
     }
     if (step === 2) {
-      if (!city) { Alert.alert('Required', 'Please select your city.'); return false; }
+      if (!city) { Alert.alert(t('requiredTitle', language), t('selectCityRequiredBody', language)); return false; }
       return true;
     }
     if (step === 3) {
-      if (!vehicleType) { Alert.alert('Required', 'Please select vehicle type.'); return false; }
-      if (!vehiclePlate.trim()) { Alert.alert('Required', 'Vehicle plate number is required.'); return false; }
+      if (!vehicleType) { Alert.alert(t('requiredTitle', language), t('selectVehicleTypeRequiredBody', language)); return false; }
+      if (!vehiclePlate.trim()) { Alert.alert(t('requiredTitle', language), t('vehiclePlateRequiredBody', language)); return false; }
       return true;
     }
     if (step === 4) {
-      if (!licenseNumber.trim()) { Alert.alert('Required', 'License number is required.'); return false; }
-      if (!licenseExpiry.trim()) { Alert.alert('Required', 'License expiry date is required.'); return false; }
+      if (!licenseNumber.trim()) { Alert.alert(t('requiredTitle', language), t('licenseNumberRequiredBody', language)); return false; }
+      if (!licenseExpiry.trim()) { Alert.alert(t('requiredTitle', language), t('licenseExpiryRequiredBody', language)); return false; }
       const expiryDate = new Date(licenseExpiry);
-      if (isNaN(expiryDate.getTime())) { Alert.alert('Invalid', 'Enter expiry as YYYY-MM-DD.'); return false; }
-      if (expiryDate < new Date()) { Alert.alert('Invalid', 'License has already expired.'); return false; }
+      if (isNaN(expiryDate.getTime())) { Alert.alert(t('invalidTitle', language), t('enterExpiryFormatBody', language)); return false; }
+      if (expiryDate < new Date()) { Alert.alert(t('invalidTitle', language), t('licenseAlreadyExpiredBody', language)); return false; }
       return true;
     }
     return true;
@@ -223,13 +225,13 @@ export default function DriverRegistrationScreen({ navigation }) {
       });
       await dispatch(loadUser());
       Alert.alert(
-        '✓ Application Submitted',
-        'Your driver application has been submitted successfully.\n\nOur team will review your information within 24-48 hours. You will receive a notification once your status is updated.\n\nThank you for choosing ET Spark!',
-        [{ text: 'Got it', onPress: () => {} }]
+        t('applicationSubmittedTitle', language),
+        t('applicationSubmittedBody', language),
+        [{ text: t('gotIt', language), onPress: () => {} }]
       );
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Registration failed. Please try again.';
-      Alert.alert('Error', msg);
+      const msg = err?.response?.data?.message || t('registrationFailed', language);
+      Alert.alert(t('errorTitle', language), msg);
     } finally {
       setLoading(false);
     }
@@ -247,7 +249,7 @@ export default function DriverRegistrationScreen({ navigation }) {
         </TouchableOpacity>
         <View style={S.headerCenter}>
           <Text style={S.headerBrand}>Fetno Driver</Text>
-          <Text style={S.headerSub}>Step {step} of {TOTAL_STEPS}</Text>
+          <Text style={S.headerSub}>{t('step', language)} {step} {t('of', language)} {TOTAL_STEPS}</Text>
         </View>
         <View style={{ width: 42 }} />
       </View>
@@ -274,42 +276,41 @@ export default function DriverRegistrationScreen({ navigation }) {
             <Text style={S.stepIcon}>{meta.icon}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={S.stepTitle}>{meta.title}</Text>
-            <Text style={S.stepTitleAm}>{meta.titleAm}</Text>
+            <Text style={S.stepTitle}>{t(meta.titleKey, language)}</Text>
           </View>
         </View>
 
         {/* ── STEP 1: Personal Info ── */}
         {step === 1 && (
           <View>
-            <FieldLabel label="Full Name *" />
-            <StyledInput value={fullName} onChangeText={setFullName} placeholder="As on your ID" />
+            <FieldLabel label={`${t('fullName', language)} *`} />
+            <StyledInput value={fullName} onChangeText={setFullName} placeholder={t('asOnYourId', language)} />
 
-            <FieldLabel label="Date of Birth" />
+            <FieldLabel label={t('dateOfBirth', language)} />
             <StyledInput value={dateOfBirth} onChangeText={setDateOfBirth} placeholder="YYYY-MM-DD" />
 
-            <FieldLabel label="Gender" />
-            <ChipRow options={GENDERS} selected={gender} onSelect={setGender} />
+            <FieldLabel label={t('gender', language)} />
+            <ChipRow options={GENDERS} selected={gender} onSelect={setGender} language={language} />
 
-            <FieldLabel label="National ID Number" />
-            <StyledInput value={nationalId} onChangeText={setNationalId} placeholder="National ID / Fayda" maxLength={50} />
+            <FieldLabel label={t('nationalIdNumber', language)} />
+            <StyledInput value={nationalId} onChangeText={setNationalId} placeholder={t('nationalIdPlaceholder', language)} maxLength={50} />
 
             <View style={S.sectionDivider}>
-              <Text style={S.sectionLabel}>Emergency Contact</Text>
+              <Text style={S.sectionLabel}>{t('emergencyContact', language)}</Text>
             </View>
 
-            <FieldLabel label="Contact Name" />
-            <StyledInput value={emergencyContactName} onChangeText={setEmergencyContactName} placeholder="Full name" maxLength={100} />
+            <FieldLabel label={t('contactName', language)} />
+            <StyledInput value={emergencyContactName} onChangeText={setEmergencyContactName} placeholder={t('fullName', language)} maxLength={100} />
 
-            <FieldLabel label="Contact Phone *" />
-            <StyledInput value={emergencyContactPhone} onChangeText={setEmergencyContactPhone} placeholder="+251 9XX XXX XXX" keyboardType="phone-pad" maxLength={20} />
+            <FieldLabel label={`${t('contactPhone', language)} *`} />
+            <StyledInput value={emergencyContactPhone} onChangeText={setEmergencyContactPhone} placeholder={t('phonePlaceholder', language)} keyboardType="phone-pad" maxLength={20} />
           </View>
         )}
 
         {/* ── STEP 2: Location ── */}
         {step === 2 && (
           <View>
-            <FieldLabel label="City *" />
+            <FieldLabel label={`${t('cityRequired', language)} *`} />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={S.cityScroll}>
               {ETHIOPIAN_CITIES.map((c) => (
                 <TouchableOpacity
@@ -324,11 +325,11 @@ export default function DriverRegistrationScreen({ navigation }) {
             </ScrollView>
             {city ? <Text style={S.selectedCity}>📍 {city}</Text> : null}
 
-            <FieldLabel label="Home Address" />
+            <FieldLabel label={t('homeAddress', language)} />
             <StyledInput
               value={homeAddress}
               onChangeText={setHomeAddress}
-              placeholder="Subcity, Woreda, Street..."
+              placeholder={t('subcityWoredaStreet', language)}
               multiline
             />
           </View>
@@ -337,7 +338,7 @@ export default function DriverRegistrationScreen({ navigation }) {
         {/* ── STEP 3: Vehicle ── */}
         {step === 3 && (
           <View>
-            <FieldLabel label="Vehicle Type *" />
+            <FieldLabel label={`${t('vehicleTypeRequired', language)} *`} />
             <View style={S.vehicleGrid}>
               {VEHICLE_TYPES.map((v) => (
                 <TouchableOpacity
@@ -347,14 +348,14 @@ export default function DriverRegistrationScreen({ navigation }) {
                   activeOpacity={0.8}
                 >
                   <Text style={S.vehicleIcon}>{v.icon}</Text>
-                  <Text style={[S.vehicleLabel, vehicleType === v.key && S.vehicleLabelActive]}>{v.label}</Text>
+                  <Text style={[S.vehicleLabel, vehicleType === v.key && S.vehicleLabelActive]}>{v.labelKey ? t(v.labelKey, language) : v.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
             {vehicleType ? (
               <>
-                <FieldLabel label="Vehicle Make" />
+                <FieldLabel label={t('vehicleMakeLabel', language)} />
                 <ChipRow
                   options={VEHICLE_MAKES[vehicleType] || []}
                   selected={vehicleMake}
@@ -363,22 +364,22 @@ export default function DriverRegistrationScreen({ navigation }) {
                   labelField={undefined}
                 />
 
-                <FieldLabel label="Model" />
-                <StyledInput value={vehicleModel} onChangeText={setVehicleModel} placeholder="e.g. Corolla, HB20..." maxLength={100} />
+                <FieldLabel label={t('modelLabel', language)} />
+                <StyledInput value={vehicleModel} onChangeText={setVehicleModel} placeholder={t('modelPlaceholder', language)} maxLength={100} />
 
                 <View style={S.twoCol}>
                   <View style={S.colHalf}>
-                    <FieldLabel label="Year" />
+                    <FieldLabel label={t('vehicleYear', language)} />
                     <StyledInput value={vehicleYear} onChangeText={setVehicleYear} placeholder="2020" keyboardType="numeric" maxLength={4} />
                   </View>
                   <View style={S.colHalf}>
-                    <FieldLabel label="Color" />
+                    <FieldLabel label={t('vehicleColor', language)} />
                     <StyledInput value={vehicleColor} onChangeText={setVehicleColor} placeholder="White" maxLength={50} />
                   </View>
                 </View>
 
-                <FieldLabel label="Plate Number *" />
-                <StyledInput value={vehiclePlate} onChangeText={(t) => setVehiclePlate(t.toUpperCase())} placeholder="AA 12345" maxLength={20} />
+                <FieldLabel label={`${t('plateNumberRequired', language)} *`} />
+                <StyledInput value={vehiclePlate} onChangeText={(v) => setVehiclePlate(v.toUpperCase())} placeholder="AA 12345" maxLength={20} />
               </>
             ) : null}
           </View>
@@ -387,18 +388,18 @@ export default function DriverRegistrationScreen({ navigation }) {
         {/* ── STEP 4: License ── */}
         {step === 4 && (
           <View>
-            <FieldLabel label="License Number *" />
+            <FieldLabel label={`${t('licenseNumberRequired', language)} *`} />
             <StyledInput value={licenseNumber} onChangeText={setLicenseNumber} placeholder="ETH-DL-XXXXXXXXX" maxLength={50} />
 
-            <FieldLabel label="License Class" />
+            <FieldLabel label={t('licenseClassLabel', language)} />
             <ChipRow options={LICENSE_CLASSES} selected={licenseClass} onSelect={setLicenseClass} />
 
-            <FieldLabel label="Expiry Date *" />
+            <FieldLabel label={`${t('expiryDateRequired', language)} *`} />
             <StyledInput value={licenseExpiry} onChangeText={setLicenseExpiry} placeholder="YYYY-MM-DD" />
 
             <View style={S.infoCard}>
               <Text style={S.infoIcon}>ℹ️</Text>
-              <Text style={S.infoText}>Your license must be valid. Expired licenses will be rejected.</Text>
+              <Text style={S.infoText}>{t('licenseValidInfoText', language)}</Text>
             </View>
           </View>
         )}
@@ -406,21 +407,21 @@ export default function DriverRegistrationScreen({ navigation }) {
         {/* ── STEP 5: Documents ── */}
         {step === 5 && (
           <View>
-            <Text style={S.docNote}>Upload clear photos of your documents. All uploads are optional but speed up approval.</Text>
+            <Text style={S.docNote}>{t('uploadDocsNote', language)}</Text>
             <View style={S.photoGrid}>
-              <PhotoBlock label="Profile Photo" uri={profilePhoto} onPick={() => pickImage(setProfilePhoto)} />
-              <PhotoBlock label="Driver's License" uri={licensePhoto} onPick={() => pickImage(setLicensePhoto)} />
-              <PhotoBlock label="National ID" uri={nationalIdPhoto} onPick={() => pickImage(setNationalIdPhoto)} />
-              <PhotoBlock label="Vehicle Photo" uri={vehiclePhoto} onPick={() => pickImage(setVehiclePhoto)} />
+              <PhotoBlock label={t('profilePhotoLabel', language)} uri={profilePhoto} onPick={() => pickImage(setProfilePhoto)} language={language} />
+              <PhotoBlock label={t('driversLicense', language)} uri={licensePhoto} onPick={() => pickImage(setLicensePhoto)} language={language} />
+              <PhotoBlock label={t('nationalIdLabel', language)} uri={nationalIdPhoto} onPick={() => pickImage(setNationalIdPhoto)} language={language} />
+              <PhotoBlock label={t('vehiclePhotoLabel', language)} uri={vehiclePhoto} onPick={() => pickImage(setVehiclePhoto)} language={language} />
             </View>
 
             <View style={S.reviewCard}>
-              <Text style={S.reviewTitle}>Review Summary</Text>
+              <Text style={S.reviewTitle}>{t('reviewSummary', language)}</Text>
               <Text style={S.reviewLine}>👤 {fullName || '—'}</Text>
               <Text style={S.reviewLine}>📍 {city || '—'}</Text>
               <Text style={S.reviewLine}>🚗 {vehicleType} {vehicleMake ? `· ${vehicleMake}` : ''}</Text>
               <Text style={S.reviewLine}>🔖 {vehiclePlate || '—'}</Text>
-              <Text style={S.reviewLine}>📋 License: {licenseNumber || '—'}</Text>
+              <Text style={S.reviewLine}>📋 {t('licensePrefix', language)} {licenseNumber || '—'}</Text>
             </View>
           </View>
         )}
@@ -440,12 +441,12 @@ export default function DriverRegistrationScreen({ navigation }) {
             <ActivityIndicator color={COLORS.white} />
           ) : (
             <Text style={S.ctaText}>
-              {step === TOTAL_STEPS ? 'Submit Application ✓' : 'Continue →'}
+              {step === TOTAL_STEPS ? t('submitApplication', language) : t('continueArrow', language)}
             </Text>
           )}
         </TouchableOpacity>
         {step === TOTAL_STEPS && (
-          <Text style={S.footerNote}>Your application will be reviewed within 24 hours</Text>
+          <Text style={S.footerNote}>{t('applicationReviewNote', language)}</Text>
         )}
       </View>
     </SafeAreaView>
@@ -502,7 +503,6 @@ const S = StyleSheet.create({
   },
   stepIcon: { fontSize: 26 },
   stepTitle: { fontSize: 20, fontWeight: '800', color: COLORS.primary },
-  stepTitleAm: { fontSize: 13, color: '#2E7D32', marginTop: 2 },
 
   label: {
     fontSize: 12, fontWeight: '700', color: COLORS.text,

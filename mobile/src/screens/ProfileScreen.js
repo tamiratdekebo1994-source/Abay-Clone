@@ -10,6 +10,7 @@ import Constants from 'expo-constants';
 import { loadUser, updateDriver, logout } from '../store/authStore';
 import { authAPI, uploadAPI } from '../services/api';
 import { COLORS, VEHICLE_TYPES } from '../utils/constants';
+import { t } from '../utils/i18n';
 
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
@@ -29,17 +30,22 @@ const STATUS_COLORS = {
   OFFLINE:   '#6B7280',
 };
 
-const STATUS_INFO = {
+const DRIVER_STATUS_KEYS = {
+  ONLINE: 'online', OFFLINE: 'offline', PENDING: 'pending',
+  APPROVED: 'statusApproved', SUSPENDED: 'statusSuspended', REJECTED: 'statusRejected',
+};
+
+const STATUS_INFO_KEYS = {
   PENDING: {
     icon: '⏳',
-    title: 'Account under review',
-    body: 'Your documents are being verified. This usually takes 1-2 business days. We\'ll notify you once approved.',
+    titleKey: 'accountUnderReviewTitle',
+    bodyKey: 'accountUnderReviewBody',
     bg: '#FFFBEB', border: '#FDE68A', text: '#92400E',
   },
   SUSPENDED: {
     icon: '🚫',
-    title: 'Account suspended',
-    body: 'Your account has been suspended. Please contact support to resolve the issue and restore access.',
+    titleKey: 'accountSuspendedTitle',
+    bodyKey: 'accountSuspendedBody',
     bg: '#FEF2F2', border: '#FECACA', text: '#991B1B',
   },
 };
@@ -47,6 +53,7 @@ const STATUS_INFO = {
 export default function ProfileScreen({ navigation }) {
   const dispatch = useDispatch();
   const { user, driver } = useSelector((s) => s.auth);
+  const language = useSelector((s) => s.settings.language);
 
   const [editing, setEditing] = useState(false);
   const [fullName, setFullName] = useState(user?.fullName || '');
@@ -62,12 +69,15 @@ export default function ProfileScreen({ navigation }) {
     || driver?.vehicleType || '—';
   const vehicleIcon = VEHICLE_ICONS[driver?.vehicleType] || '🚗';
   const statusColor = STATUS_COLORS[driver?.status] || '#6B7280';
-  const statusInfo = STATUS_INFO[driver?.status] ?? null;
+  const statusInfoConfig = STATUS_INFO_KEYS[driver?.status] ?? null;
+  const driverStatusLabel = driver?.status
+    ? (DRIVER_STATUS_KEYS[driver.status] ? t(DRIVER_STATUS_KEYS[driver.status], language) : driver.status)
+    : null;
 
   const pickPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Allow photo access to update your profile picture.');
+      Alert.alert(t('permissionNeededTitle', language), t('allowPhotoAccessBody', language));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -82,7 +92,7 @@ export default function ProfileScreen({ navigation }) {
       const { data } = await uploadAPI.avatar(result.assets[0].uri);
       dispatch(updateDriver({ profilePhotoUrl: data.data?.avatarUrl ?? data.data?.url }));
     } catch {
-      Alert.alert('Upload failed', 'Could not update your profile photo. Try again.');
+      Alert.alert(t('uploadFailedTitle', language), t('profilePhotoFailedBody', language));
     } finally {
       setUploadingPhoto(false);
     }
@@ -90,7 +100,7 @@ export default function ProfileScreen({ navigation }) {
 
   const handleSave = async () => {
     if (!fullName.trim()) {
-      Alert.alert('Name is required'); return;
+      Alert.alert(t('nameRequired', language)); return;
     }
     setSaving(true);
     try {
@@ -98,7 +108,7 @@ export default function ProfileScreen({ navigation }) {
       await dispatch(loadUser());
       setEditing(false);
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.message || 'Failed to save changes');
+      Alert.alert(t('errorTitle', language), err.response?.data?.message || t('saveFailedBody', language));
     } finally {
       setSaving(false);
     }
@@ -106,12 +116,12 @@ export default function ProfileScreen({ navigation }) {
 
   const handleSignOut = () => {
     Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
+      t('signOut', language),
+      t('signOutConfirm', language),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('cancel', language), style: 'cancel' },
         {
-          text: 'Sign Out',
+          text: t('signOut', language),
           style: 'destructive',
           onPress: () => dispatch(logout()),
         },
@@ -127,7 +137,7 @@ export default function ProfileScreen({ navigation }) {
           <TouchableOpacity onPress={() => navigation.goBack()} style={S.backBtn}>
             <Text style={S.backIcon}>‹</Text>
           </TouchableOpacity>
-          <Text style={S.headerTitle}>My Account</Text>
+          <Text style={S.headerTitle}>{t('myAccount', language)}</Text>
           <TouchableOpacity
             onPress={() => {
               if (editing) {
@@ -140,7 +150,7 @@ export default function ProfileScreen({ navigation }) {
             }}
             style={S.editBtn}
           >
-            <Text style={S.editBtnText}>{editing ? 'Cancel' : 'Edit'}</Text>
+            <Text style={S.editBtnText}>{editing ? t('cancel', language) : t('edit', language)}</Text>
           </TouchableOpacity>
         </View>
 
@@ -166,7 +176,7 @@ export default function ProfileScreen({ navigation }) {
           <View style={[S.statusBadge, { backgroundColor: statusColor + '33', borderColor: statusColor + '66' }]}>
             <View style={[S.statusDot, { backgroundColor: statusColor }]} />
             <Text style={[S.statusText, { color: COLORS.white }]}>
-              {driver.status}
+              {driverStatusLabel}
             </Text>
           </View>
         )}
@@ -175,12 +185,12 @@ export default function ProfileScreen({ navigation }) {
       <ScrollView style={S.scroll} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
 
         {/* ── Status alert for PENDING / SUSPENDED ── */}
-        {statusInfo && (
-          <View style={[S.statusAlert, { backgroundColor: statusInfo.bg, borderColor: statusInfo.border }]}>
-            <Text style={S.statusAlertIcon}>{statusInfo.icon}</Text>
+        {statusInfoConfig && (
+          <View style={[S.statusAlert, { backgroundColor: statusInfoConfig.bg, borderColor: statusInfoConfig.border }]}>
+            <Text style={S.statusAlertIcon}>{statusInfoConfig.icon}</Text>
             <View style={{ flex: 1 }}>
-              <Text style={[S.statusAlertTitle, { color: statusInfo.text }]}>{statusInfo.title}</Text>
-              <Text style={[S.statusAlertBody, { color: statusInfo.text }]}>{statusInfo.body}</Text>
+              <Text style={[S.statusAlertTitle, { color: statusInfoConfig.text }]}>{t(statusInfoConfig.titleKey, language)}</Text>
+              <Text style={[S.statusAlertBody, { color: statusInfoConfig.text }]}>{t(statusInfoConfig.bodyKey, language)}</Text>
             </View>
           </View>
         )}
@@ -190,7 +200,7 @@ export default function ProfileScreen({ navigation }) {
           <View style={S.statsRow}>
             <View style={S.statCell}>
               <Text style={S.statVal}>{driver.totalDeliveries ?? 0}</Text>
-              <Text style={S.statKey}>Trips</Text>
+              <Text style={S.statKey}>{t('trips', language)}</Text>
             </View>
             <View style={S.statLine} />
             <View style={S.statCell}>
@@ -198,43 +208,43 @@ export default function ProfileScreen({ navigation }) {
                 ? <Text style={S.statVal}>⭐ {driver.rating.toFixed(1)}</Text>
                 : <Text style={S.statVal}>—</Text>
               }
-              <Text style={S.statKey}>Rating</Text>
+              <Text style={S.statKey}>{t('rating', language)}</Text>
             </View>
             <View style={S.statLine} />
             <View style={S.statCell}>
               <Text style={S.statVal}>
                 {(driver.deliveryStreak ?? 0) >= 3 ? `🔥 ${driver.deliveryStreak}` : driver.deliveryStreak ?? 0}
               </Text>
-              <Text style={S.statKey}>Streak</Text>
+              <Text style={S.statKey}>{t('streak', language)}</Text>
             </View>
             <View style={S.statLine} />
             <View style={S.statCell}>
               <Text style={S.statVal}>ETB {driver.totalEarnings?.toFixed(0) ?? '0'}</Text>
-              <Text style={S.statKey}>Earned</Text>
+              <Text style={S.statKey}>{t('earned', language)}</Text>
             </View>
           </View>
         )}
 
         {/* ── Personal info ── */}
         <View style={S.section}>
-          <Text style={S.sectionTitle}>Personal Info</Text>
+          <Text style={S.sectionTitle}>{t('personalInfo', language)}</Text>
           <View style={S.card}>
             <InfoField
               icon="👤"
-              label="Full Name"
+              label={t('fullName', language)}
               value={editing ? fullName : user?.fullName}
               editing={editing}
               onChangeText={setFullName}
             />
             <InfoField
               icon="📱"
-              label="Phone"
+              label={t('phone', language)}
               value={user?.phone}
               editing={false}
             />
             <InfoField
               icon="✉️"
-              label="Email"
+              label={t('emailLabel', language)}
               value={editing ? email : (user?.email || '—')}
               editing={editing}
               onChangeText={setEmail}
@@ -252,7 +262,7 @@ export default function ProfileScreen({ navigation }) {
             >
               {saving
                 ? <ActivityIndicator color={COLORS.white} />
-                : <Text style={S.saveBtnText}>Save Changes</Text>
+                : <Text style={S.saveBtnText}>{t('saveChanges', language)}</Text>
               }
             </TouchableOpacity>
           )}
@@ -261,7 +271,7 @@ export default function ProfileScreen({ navigation }) {
         {/* ── Vehicle info ── */}
         {driver && (
           <View style={S.section}>
-            <Text style={S.sectionTitle}>Vehicle</Text>
+            <Text style={S.sectionTitle}>{t('vehicle', language)}</Text>
             <View style={S.vehicleCard}>
               <View style={S.vehicleIconBox}>
                 <Text style={S.vehicleIconText}>{vehicleIcon}</Text>
@@ -273,12 +283,12 @@ export default function ProfileScreen({ navigation }) {
             </View>
 
             <View style={S.card}>
-              <VehicleRow label="Make / Model" value={`${driver.vehicleMake || ''} ${driver.vehicleModel || ''}`.trim() || '—'} />
-              <VehicleRow label="Color" value={driver.vehicleColor || '—'} />
-              <VehicleRow label="Year" value={driver.vehicleYear ? String(driver.vehicleYear) : '—'} />
-              <VehicleRow label="License #" value={driver.licenseNumber || '—'} />
+              <VehicleRow label={t('makeModel', language)} value={`${driver.vehicleMake || ''} ${driver.vehicleModel || ''}`.trim() || '—'} />
+              <VehicleRow label={t('vehicleColor', language)} value={driver.vehicleColor || '—'} />
+              <VehicleRow label={t('vehicleYear', language)} value={driver.vehicleYear ? String(driver.vehicleYear) : '—'} />
+              <VehicleRow label={t('licenseNumberShort', language)} value={driver.licenseNumber || '—'} />
               <VehicleRow
-                label="License Expiry"
+                label={t('licenseExpiry', language)}
                 value={driver.licenseExpiry
                   ? new Date(driver.licenseExpiry).toLocaleDateString('en-ET', { year: 'numeric', month: 'short', day: 'numeric' })
                   : '—'}
@@ -291,27 +301,27 @@ export default function ProfileScreen({ navigation }) {
         {/* ── City / location ── */}
         {driver?.city && (
           <View style={S.section}>
-            <Text style={S.sectionTitle}>Zone</Text>
+            <Text style={S.sectionTitle}>{t('zone', language)}</Text>
             <View style={S.card}>
-              <VehicleRow label="City" value={driver.city} />
-              {driver.homeAddress && <VehicleRow label="Home Address" value={driver.homeAddress} last />}
+              <VehicleRow label={t('city', language)} value={driver.city} />
+              {driver.homeAddress && <VehicleRow label={t('homeAddress', language)} value={driver.homeAddress} last />}
             </View>
           </View>
         )}
 
         {/* ── Support ── */}
         <View style={S.section}>
-          <Text style={S.sectionTitle}>Support</Text>
+          <Text style={S.sectionTitle}>{t('support', language)}</Text>
           <View style={S.card}>
             <LinkRow
               icon="📞"
-              label="Call Support"
+              label={t('callSupport', language)}
               detail="+251 911 000 000"
               onPress={() => Linking.openURL('tel:+251911000000')}
             />
             <LinkRow
               icon="✉️"
-              label="Email Support"
+              label={t('emailSupport', language)}
               detail="support@etspark.et"
               onPress={() => Linking.openURL('mailto:support@etspark.et')}
               last
@@ -322,7 +332,7 @@ export default function ProfileScreen({ navigation }) {
         {/* ── Sign Out ── */}
         <View style={S.section}>
           <TouchableOpacity style={S.signOutBtn} onPress={handleSignOut} activeOpacity={0.85}>
-            <Text style={S.signOutText}>Sign Out</Text>
+            <Text style={S.signOutText}>{t('signOut', language)}</Text>
           </TouchableOpacity>
         </View>
 

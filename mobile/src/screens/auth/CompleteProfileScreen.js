@@ -5,18 +5,20 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import api from '../../services/api';
 import { loadUser } from '../../store/authStore';
 import { COLORS } from '../../utils/constants';
+import { t } from '../../utils/i18n';
 
-const STEPS = ['OTP', 'Profile', 'Role'];
-const TOTAL_STEPS = STEPS.length;
+const STEP_KEYS = ['OTP', 'stepProfile', 'stepRole'];
+const TOTAL_STEPS = STEP_KEYS.length;
 const CURRENT_STEP = 1; // 0-indexed
 
 export default function CompleteProfileScreen({ navigation, route }) {
   const { phone } = route.params;
   const dispatch = useDispatch();
+  const language = useSelector((s) => s.settings.language);
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -27,8 +29,8 @@ export default function CompleteProfileScreen({ navigation, route }) {
   const [emailFocused, setEmailFocused] = useState(false);
 
   const handleCreate = async () => {
-    if (!fullName.trim()) { setError('Please enter your full name.'); return; }
-    if (!role) { setError('Please select your account type.'); return; }
+    if (!fullName.trim()) { setError(t('pleaseEnterFullName', language)); return; }
+    if (!role) { setError(t('pleaseSelectAccountType', language)); return; }
 
     setIsLoading(true);
     setError('');
@@ -48,7 +50,7 @@ export default function CompleteProfileScreen({ navigation, route }) {
     } catch (err) {
       const msg = err?.response?.data?.message
         || err?.message
-        || 'Registration failed. Please try again.';
+        || t('registrationFailed', language);
       setError(msg);
     } finally {
       setIsLoading(false);
@@ -66,7 +68,7 @@ export default function CompleteProfileScreen({ navigation, route }) {
           <Text style={S.backArrow}>←</Text>
         </TouchableOpacity>
         <View style={S.stepPill}>
-          <Text style={S.stepPillText}>Step {CURRENT_STEP + 1} of {TOTAL_STEPS}</Text>
+          <Text style={S.stepPillText}>{t('step', language)} {CURRENT_STEP + 1} {t('of', language)} {TOTAL_STEPS}</Text>
         </View>
         <View style={{ width: 40 }} />
       </View>
@@ -76,12 +78,12 @@ export default function CompleteProfileScreen({ navigation, route }) {
         <View style={[S.progressFill, { width: `${progressPct}%` }]} />
       </View>
       <View style={S.stepLabels}>
-        {STEPS.map((s, i) => (
+        {STEP_KEYS.map((s, i) => (
           <Text
             key={s}
             style={[S.stepLabelText, i <= CURRENT_STEP && S.stepLabelActive]}
           >
-            {s}
+            {s === 'OTP' ? 'OTP' : t(s, language)}
           </Text>
         ))}
       </View>
@@ -101,8 +103,8 @@ export default function CompleteProfileScreen({ navigation, route }) {
           </View>
         </View>
 
-        <Text style={S.title}>Complete your profile</Text>
-        <Text style={S.subtitle}>Just a few details and you're ready to go</Text>
+        <Text style={S.title}>{t('completeYourProfile', language)}</Text>
+        <Text style={S.subtitle}>{t('fewDetailsReady', language)}</Text>
 
         {/* Error */}
         {!!error && (
@@ -112,12 +114,12 @@ export default function CompleteProfileScreen({ navigation, route }) {
         )}
 
         {/* Full name */}
-        <Text style={S.label}>Full Name · ሙሉ ስም *</Text>
+        <Text style={S.label}>{t('fullName', language)} *</Text>
         <View style={[S.inputWrap, nameFocused && S.inputWrapFocused]}>
           <Text style={S.inputIcon}>👤</Text>
           <TextInput
             style={S.input}
-            placeholder="e.g. Abebe Kebede"
+            placeholder={t('fullNamePlaceholder', language)}
             value={fullName}
             onChangeText={(v) => { setFullName(v); setError(''); }}
             autoCapitalize="words"
@@ -128,7 +130,7 @@ export default function CompleteProfileScreen({ navigation, route }) {
         </View>
 
         {/* Email */}
-        <Text style={[S.label, { marginTop: 18 }]}>Email Address <Text style={S.optional}>(optional)</Text></Text>
+        <Text style={[S.label, { marginTop: 18 }]}>{t('emailAddressLabel', language)} <Text style={S.optional}>{t('optionalWord', language)}</Text></Text>
         <View style={[S.inputWrap, emailFocused && S.inputWrapFocused]}>
           <Text style={S.inputIcon}>✉️</Text>
           <TextInput
@@ -145,7 +147,7 @@ export default function CompleteProfileScreen({ navigation, route }) {
         </View>
 
         {/* Role selector */}
-        <Text style={[S.label, { marginTop: 24 }]}>I am joining as... *</Text>
+        <Text style={[S.label, { marginTop: 24 }]}>{t('iAmJoiningAs', language)} *</Text>
         <View style={S.roleGrid}>
 
           <TouchableOpacity
@@ -159,10 +161,9 @@ export default function CompleteProfileScreen({ navigation, route }) {
             <View style={[S.roleIconBox, role === 'DRIVER' && S.roleIconBoxActive]}>
               <Text style={S.roleIconEmoji}>🚚</Text>
             </View>
-            <Text style={[S.roleTitle, role === 'DRIVER' && S.roleTitleActive]}>Driver</Text>
-            <Text style={[S.roleTag, role === 'DRIVER' && S.roleTagActive]}>ሾፌር</Text>
+            <Text style={[S.roleTitle, S.roleTitleSpaced, role === 'DRIVER' && S.roleTitleActive]}>{t('driverRole', language)}</Text>
             <Text style={[S.roleDesc, role === 'DRIVER' && S.roleDescActive]}>
-              Deliver orders & earn money daily
+              {t('driverRoleDesc', language)}
             </Text>
           </TouchableOpacity>
 
@@ -177,10 +178,9 @@ export default function CompleteProfileScreen({ navigation, route }) {
             <View style={[S.roleIconBox, role === 'STORE' && S.roleIconBoxActive]}>
               <Text style={S.roleIconEmoji}>🏪</Text>
             </View>
-            <Text style={[S.roleTitle, role === 'STORE' && S.roleTitleActive]}>Store</Text>
-            <Text style={[S.roleTag, role === 'STORE' && S.roleTagActive]}>ሱቅ</Text>
+            <Text style={[S.roleTitle, S.roleTitleSpaced, role === 'STORE' && S.roleTitleActive]}>{t('storeRole', language)}</Text>
             <Text style={[S.roleDesc, role === 'STORE' && S.roleDescActive]}>
-              Send packages & manage orders
+              {t('storeRoleDesc', language)}
             </Text>
           </TouchableOpacity>
 
@@ -197,13 +197,13 @@ export default function CompleteProfileScreen({ navigation, route }) {
             <ActivityIndicator color={COLORS.white} size="small" />
           ) : (
             <Text style={S.ctaText}>
-              {role === 'DRIVER' ? 'Continue to Driver Setup →' : 'Create Account →'}
+              {role === 'DRIVER' ? t('continueToDriverSetup', language) : t('createAccountArrow', language)}
             </Text>
           )}
         </TouchableOpacity>
 
         <Text style={S.terms}>
-          By continuing you agree to ET Spark's Terms of Service and Privacy Policy.
+          {t('profileTerms', language)}
         </Text>
 
       </ScrollView>
@@ -324,9 +324,8 @@ const S = StyleSheet.create({
   roleIconBoxActive: { backgroundColor: 'rgba(27,67,50,0.1)' },
   roleIconEmoji: { fontSize: 28 },
   roleTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text, marginBottom: 2 },
+  roleTitleSpaced: { marginBottom: 8 },
   roleTitleActive: { color: COLORS.primary },
-  roleTag: { fontSize: 12, color: COLORS.gray, marginBottom: 8, fontWeight: '500' },
-  roleTagActive: { color: COLORS.primaryLight },
   roleDesc: { fontSize: 11, color: COLORS.gray, textAlign: 'center', lineHeight: 15 },
   roleDescActive: { color: COLORS.primaryLight },
 

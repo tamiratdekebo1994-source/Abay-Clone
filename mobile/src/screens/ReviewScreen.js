@@ -7,34 +7,43 @@ import { useSelector } from 'react-redux';
 import { orderAPI } from '../services/api';
 import { COLORS } from '../utils/constants';
 import { getColors } from '../utils/theme';
+import { t, tf } from '../utils/i18n';
+
+const TAGS = [
+  { key: 'tagFastDelivery' },
+  { key: 'tagCarefulHandling' },
+  { key: 'tagProfessional' },
+  { key: 'tagOnTime' },
+  { key: 'tagExcellentCommunication' },
+];
 
 export default function ReviewScreen({ route, navigation }) {
   const { orderId, order } = route.params || {};
   const theme = useSelector((s) => s.settings.theme);
+  const language = useSelector((s) => s.settings.language);
   const C = getColors(theme);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hovered, setHovered] = useState(0);
 
-  const LABELS = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
-  const LABELS_AM = ['', 'መጥፎ', 'ደካማ', 'ጥሩ', 'በጣም ጥሩ', 'አስደናቂ'];
+  const LABEL_KEYS = ['', 'ratingPoor', 'ratingFair', 'ratingGood', 'ratingVeryGood', 'ratingExcellent'];
 
   const handleSubmit = async () => {
     if (rating === 0) {
-      Alert.alert('Rating Required', 'Please select a star rating.\nእባክዎ ደረጃ ይምረጡ።');
+      Alert.alert(t('ratingRequiredTitle', language), t('ratingRequiredBody', language));
       return;
     }
     try {
       setIsSubmitting(true);
       await orderAPI.submitReview(orderId, { rating, comment });
       Alert.alert(
-        '🎉 Review Submitted!',
-        'Thank you for your feedback.\nለአስተያየትዎ እናመሰግናለን።',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        t('reviewSubmittedTitle', language),
+        t('reviewSubmittedBody', language),
+        [{ text: t('ok', language), onPress: () => navigation.goBack() }]
       );
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.message || 'Failed to submit review');
+      Alert.alert(t('errorTitle', language), err.response?.data?.message || t('reviewFailedBody', language));
     } finally {
       setIsSubmitting(false);
     }
@@ -47,15 +56,14 @@ export default function ReviewScreen({ route, navigation }) {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Order Header */}
       <View style={styles.orderCard}>
-        <Text style={styles.orderNum}>Order #{order?.orderNumber}</Text>
+        <Text style={styles.orderNum}>{t('orderNumber', language)} #{order?.orderNumber}</Text>
         <Text style={styles.orderAddress} numberOfLines={1}>📦 {order?.deliveryAddress}</Text>
-        <Text style={styles.orderFee}>ETB {order?.driverFee?.toFixed(2)} earned</Text>
+        <Text style={styles.orderFee}>{tf('orderFeeEarnedTemplate', language, { amount: order?.driverFee?.toFixed(2) })}</Text>
       </View>
 
       {/* Rating */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Rate this delivery</Text>
-        <Text style={styles.sectionTitleAm}>ይህን ማድረስ ይምዘኑ</Text>
+        <Text style={styles.sectionTitle}>{t('rateThisDeliveryTitle', language)}</Text>
         <View style={styles.stars}>
           {[1, 2, 3, 4, 5].map((star) => (
             <TouchableOpacity
@@ -74,16 +82,14 @@ export default function ReviewScreen({ route, navigation }) {
         </View>
         {displayRating > 0 && (
           <View style={styles.ratingLabel}>
-            <Text style={styles.ratingLabelText}>{LABELS[displayRating]}</Text>
-            <Text style={styles.ratingLabelAm}>{LABELS_AM[displayRating]}</Text>
+            <Text style={styles.ratingLabelText}>{t(LABEL_KEYS[displayRating], language)}</Text>
           </View>
         )}
       </View>
 
       {/* Comment */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Comment (optional)</Text>
-        <Text style={styles.sectionTitleAm}>አስተያየት (አማራጭ)</Text>
+        <Text style={styles.sectionTitle}>{t('commentOptional', language)}</Text>
         <TextInput
           style={styles.commentInput}
           multiline
@@ -91,7 +97,7 @@ export default function ReviewScreen({ route, navigation }) {
           maxLength={300}
           value={comment}
           onChangeText={setComment}
-          placeholder="Describe your experience... / ልምድዎን ይግለጹ..."
+          placeholder={t('describeExperience', language)}
           placeholderTextColor={C.gray}
           textAlignVertical="top"
         />
@@ -100,21 +106,24 @@ export default function ReviewScreen({ route, navigation }) {
 
       {/* Quick tags */}
       <View style={styles.section}>
-        <Text style={styles.quickLabel}>Quick tags:</Text>
+        <Text style={styles.quickLabel}>{t('quickTagsLabel', language)}</Text>
         <View style={styles.quickTags}>
-          {['Fast delivery', 'Careful handling', 'Professional', 'On time', 'Excellent communication'].map((tag) => (
-            <TouchableOpacity
-              key={tag}
-              style={[styles.tag, comment.includes(tag) && styles.tagActive]}
-              onPress={() =>
-                setComment((prev) =>
-                  prev.includes(tag) ? prev.replace(tag, '').trim() : `${prev} ${tag}`.trim()
-                )
-              }
-            >
-              <Text style={[styles.tagText, comment.includes(tag) && styles.tagTextActive]}>{tag}</Text>
-            </TouchableOpacity>
-          ))}
+          {TAGS.map(({ key }) => {
+            const tag = t(key, language);
+            return (
+              <TouchableOpacity
+                key={key}
+                style={[styles.tag, comment.includes(tag) && styles.tagActive]}
+                onPress={() =>
+                  setComment((prev) =>
+                    prev.includes(tag) ? prev.replace(tag, '').trim() : `${prev} ${tag}`.trim()
+                  )
+                }
+              >
+                <Text style={[styles.tagText, comment.includes(tag) && styles.tagTextActive]}>{tag}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
 
@@ -127,15 +136,12 @@ export default function ReviewScreen({ route, navigation }) {
         {isSubmitting ? (
           <ActivityIndicator color={COLORS.white} />
         ) : (
-          <>
-            <Text style={styles.submitText}>Submit Review</Text>
-            <Text style={styles.submitTextAm}>ግምገማ አስገባ</Text>
-          </>
+          <Text style={styles.submitText}>{t('submitReview', language)}</Text>
         )}
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.skipBtn} onPress={() => navigation.goBack()}>
-        <Text style={styles.skipText}>Skip for now / አሁን ይዝለሉ</Text>
+        <Text style={styles.skipText}>{t('skipForNow', language)}</Text>
       </TouchableOpacity>
 
       <View style={{ height: 32 }} />
@@ -155,15 +161,13 @@ const getStyles = (C) => StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06, shadowRadius: 4, elevation: 1,
   },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: C.text },
-  sectionTitleAm: { fontSize: 13, color: C.gray, marginTop: 2, marginBottom: 16 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: C.text, marginBottom: 16 },
   stars: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 12 },
   starBtn: { padding: 4 },
   star: { fontSize: 44, color: C.grayLight },
   starActive: { color: COLORS.accent },
   ratingLabel: { alignItems: 'center' },
   ratingLabelText: { fontSize: 18, fontWeight: '800', color: COLORS.primary },
-  ratingLabelAm: { fontSize: 14, color: C.gray, marginTop: 2 },
   commentInput: {
     borderWidth: 1, borderColor: C.border, borderRadius: 10,
     padding: 12, fontSize: 14, color: C.text,
@@ -186,7 +190,6 @@ const getStyles = (C) => StyleSheet.create({
   },
   submitBtnDisabled: { opacity: 0.5, shadowOpacity: 0 },
   submitText: { color: COLORS.white, fontSize: 18, fontWeight: '800' },
-  submitTextAm: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 },
   skipBtn: { alignItems: 'center', paddingVertical: 14 },
   skipText: { color: C.gray, fontSize: 14 },
 });

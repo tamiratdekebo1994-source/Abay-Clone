@@ -5,9 +5,12 @@ import {
   KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSelector } from 'react-redux';
 import { COLORS, API_URL } from '../../utils/constants';
+import { t } from '../../utils/i18n';
 
 export default function PhoneEntryScreen({ navigation }) {
+  const language = useSelector((s) => s.settings.language);
   const [digits, setDigits] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -40,7 +43,7 @@ export default function PhoneEntryScreen({ navigation }) {
       }
 
       if (!res.ok) {
-        setError(data.message || 'Could not send code. Try again.');
+        setError(data.message || t('couldNotSendCode', language));
         return;
       }
 
@@ -50,7 +53,7 @@ export default function PhoneEntryScreen({ navigation }) {
         devCode: data.data?.devCode,
       });
     } catch {
-      setError('Network error. Check your connection.');
+      setError(t('networkError', language));
     } finally {
       setLoading(false);
     }
@@ -66,8 +69,8 @@ export default function PhoneEntryScreen({ navigation }) {
           </TouchableOpacity>
 
           <View style={S.content}>
-            <Text style={S.title}>What's your{'\n'}phone number?</Text>
-            <Text style={S.subtitle}>We'll send you a verification code</Text>
+            <Text style={S.title}>{t('whatsYourPhoneNumber', language)}</Text>
+            <Text style={S.subtitle}>{t('weWillSendCode', language)}</Text>
 
             {!!error && (
               <View style={S.errorBox}>
@@ -109,7 +112,7 @@ export default function PhoneEntryScreen({ navigation }) {
           >
             {loading
               ? <ActivityIndicator color={COLORS.white} />
-              : <Text style={S.ctaText}>Continue →</Text>
+              : <Text style={S.ctaText}>{t('continueArrow', language)}</Text>
             }
           </TouchableOpacity>
 
