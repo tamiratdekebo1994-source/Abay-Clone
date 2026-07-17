@@ -8,12 +8,14 @@ import { BlurView } from 'expo-blur';
 import { useSelector, useDispatch } from 'react-redux';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS, TAB_BAR_HEIGHT, TAB_BAR_BOTTOM_OFFSET } from '../utils/constants';
 import { getColors } from '../utils/theme';
 import { driverAPI } from '../services/api';
 import { t } from '../utils/i18n';
 
 // Auth Screens
+import OnboardingScreen from '../screens/auth/OnboardingScreen';
 import WelcomeScreen from '../screens/auth/WelcomeScreen';
 import PhoneEntryScreen from '../screens/auth/PhoneEntryScreen';
 import OtpVerificationScreen from '../screens/auth/OtpVerificationScreen';
@@ -232,9 +234,10 @@ const tabStyles = StyleSheet.create({
   iconWrapActive: { backgroundColor: COLORS.accent },
 });
 
-function AuthStack() {
+function AuthStack({ initialRouteName }) {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRouteName}>
+      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="PhoneEntry" component={PhoneEntryScreen} />
       <Stack.Screen
@@ -261,10 +264,15 @@ export default function AppNavigator() {
   const { isAuthenticated, isLoading, driver, user } = useSelector((state) => state.auth);
   const language = useSelector((state) => state.settings.language);
   const [showSplash, setShowSplash] = useState(true);
+  const [seenOnboarding, setSeenOnboarding] = useState(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 5000);
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    AsyncStorage.getItem('hasSeenOnboarding').then((v) => setSeenOnboarding(v === 'true'));
   }, []);
 
   useEffect(() => {
@@ -273,7 +281,7 @@ export default function AppNavigator() {
     }
   }, [isAuthenticated]);
 
-  if (isLoading || showSplash) {
+  if (isLoading || showSplash || seenOnboarding === null) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.accent }}>
         <ActivityIndicator size="large" color={COLORS.primary} style={{ transform: [{ scale: 1.6 }] }} />
@@ -355,7 +363,7 @@ export default function AppNavigator() {
           />
         </Stack.Navigator>
       ) : (
-        <AuthStack />
+        <AuthStack initialRouteName={seenOnboarding ? 'Welcome' : 'Onboarding'} />
       )}
     </NavigationContainer>
 

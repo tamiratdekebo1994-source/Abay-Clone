@@ -382,6 +382,15 @@ const strings = {
   newDriverRegisterHere:{ en: 'New driver? Register here', am: 'አዲስ ሾፌር? እዚህ ይመዝገቡ' },
   madeForEthiopia:      { en: '🇪🇹 Made for Ethiopia', am: '🇪🇹 ለኢትዮጵያ የተሰራ' },
 
+  // ─── Onboarding carousel (first launch, before Welcome) ──────────────────
+  skip:                 { en: 'Skip', am: 'ዝለል' },
+  onboardTitle1:        { en: 'Deliver Orders Nearby', am: 'በአቅራቢያዎ ያሉ ትዕዛዞችን ያድርሱ' },
+  onboardBody1:         { en: 'Accept delivery requests from restaurants and stores close to you.', am: 'ከአቅራቢያዎ ካሉ ምግብ ቤቶች እና ሱቆች የማድረስ ጥያቄዎችን ይቀበሉ።' },
+  onboardTitle2:        { en: 'Earn Per Delivery', am: 'በእያንዳንዱ ጉዞ ያግኙ' },
+  onboardBody2:         { en: 'Get paid for every trip you complete, with fees shown upfront.', am: 'ለሚያጠናቅቁት እያንዳንዱ ጉዞ ይከፈልዎታል፣ ክፍያውም አስቀድሞ በግልፅ ይታያል።' },
+  onboardTitle3:        { en: 'Get Paid Fast', am: 'ገንዘብዎን በፍጥነት ያግኙ' },
+  onboardBody3:         { en: 'Withdraw your earnings anytime via Telebirr, CBE Birr, or bank transfer.', am: 'በማንኛውም ጊዜ በቴሌብር፣ በሲቢኢ ብር ወይም በባንክ በኩል ገቢዎን ያውጡ።' },
+
   // ─── Welcome screen ───────────────────────────────────────────────────────
   getStarted:           { en: 'Get Started', am: 'ጀምር' },
   alreadyHaveAccount:   { en: 'I already have an account', am: 'ቀድሞውኑ መለያ አለኝ' },
