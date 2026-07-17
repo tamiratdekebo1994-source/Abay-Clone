@@ -705,7 +705,7 @@ export default function HomeScreen({ navigation }) {
                   return (
                     <View key={h} style={styles.barWrap}>
                       <View style={styles.barTrack}>
-                        {isCurrent && <View style={styles.nowNeedle} />}
+                        {isCurrent && <View style={[styles.nowDot, { bottom: fillH + 6 }]} />}
                         <View style={[
                           styles.barFill,
                           { height: fillH },
@@ -963,9 +963,9 @@ const styles = StyleSheet.create({
   barActive: { backgroundColor: COLORS.primary },
   barInactive: { backgroundColor: '#D8DCE1' },
   barEstimated: { opacity: 0.55 },
-  nowNeedle: {
-    position: 'absolute', top: -10, left: '50%', marginLeft: -1,
-    width: 2, height: 80, borderRadius: 1, backgroundColor: COLORS.primary,
+  nowDot: {
+    position: 'absolute', left: '50%', marginLeft: -3,
+    width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.primary,
   },
   barLabelSlot: { height: 14, marginTop: 4, alignItems: 'center' },
   barLabel: { fontSize: 9, color: '#9CA3AF' },
