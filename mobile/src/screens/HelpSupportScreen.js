@@ -115,7 +115,7 @@ export default function HelpSupportScreen() {
 
       {/* App version */}
       <View style={styles.versionRow}>
-        <Text style={styles.versionText}>Fetno v1.0.0</Text>
+        <Text style={styles.versionText}>ET SPARK v1.0.0</Text>
         <Text style={styles.versionSub}>{t('madeWithLoveEthiopia', language)}</Text>
       </View>
     </ScrollView>

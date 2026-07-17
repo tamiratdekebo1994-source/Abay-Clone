@@ -248,7 +248,7 @@ export default function DriverRegistrationScreen({ navigation }) {
           <Text style={[S.backArrow, step === 1 && { opacity: 0 }]}>←</Text>
         </TouchableOpacity>
         <View style={S.headerCenter}>
-          <Text style={S.headerBrand}>Fetno Driver</Text>
+          <Text style={S.headerBrand}>ET SPARK Driver</Text>
           <Text style={S.headerSub}>{t('step', language)} {step} {t('of', language)} {TOTAL_STEPS}</Text>
         </View>
         <View style={{ width: 42 }} />

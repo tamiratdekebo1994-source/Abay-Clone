@@ -1,11 +1,11 @@
 /**
- * Fetno - Bilingual String System (English / Amharic አማርኛ)
+ * ET SPARK - Bilingual String System (English / Amharic አማርኛ)
  * Usage: t('welcome') or t('welcome', 'am')
  */
 
 const strings = {
   // ─── App ─────────────────────────────────────────────────────────────────
-  appName:       { en: 'Fetno', am: 'Fetno' },
+  appName:       { en: 'ET SPARK', am: 'ET SPARK' },
   tagline:       { en: "Ethiopia's Delivery Network", am: 'የኢትዮጵያ የማድረስ አውታር' },
   madeInEthiopia:{ en: '🇪🇹 Made in Ethiopia', am: '🇪🇹 በኢትዮጵያ የተሰራ' },
 

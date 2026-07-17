@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  View, Text, Image, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
@@ -33,10 +33,8 @@ export default function LoginScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Text style={styles.logoText}>Fetno</Text>
-          </View>
-          <Text style={styles.appName}>Fetno</Text>
+          <Image source={require('../../assets/icon.png')} style={styles.logoImage} />
+          <Text style={styles.appName}>ET SPARK</Text>
           <Text style={styles.tagline}>{t('tagline', language)}</Text>
         </View>
 
@@ -116,16 +114,13 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   scrollContent: { flexGrow: 1, padding: 24 },
   header: { alignItems: 'center', paddingVertical: 48 },
-  logoContainer: {
-    backgroundColor: COLORS.accent,
+  logoImage: {
     width: 100, height: 100,
     borderRadius: 20,
-    alignItems: 'center', justifyContent: 'center',
     marginBottom: 16,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3, shadowRadius: 8, elevation: 8,
   },
-  logoText: { color: COLORS.primary, fontSize: 26, fontWeight: '900', letterSpacing: 1 },
   appName: { fontSize: 32, fontWeight: '900', color: COLORS.black, marginTop: 12 },
   tagline: { fontSize: 16, fontWeight: '600', color: COLORS.black, marginTop: 4 },
   form: { backgroundColor: COLORS.white, borderRadius: 16, padding: 24, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },

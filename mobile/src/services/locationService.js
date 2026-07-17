@@ -1,5 +1,5 @@
 /**
- * Background Location Service for Fetno
+ * Background Location Service for ET SPARK
  * Tracks driver location even when the app is backgrounded
  * Uses Expo Location's background task
  */
