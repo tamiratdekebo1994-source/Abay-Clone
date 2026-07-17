@@ -95,6 +95,7 @@ export default function HomeScreen({ navigation }) {
   const [showOnlineBanner, setShowOnlineBanner] = useState(false);
   const [surgeZones, setSurgeZones] = useState([]);
   const [activityHeatmap, setActivityHeatmap] = useState(null);
+  const [heatmapLoaded, setHeatmapLoaded] = useState(false);
 
   const [scrollY, setScrollY] = useState(0);
 
@@ -223,7 +224,10 @@ export default function HomeScreen({ navigation }) {
       );
       setActiveOrder(active || null);
       if (heatmapRes) setActivityHeatmap(heatmapRes.data.data);
-    } catch {}
+    } catch {
+    } finally {
+      setHeatmapLoaded(true);
+    }
   };
 
   // loadData() in the mount effect above only runs once — without this, completing a
@@ -674,42 +678,50 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.chartTitle}>{t('popularOfferTimes', language)}</Text>
             <Text style={styles.chartChev}>›</Text>
           </View>
-          <Text style={styles.chartSub}>
-            {hasActivityPattern
-              ? tf('basedOnOrders', language, { n: activityHeatmap.totalOrders })
-              : t('typicalBusyHours', language)}
-          </Text>
-          <View style={styles.chart}>
-            {HOURS.map((h, i) => {
-              const isCurrent = i === currentHourIdx;
-              const level = hasActivityPattern
-                ? (activityHeatmap.normalized[HOURS_START + i] || 0)
-                : TYPICAL_HOURLY_PATTERN[i];
-              const fillH = 28 + level * 42; // tall wall like Spark Driver's reference, with peak/quiet contrast
-              return (
-                <View key={h} style={styles.barWrap}>
-                  <View style={styles.barTrack}>
-                    {isCurrent && <View style={styles.nowNeedle} />}
-                    <View style={[
-                      styles.barFill,
-                      { height: fillH },
-                      isCurrent ? styles.barActive : styles.barInactive,
-                      !hasActivityPattern && styles.barEstimated,
-                    ]} />
-                  </View>
-                  <View style={styles.barLabelSlot}>
-                    {(i % 4 === 0) && (
-                      <Text style={[styles.barLabel, isCurrent && styles.barLabelActive]}>{h}</Text>
-                    )}
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-          {!hasActivityPattern && (
-            <Text style={styles.chartFootnote}>
-              {tf('completeDeliveriesFootnote', language, { n: MIN_ORDERS_FOR_PATTERN })}
-            </Text>
+          {!heatmapLoaded ? (
+            <View style={styles.chartLoading}>
+              <ActivityIndicator color={COLORS.primary} />
+            </View>
+          ) : (
+            <>
+              <Text style={styles.chartSub}>
+                {hasActivityPattern
+                  ? tf('basedOnOrders', language, { n: activityHeatmap.totalOrders })
+                  : t('typicalBusyHours', language)}
+              </Text>
+              <View style={styles.chart}>
+                {HOURS.map((h, i) => {
+                  const isCurrent = i === currentHourIdx;
+                  const level = hasActivityPattern
+                    ? (activityHeatmap.normalized[HOURS_START + i] || 0)
+                    : TYPICAL_HOURLY_PATTERN[i];
+                  const fillH = 28 + level * 42; // tall wall like Spark Driver's reference, with peak/quiet contrast
+                  return (
+                    <View key={h} style={styles.barWrap}>
+                      <View style={styles.barTrack}>
+                        {isCurrent && <View style={styles.nowNeedle} />}
+                        <View style={[
+                          styles.barFill,
+                          { height: fillH },
+                          isCurrent ? styles.barActive : styles.barInactive,
+                          !hasActivityPattern && styles.barEstimated,
+                        ]} />
+                      </View>
+                      <View style={styles.barLabelSlot}>
+                        {(i % 4 === 0) && (
+                          <Text style={[styles.barLabel, isCurrent && styles.barLabelActive]}>{h}</Text>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+              {!hasActivityPattern && (
+                <Text style={styles.chartFootnote}>
+                  {tf('completeDeliveriesFootnote', language, { n: MIN_ORDERS_FOR_PATTERN })}
+                </Text>
+              )}
+            </>
           )}
         </View>
       </ScrollView>
@@ -934,6 +946,7 @@ const styles = StyleSheet.create({
   chartTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
   chartChev: { fontSize: 20, color: '#9CA3AF' },
   chartSub: { fontSize: 12, color: '#6B7280', marginTop: 2, marginBottom: 10 },
+  chartLoading: { height: 116, alignItems: 'center', justifyContent: 'center' },
   chart: { flexDirection: 'row', alignItems: 'flex-end', paddingTop: 10 },
   barWrap: { flex: 1, alignItems: 'center' },
   barTrack: {
