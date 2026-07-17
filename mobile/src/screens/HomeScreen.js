@@ -36,6 +36,7 @@ function haversineKm(lat1, lng1, lat2, lng2) {
 
 const HOURS = ['6a','7a','8a','9a','10a','11a','12p','1p','2p','3p','4p','5p','6p','7p','8p','9p'];
 const HOURS_START = 6; // HOURS[i] corresponds to real hour-of-day (HOURS_START + i)
+const ETHIOPIA_UTC_OFFSET_HOURS = 3; // EAT is UTC+3 year-round — matches the backend's bucketing
 const MIN_ORDERS_FOR_PATTERN = 10; // below this, fall back to the general typical-hours guide
 
 // General guide only (not this driver's data) — approximate Addis Ababa delivery demand shape:
@@ -113,8 +114,13 @@ export default function HomeScreen({ navigation }) {
   const dot2Anim = useRef(new Animated.Value(0.3)).current;
   const dot3Anim = useRef(new Animated.Value(0.3)).current;
 
-  const currentHour = new Date().getHours();
-  const currentHourIdx = Math.max(0, Math.min(currentHour - 6, HOURS.length - 1));
+  // Addis Ababa local hour, independent of the device's own timezone — otherwise "now" on a
+  // Mac/simulator set to a different timezone lands on the wrong bar (or gets clamped to an
+  // edge bar), while the real order data (bucketed server-side by Addis time) sits elsewhere.
+  const currentHour = (new Date().getUTCHours() + ETHIOPIA_UTC_OFFSET_HOURS) % 24;
+  const currentHourIdx = (currentHour >= HOURS_START && currentHour < HOURS_START + HOURS.length)
+    ? currentHour - HOURS_START
+    : -1;
 
   const hasActivityPattern = !!activityHeatmap && activityHeatmap.totalOrders >= MIN_ORDERS_FOR_PATTERN;
 
