@@ -95,6 +95,7 @@ export default function HomeScreen({ navigation }) {
   const [goOfflineSheet, setGoOfflineSheet] = useState(false);
   const [showOnlineBanner, setShowOnlineBanner] = useState(false);
   const [surgeZones, setSurgeZones] = useState([]);
+  const [hasAlwaysLocation, setHasAlwaysLocation] = useState(true); // assume granted until checked, so the tip never flashes on first paint
 
   const [scrollY, setScrollY] = useState(0);
 
@@ -186,6 +187,7 @@ export default function HomeScreen({ navigation }) {
 
       const bg = await Location.getBackgroundPermissionsAsync();
       if (bg.status === 'granted') {
+        setHasAlwaysLocation(true);
         Alert.alert(t('locAlreadyOnTitle', language), t('locAlreadyOnBody', language));
         return;
       }
@@ -199,6 +201,7 @@ export default function HomeScreen({ navigation }) {
       }
 
       const granted = await startBackgroundTracking();
+      if (granted) setHasAlwaysLocation(true);
       Alert.alert(
         granted ? t('locEnabledTitle', language) : t('locForegroundOnlyTitle', language),
         granted ? t('locEnabledBody', language) : t('locForegroundOnlyBody', language)
@@ -232,6 +235,16 @@ export default function HomeScreen({ navigation }) {
     useCallback(() => {
       if (user?.role === 'DRIVER') loadData();
     }, [user?.role])
+  );
+
+  // Re-check on every focus (not just mount) so returning from the OS Settings app after
+  // granting "Always" location correctly hides the tip without needing a manual reload.
+  useFocusEffect(
+    useCallback(() => {
+      Location.getBackgroundPermissionsAsync()
+        .then((bg) => setHasAlwaysLocation(bg.status === 'granted'))
+        .catch(() => {});
+    }, [])
   );
 
   const resolveStoreName = async (storeId) => {
@@ -609,8 +622,8 @@ export default function HomeScreen({ navigation }) {
           </View>
         )}
 
-        {/* Location tip (offline) */}
-        {!isOnline && (
+        {/* Location tip (offline, and only if "Always" location isn't already granted) */}
+        {!isOnline && !hasAlwaysLocation && (
           <TouchableOpacity style={styles.tipCard} onPress={handleLocationTipPress} activeOpacity={0.75}>
             <View style={styles.tipIconWrap}>
               <Text style={styles.tipIcon}>⚙️</Text>
