@@ -18,8 +18,8 @@ const FAQ = [
   {
     q: 'When do I get paid for deliveries?',
     qAm: 'ለማድረስ ስራ መቼ ክፍያ እቀበላለሁ?',
-    a: 'Earnings are added to your wallet after each completed delivery. You can withdraw any time from the Wallet screen.',
-    aAm: 'ገቢ ከእያንዳንዱ ማድረስ በኋላ ወደ ቦርሳዎ ይጨምሩ። ከቦርሳ ገጽ ማንኛውም ጊዜ ማውጣት ይችላሉ።',
+    a: 'Earnings are added to your account after each completed delivery. Payouts are processed by ET SPARK on a regular schedule — check the Earnings tab for your running total.',
+    aAm: 'ገቢ ከእያንዳንዱ ማድረስ በኋላ ወደ መለያዎ ይጨምራል። ክፍያዎች በ ET SPARK በመደበኛ የጊዜ ሰሌዳ ይከናወናሉ — ጠቅላላ ገቢዎን ለማየት የገቢ ትርን ይመልከቱ።',
   },
   {
     q: 'My account is suspended. What do I do?',

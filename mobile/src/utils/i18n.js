@@ -98,20 +98,12 @@ const strings = {
   status_CANCELLED:         { en: 'Cancelled', am: 'ተሰርዟል' },
   status_FAILED:            { en: 'Failed', am: 'አልተሳካም' },
 
-  // ─── Earnings / Wallet ────────────────────────────────────────────────────
+  // ─── Earnings ─────────────────────────────────────────────────────────────
   earnings:      { en: 'Earnings', am: 'ገቢ' },
   todayEarnings: { en: "Today's Earnings", am: 'ዛሬ ያገኘሁት' },
-  totalEarned:   { en: 'Total Earned', am: 'ጠቅላላ ያገኘሁት' },
   trips:         { en: 'Trips', am: 'ጉዞዎች' },
   avgPerTrip:    { en: 'Avg per Trip', am: 'በጉዞ አማካይ' },
-  wallet:        { en: 'Wallet', am: 'የገንዘብ ቦርሳ' },
-  balance:       { en: 'Available Balance', am: 'ያለ ቀሪ' },
   pending:       { en: 'Pending', am: 'በጸጸጸጸ ላይ' },
-  withdraw:      { en: 'Withdraw', am: 'አውጣ' },
-  withdrawFunds: { en: 'Withdraw Funds', am: 'ገንዘብ አውጡ' },
-  minWithdrawal: { en: 'Minimum withdrawal: ETB 100', am: 'አነስተኛ ክፍያ: 100 ብር' },
-  accountNumber: { en: 'Account Number / Phone', am: 'የሂሳብ ቁጥር / ስልክ' },
-  accountName:   { en: 'Account Holder Name', am: 'የሂሳብ ባለቤት ስም' },
 
   // ─── Chat ─────────────────────────────────────────────────────────────────
   chat:          { en: 'Chat', am: 'ውይይት' },
@@ -255,33 +247,7 @@ const strings = {
   daySat:               { en: 'Sat', am: 'ቅዳሜ' },
   daySun:               { en: 'Sun', am: 'እሁድ' },
 
-  // ─── Wallet screen ────────────────────────────────────────────────────────
-  myWallet:             { en: 'My Wallet', am: 'የእኔ ቦርሳ' },
-  minWithdrawalAlert:   { en: 'Minimum withdrawal is ETB 100', am: 'አነስተኛ ክፍያ ማውጫ 100 ብር ነው' },
-  insufficientBalance:  { en: 'Insufficient balance', am: 'በቂ ቀሪ ሂሳብ የለም' },
-  fillAllFields:        { en: 'Please fill in all fields', am: 'እባክዎ ሁሉንም መስኮች ይሙሉ' },
-  requestSubmittedTitle:{ en: '✅ Request submitted', am: '✅ ጥያቄ ተልኳል' },
-  requestSubmittedBody: { en: 'Your withdrawal will be processed within 24 hours.', am: 'የገንዘብ ማውጫ ጥያቄዎ በ24 ሰዓት ውስጥ ይከናወናል።' },
-  withdrawFailedBody:   { en: 'Failed to submit withdrawal', am: 'የገንዘብ ማውጫ ጥያቄ መላክ አልተሳካም' },
-  pendingAmountTemplate:{ en: '⏳ ETB {amount} pending', am: '⏳ {amount} ብር በመጠባበቅ ላይ' },
-  lifetimeEarned:       { en: 'Lifetime Earned', am: 'በጠቅላላ ያገኙት' },
-  totalWithdrawn:       { en: 'Total Withdrawn', am: 'በጠቅላላ የወጣ' },
-  requests:             { en: 'Requests', am: 'ጥያቄዎች' },
-  withdrawalHistory:    { en: 'Withdrawal History', am: 'የገንዘብ ማውጫ ታሪክ' },
-  noWithdrawalsYet:     { en: 'No withdrawals yet', am: 'ገና ምንም ገንዘብ አላወጡም' },
-  withdrawalHistoryEmptyBody: { en: 'Your withdrawal history will appear here', am: 'የገንዘብ ማውጫ ታሪክዎ እዚህ ይታያል' },
-  withdrawalFooterNote: { en: 'Minimum withdrawal: ETB 100 · Processed within 24 hours', am: 'አነስተኛ ክፍያ ማውጫ: 100 ብር · በ24 ሰዓት ውስጥ ይከናወናል' },
-  availableAmountTemplate: { en: 'Available: ETB {amount}', am: 'ያለ: {amount} ብር' },
-  amountEtb:            { en: 'Amount (ETB)', am: 'መጠን (ብር)' },
-  enterCustomAmount:    { en: 'Or enter custom amount', am: 'ወይም የተለየ መጠን ያስገቡ' },
-  paymentMethod:        { en: 'Payment Method', am: 'የክፍያ ዘዴ' },
-  accountNumberShort:   { en: 'Account Number', am: 'የሂሳብ ቁጥር' },
-  accountNumberPlaceholder: { en: '+251XXXXXXXXX or account number', am: '+251XXXXXXXXX ወይም የሂሳብ ቁጥር' },
-  accountNameShort:     { en: 'Account Name', am: 'የሂሳብ ስም' },
-  accountNamePlaceholder: { en: 'Name on account', am: 'በሂሳብ ላይ ያለ ስም' },
-  submitRequest:        { en: 'Submit Request', am: 'ጥያቄ ላክ' },
   statusApproved:       { en: 'Approved', am: 'ጸድቋል' },
-  statusCompleted:      { en: 'Completed', am: 'ተጠናቋል' },
 
   // ─── Order Detail screen ──────────────────────────────────────────────────
   tl_orderPlaced:       { en: 'Order placed', am: 'ትዕዛዝ ተይዟል' },
@@ -378,8 +344,8 @@ const strings = {
   onboardBody1:         { en: 'Accept delivery requests from restaurants and stores close to you.', am: 'ከአቅራቢያዎ ካሉ ምግብ ቤቶች እና ሱቆች የማድረስ ጥያቄዎችን ይቀበሉ።' },
   onboardTitle2:        { en: 'Earn Per Delivery', am: 'በእያንዳንዱ ጉዞ ያግኙ' },
   onboardBody2:         { en: 'Get paid for every trip you complete, with fees shown upfront.', am: 'ለሚያጠናቅቁት እያንዳንዱ ጉዞ ይከፈልዎታል፣ ክፍያውም አስቀድሞ በግልፅ ይታያል።' },
-  onboardTitle3:        { en: 'Get Paid Fast', am: 'ገንዘብዎን በፍጥነት ያግኙ' },
-  onboardBody3:         { en: 'Withdraw your earnings anytime via Telebirr, CBE Birr, or bank transfer.', am: 'በማንኛውም ጊዜ በቴሌብር፣ በሲቢኢ ብር ወይም በባንክ በኩል ገቢዎን ያውጡ።' },
+  onboardTitle3:        { en: 'Get Paid Regularly', am: 'በመደበኛነት ይክፈሉ' },
+  onboardBody3:         { en: 'Track every trip in the Earnings tab — payouts are processed by ET SPARK on a regular schedule.', am: 'እያንዳንዱን ጉዞ በገቢ ትር ውስጥ ይከታተሉ — ክፍያዎች በ ET SPARK በመደበኛ የጊዜ ሰሌዳ ይከናወናሉ።' },
 
   // ─── Welcome screen ───────────────────────────────────────────────────────
   getStarted:           { en: 'Get Started', am: 'ጀምር' },

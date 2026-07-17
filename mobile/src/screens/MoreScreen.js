@@ -20,7 +20,6 @@ const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 const MENU_SECTIONS = [
   {
     items: [
-      { id: 'wallet',     icon: '💰', labelKey: 'wallet',   screen: 'Wallet' },
       { id: 'account',    icon: '👤', labelKey: 'account',  screen: null },
       { id: 'help',       icon: '❓', labelKey: 'help',     screen: 'HelpSupport' },
       { id: 'settings',   icon: '⚙️',  labelKey: 'settings', screen: null },

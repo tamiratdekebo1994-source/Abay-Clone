@@ -27,7 +27,6 @@ import DriverRegistrationScreen from '../screens/driver/DriverRegistrationScreen
 // Main Screens
 import HomeScreen from '../screens/HomeScreen';
 import EarningsScreen from '../screens/EarningsScreen';
-import WalletScreen from '../screens/WalletScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ActiveDeliveryScreen from '../screens/ActiveDeliveryScreen';
 import ChatScreen from '../screens/ChatScreen';
@@ -354,11 +353,6 @@ export default function AppNavigator() {
           <Stack.Screen
             name="Profile"
             component={ProfileScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="Wallet"
-            component={WalletScreen}
             options={{ headerShown: false }}
           />
         </Stack.Navigator>
