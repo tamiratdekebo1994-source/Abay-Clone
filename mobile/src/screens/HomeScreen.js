@@ -678,7 +678,7 @@ export default function HomeScreen({ navigation }) {
             {HOURS.map((h, i) => {
               const hour = HOURS_START + i;
               const isPast = hour < currentHour;
-              const fillH = 52 + HOUR_SHAPE[i] * 78;
+              const fillH = 32 + HOUR_SHAPE[i] * 48;
               return (
                 <View key={h} style={styles.barWrap}>
                   <View style={styles.barTrack}>
@@ -923,7 +923,7 @@ const styles = StyleSheet.create({
   chart: { flexDirection: 'row', alignItems: 'flex-end', paddingTop: 10 },
   barWrap: { flex: 1, alignItems: 'center' },
   barTrack: {
-    width: '62%', height: 130,
+    width: '62%', height: 80,
     justifyContent: 'flex-end', overflow: 'visible',
   },
   barFill: { width: '100%', borderRadius: 8 },
