@@ -275,8 +275,8 @@ export default function AppNavigator() {
 
   if (isLoading || showSplash) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary }}>
-        <ActivityIndicator size="large" color={COLORS.accent} style={{ transform: [{ scale: 1.6 }] }} />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.accent }}>
+        <ActivityIndicator size="large" color={COLORS.primary} style={{ transform: [{ scale: 1.6 }] }} />
       </View>
     );
   }
@@ -284,17 +284,17 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       {isAuthenticated && user?.role === 'STORE' ? (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary, padding: 32 }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.accent, padding: 32 }}>
           <Text style={{ fontSize: 48, marginBottom: 16 }}>🏪</Text>
-          <Text style={{ color: COLORS.white, fontSize: 22, fontWeight: '800', textAlign: 'center' }}>Store Account</Text>
-          <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, textAlign: 'center', marginTop: 8 }}>
+          <Text style={{ color: COLORS.primary, fontSize: 22, fontWeight: '800', textAlign: 'center' }}>Store Account</Text>
+          <Text style={{ color: 'rgba(27,67,50,0.75)', fontSize: 14, textAlign: 'center', marginTop: 8 }}>
             This app is for ET Spark drivers.{'\n'}Use the web dashboard for store access.
           </Text>
           <TouchableOpacity
-            style={{ marginTop: 32, backgroundColor: COLORS.accent, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 32 }}
+            style={{ marginTop: 32, backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 32 }}
             onPress={() => dispatch(require('../store/authStore').logout())}
           >
-            <Text style={{ color: COLORS.primary, fontWeight: '700', fontSize: 16 }}>Sign Out</Text>
+            <Text style={{ color: COLORS.accent, fontWeight: '700', fontSize: 16 }}>Sign Out</Text>
           </TouchableOpacity>
         </View>
       ) : isAuthenticated ? (

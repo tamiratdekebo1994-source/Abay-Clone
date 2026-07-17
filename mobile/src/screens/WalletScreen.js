@@ -320,40 +320,40 @@ const S = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   // Header
-  header: { backgroundColor: '#1B4332', paddingBottom: 0 },
-  headerTitle: { color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: '700',
+  header: { backgroundColor: '#FCBF49', paddingBottom: 0 },
+  headerTitle: { color: 'rgba(27,67,50,0.75)', fontSize: 13, fontWeight: '700',
     letterSpacing: 1, textTransform: 'uppercase', textAlign: 'center', paddingTop: 4, marginBottom: 16 },
 
   // Balance card
   balanceCard: { marginHorizontal: 16, marginBottom: 0, alignItems: 'center', paddingBottom: 24 },
-  balanceLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: '600',
+  balanceLabel: { color: 'rgba(27,67,50,0.65)', fontSize: 13, fontWeight: '600',
     textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
-  balanceAmount: { color: '#FCBF49', fontSize: 48, fontWeight: '900', letterSpacing: -1, marginBottom: 10 },
+  balanceAmount: { color: '#1B4332', fontSize: 48, fontWeight: '900', letterSpacing: -1, marginBottom: 10 },
   pendingChip: {
-    backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 20,
+    backgroundColor: 'rgba(27,67,50,0.12)', borderRadius: 20,
     paddingHorizontal: 14, paddingVertical: 5, marginBottom: 16,
   },
-  pendingChipText: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '500' },
+  pendingChipText: { color: 'rgba(27,67,50,0.8)', fontSize: 13, fontWeight: '500' },
   withdrawBtn: {
-    backgroundColor: '#FCBF49', borderRadius: 50,
+    backgroundColor: '#1B4332', borderRadius: 50,
     paddingVertical: 14, paddingHorizontal: 36,
-    shadowColor: '#FCBF49', shadowOffset: { width: 0, height: 4 },
+    shadowColor: '#1B4332', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4, shadowRadius: 10, elevation: 6,
   },
   withdrawBtnDisabled: { opacity: 0.4, shadowOpacity: 0 },
-  withdrawBtnText: { color: '#1B4332', fontSize: 15, fontWeight: '900', letterSpacing: 0.5 },
+  withdrawBtnText: { color: '#FCBF49', fontSize: 15, fontWeight: '900', letterSpacing: 0.5 },
 
   // Stats row
   statsRow: {
-    flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.08)',
+    flexDirection: 'row', backgroundColor: 'rgba(27,67,50,0.08)',
     marginHorizontal: 16, marginBottom: 0, borderRadius: 14,
     paddingVertical: 14, marginTop: 16, marginBottom: 0,
   },
   statItem: { flex: 1, alignItems: 'center' },
-  statVal: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
-  statLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '600',
+  statVal: { color: '#1B4332', fontSize: 15, fontWeight: '800' },
+  statLabel: { color: 'rgba(27,67,50,0.55)', fontSize: 10, fontWeight: '600',
     textTransform: 'uppercase', letterSpacing: 0.3, marginTop: 2 },
-  statDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.12)' },
+  statDivider: { width: 1, backgroundColor: 'rgba(27,67,50,0.12)' },
 
   // History
   scrollContent: { padding: 16, paddingBottom: 40 },

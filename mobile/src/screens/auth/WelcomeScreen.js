@@ -11,7 +11,7 @@ export default function WelcomeScreen({ navigation }) {
 
   return (
     <View style={S.root}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.accent} />
       <SafeAreaView style={S.safe}>
 
         <View style={S.center}>
@@ -35,7 +35,7 @@ export default function WelcomeScreen({ navigation }) {
 }
 
 const S = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.primary },
+  root: { flex: 1, backgroundColor: COLORS.accent },
   safe: { flex: 1, paddingHorizontal: 28 },
 
   center: {
@@ -54,14 +54,14 @@ const S = StyleSheet.create({
   brand: {
     fontSize: 38,
     fontWeight: '900',
-    color: COLORS.white,
+    color: COLORS.primary,
     letterSpacing: 5,
     marginBottom: 14,
   },
 
   tagline: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.45)',
+    color: 'rgba(27,67,50,0.55)',
     letterSpacing: 2,
     textTransform: 'uppercase',
     fontWeight: '500',
@@ -72,7 +72,7 @@ const S = StyleSheet.create({
   },
 
   btnPrimary: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.primary,
     borderRadius: 16,
     paddingVertical: 19,
     alignItems: 'center',
@@ -81,7 +81,7 @@ const S = StyleSheet.create({
   btnPrimaryText: {
     fontSize: 17,
     fontWeight: '800',
-    color: COLORS.primary,
+    color: COLORS.accent,
     letterSpacing: 0.3,
   },
 
@@ -91,7 +91,7 @@ const S = StyleSheet.create({
   },
   btnSecondaryText: {
     fontSize: 15,
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(27,67,50,0.6)',
     fontWeight: '500',
   },
 });

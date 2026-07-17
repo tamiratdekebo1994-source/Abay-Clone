@@ -152,10 +152,10 @@ export default function ReviewScreen({ route, navigation }) {
 const getStyles = (C) => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.background },
   content: { padding: 16 },
-  orderCard: { backgroundColor: COLORS.primary, borderRadius: 14, padding: 16, marginBottom: 20 },
-  orderNum: { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginBottom: 4 },
-  orderAddress: { color: COLORS.white, fontSize: 15, fontWeight: '600' },
-  orderFee: { color: COLORS.accent, fontSize: 14, fontWeight: '700', marginTop: 6 },
+  orderCard: { backgroundColor: COLORS.accent, borderRadius: 14, padding: 16, marginBottom: 20 },
+  orderNum: { color: 'rgba(27,67,50,0.7)', fontSize: 12, marginBottom: 4 },
+  orderAddress: { color: COLORS.primary, fontSize: 15, fontWeight: '600' },
+  orderFee: { color: COLORS.primary, fontSize: 14, fontWeight: '700', marginTop: 6 },
   section: {
     backgroundColor: C.white, borderRadius: 14, padding: 16, marginBottom: 12,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 },

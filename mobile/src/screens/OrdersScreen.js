@@ -268,15 +268,15 @@ const getStyles = (C) => StyleSheet.create({
 
   // Summary bar (delivered filter)
   summaryBar: {
-    flexDirection: 'row', backgroundColor: '#1B4332',
+    flexDirection: 'row', backgroundColor: '#FCBF49',
     marginHorizontal: 16, marginTop: 12, borderRadius: 14,
     paddingVertical: 14,
   },
   summaryItem: { flex: 1, alignItems: 'center' },
-  summaryVal: { color: '#FCBF49', fontSize: 16, fontWeight: '800' },
-  summaryLabel: { color: 'rgba(255,255,255,0.55)', fontSize: 10, fontWeight: '600',
+  summaryVal: { color: '#1B4332', fontSize: 16, fontWeight: '800' },
+  summaryLabel: { color: 'rgba(27,67,50,0.6)', fontSize: 10, fontWeight: '600',
     textTransform: 'uppercase', letterSpacing: 0.3, marginTop: 2 },
-  summaryDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.15)' },
+  summaryDivider: { width: 1, backgroundColor: 'rgba(27,67,50,0.15)' },
 
   // Card
   card: {
