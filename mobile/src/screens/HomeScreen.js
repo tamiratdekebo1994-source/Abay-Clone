@@ -15,6 +15,7 @@ import { driverAPI, orderAPI } from '../services/api';
 import { updateDriver } from '../store/authStore';
 import { COLORS, ORDER_STATUS_LABELS, TAB_BAR_CLEARANCE } from '../utils/constants';
 import { getColors } from '../utils/theme';
+import { t, tf } from '../utils/i18n';
 import { db } from '../services/firebase';
 import OrderOfferCard from '../components/OrderOfferCard';
 import { startBackgroundTracking, stopBackgroundTracking, getCurrentLocation } from '../services/locationService';
@@ -78,6 +79,7 @@ export default function HomeScreen({ navigation }) {
   const dispatch = useDispatch();
   const { user, driver } = useSelector((s) => s.auth);
   const theme = useSelector((s) => s.settings.theme);
+  const language = useSelector((s) => s.settings.language);
   const C = getColors(theme);
   const insets = useSafeAreaInsets();
 
@@ -169,36 +171,34 @@ export default function HomeScreen({ navigation }) {
       const fg = await Location.getForegroundPermissionsAsync();
       if (fg.status !== 'granted' && !fg.canAskAgain) {
         Alert.alert(
-          'Location Permission Needed',
-          'Please enable location access in Settings to receive more delivery offers.',
-          [{ text: 'Cancel', style: 'cancel' }, { text: 'Open Settings', onPress: () => Linking.openSettings() }]
+          t('locPermTitle', language),
+          t('locPermBody', language),
+          [{ text: t('cancel', language), style: 'cancel' }, { text: t('openSettings', language), onPress: () => Linking.openSettings() }]
         );
         return;
       }
 
       const bg = await Location.getBackgroundPermissionsAsync();
       if (bg.status === 'granted') {
-        Alert.alert('Already Enabled', "You're all set — background location sharing is on.");
+        Alert.alert(t('locAlreadyOnTitle', language), t('locAlreadyOnBody', language));
         return;
       }
       if (!bg.canAskAgain) {
         Alert.alert(
-          'Allow "Always" Location',
-          'Enable "Always" location access in Settings so you keep getting offers even when the app is in the background.',
-          [{ text: 'Cancel', style: 'cancel' }, { text: 'Open Settings', onPress: () => Linking.openSettings() }]
+          t('locAlwaysTitle', language),
+          t('locAlwaysBody', language),
+          [{ text: t('cancel', language), style: 'cancel' }, { text: t('openSettings', language), onPress: () => Linking.openSettings() }]
         );
         return;
       }
 
       const granted = await startBackgroundTracking();
       Alert.alert(
-        granted ? 'Location Sharing Enabled' : 'Foreground Only',
-        granted
-          ? "You'll now get matched with more delivery offers, even in the background."
-          : "Background access wasn't granted, so your location only updates while the app is open."
+        granted ? t('locEnabledTitle', language) : t('locForegroundOnlyTitle', language),
+        granted ? t('locEnabledBody', language) : t('locForegroundOnlyBody', language)
       );
     } catch {
-      Alert.alert('Error', 'Could not update location settings. Please try again.');
+      Alert.alert(t('errorTitle', language), t('locErrorBody', language));
     }
   };
 
@@ -337,11 +337,11 @@ export default function HomeScreen({ navigation }) {
 
   const goOnline = async () => {
     if (driver?.status === 'PENDING') {
-      Alert.alert('Pending Approval', 'Your driver application is still being reviewed.');
+      Alert.alert(t('pendingApprovalTitle', language), t('pendingApprovalBody', language));
       return;
     }
     if (driver?.status === 'REJECTED') {
-      Alert.alert('Application Not Approved', driver?.rejectionReason || 'Contact support for more information.');
+      Alert.alert(t('appNotApprovedTitle', language), driver?.rejectionReason || t('contactSupport', language));
       return;
     }
     try {
@@ -364,11 +364,11 @@ export default function HomeScreen({ navigation }) {
         setSurgeZones(SURGE_ZONES);
         const surgeRes = await driverAPI.getSurge(driver?.city || 'Addis Ababa').catch(() => null);
         if (surgeRes?.data?.data?.isSurge) {
-          Alert.alert('🔥 Surge Active', `${surgeRes.data.data.multiplier}x earnings now!`);
+          Alert.alert(t('surgeActiveAlertTitle', language), tf('surgeMultiplierBody', language, { x: surgeRes.data.data.multiplier }));
         }
       }
     } catch {
-      Alert.alert('Error', 'Failed to update status');
+      Alert.alert(t('errorTitle', language), t('updateStatusFailed', language));
     } finally {
       setIsLoading(false);
     }
@@ -383,7 +383,7 @@ export default function HomeScreen({ navigation }) {
       dispatch(updateDriver({ status: data.data.status }));
       await stopBackgroundTracking();
     } catch {
-      Alert.alert('Error', 'Failed to go offline');
+      Alert.alert(t('errorTitle', language), t('goOfflineFailed', language));
     } finally {
       setOfflineLoading(false);
     }
@@ -400,8 +400,8 @@ export default function HomeScreen({ navigation }) {
     return (
       <View style={[styles.root, { alignItems: 'center', justifyContent: 'center', padding: 32 }]}>
         <Text style={{ fontSize: 48, marginBottom: 16 }}>🔐</Text>
-        <Text style={{ fontSize: 22, fontWeight: '800', color: C.text, marginBottom: 8 }}>Admin Account</Text>
-        <Text style={{ fontSize: 15, color: C.gray, textAlign: 'center' }}>Use the web dashboard for admin controls.</Text>
+        <Text style={{ fontSize: 22, fontWeight: '800', color: C.text, marginBottom: 8 }}>{t('adminAccountTitle', language)}</Text>
+        <Text style={{ fontSize: 15, color: C.gray, textAlign: 'center' }}>{t('adminAccountBody', language)}</Text>
         <Text style={{ marginTop: 12, fontSize: 13, color: C.gray }}>{user.fullName} · {user.phone}</Text>
       </View>
     );
@@ -463,13 +463,13 @@ export default function HomeScreen({ navigation }) {
             activeOpacity={0.8}
           >
             <View style={[styles.statusDot, { backgroundColor: '#22C55E' }]} />
-            <Text style={styles.statusText}>ONLINE</Text>
+            <Text style={styles.statusText}>{t('online', language).toUpperCase()}</Text>
             <Ionicons name="pause" size={12} color="#111827" style={{ marginLeft: 5 }} />
           </TouchableOpacity>
         ) : (
           <View style={[styles.statusBadge, { top: 16 + insets.top }, styles.offlineBadge]}>
             <View style={[styles.statusDot, { backgroundColor: '#9CA3AF' }]} />
-            <Text style={styles.statusText}>OFFLINE</Text>
+            <Text style={styles.statusText}>{t('offline', language).toUpperCase()}</Text>
           </View>
         )}
       </View>
@@ -493,7 +493,7 @@ export default function HomeScreen({ navigation }) {
             transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }],
           }]}>
             <View style={styles.onlineBannerDot} />
-            <Text style={styles.onlineBannerText}>You're online! Offers will appear here.</Text>
+            <Text style={styles.onlineBannerText}>{t('onlineBannerMsg', language)}</Text>
           </Animated.View>
         )}
 
@@ -505,7 +505,7 @@ export default function HomeScreen({ navigation }) {
           >
             <Text style={styles.activeBannerIcon}>🚚</Text>
             <View style={{ flex: 1 }}>
-              <Text style={styles.activeBannerTitle}>Active Delivery</Text>
+              <Text style={styles.activeBannerTitle}>{t('activeDelivery', language)}</Text>
               <Text style={styles.activeBannerAddr} numberOfLines={1}>{activeOrder.deliveryAddress}</Text>
             </View>
             <Text style={styles.activeBannerChev}>›</Text>
@@ -535,7 +535,7 @@ export default function HomeScreen({ navigation }) {
                     size={18}
                     color={isOnline ? COLORS.primary : COLORS.white}
                   />
-                  <Text style={[styles.sparkBtnText, isOnline && styles.sparkBtnTextOnline]}>{isOnline ? 'GO OFFLINE' : 'SPARK NOW'}</Text>
+                  <Text style={[styles.sparkBtnText, isOnline && styles.sparkBtnTextOnline]}>{isOnline ? t('goOfflineCaps', language) : t('sparkNow', language)}</Text>
                 </View>
               )
             }
@@ -548,21 +548,21 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.streakChip}>
               <Text style={styles.chipIcon}>🔥</Text>
               <Text style={styles.chipVal}>{streakCount}</Text>
-              <Text style={styles.chipLabel}>Day Streak</Text>
+              <Text style={styles.chipLabel}>{t('dayStreak', language)}</Text>
             </View>
           </View>
         )}
 
         {driver?.status === 'PENDING' && (
           <View style={styles.pendingCard}>
-            <Text style={styles.pendingText}>⏳ Application under review — you'll be notified once approved.</Text>
+            <Text style={styles.pendingText}>{t('pendingReviewMsg', language)}</Text>
           </View>
         )}
 
         {driver?.status === 'REJECTED' && (
           <View style={styles.rejectedCard}>
             <Text style={styles.rejectedText}>
-              ✕ Application not approved{driver?.rejectionReason ? `: ${driver.rejectionReason}` : '.'} Contact support for more information.
+              {t('appNotApprovedMsg', language)}{driver?.rejectionReason ? `: ${driver.rejectionReason}` : '.'} {t('contactSupport', language)}
             </Text>
           </View>
         )}
@@ -573,22 +573,22 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.earningsRow}>
               <View style={styles.earningsStat}>
                 <Text style={styles.earningsVal}>ETB {todayEarnings.totalEarnings?.toFixed(0) || '0'}</Text>
-                <Text style={styles.earningsLabel}>Today's earnings</Text>
+                <Text style={styles.earningsLabel}>{t('todayEarnings', language)}</Text>
               </View>
               <View style={styles.earningsDivider} />
               <View style={styles.earningsStat}>
                 <Text style={styles.earningsVal}>{todayEarnings.totalDeliveries || 0}</Text>
-                <Text style={styles.earningsLabel}>Trips</Text>
+                <Text style={styles.earningsLabel}>{t('trips', language)}</Text>
               </View>
               <View style={styles.earningsDivider} />
               <View style={styles.earningsStat}>
                 <Text style={styles.earningsVal}>ETB {todayEarnings.avgPerTrip?.toFixed(0) || '0'}</Text>
-                <Text style={styles.earningsLabel}>Avg / Trip</Text>
+                <Text style={styles.earningsLabel}>{t('avgPerTrip', language)}</Text>
               </View>
             </View>
             <View style={styles.goalSection}>
               <View style={styles.goalHeader}>
-                <Text style={styles.goalLabel}>Daily Goal · ETB {DAILY_GOAL}</Text>
+                <Text style={styles.goalLabel}>{t('dailyGoal', language)} · ETB {DAILY_GOAL}</Text>
                 <Text style={styles.goalPct}>{Math.round(goalPct)}%</Text>
               </View>
               <View style={styles.goalTrack}>
@@ -596,7 +596,7 @@ export default function HomeScreen({ navigation }) {
               </View>
               {goalPct >= 100 && (
                 <View style={styles.goalCompleteBadge}>
-                  <Text style={styles.goalCompleteText}>🎉 Daily goal reached!</Text>
+                  <Text style={styles.goalCompleteText}>{t('dailyGoalReached', language)}</Text>
                 </View>
               )}
             </View>
@@ -610,8 +610,8 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.tipIcon}>⚙️</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.tipTitle}>Getting more offers</Text>
-              <Text style={styles.tipBody}>Setting your location access to always sharing helps get more offers.</Text>
+              <Text style={styles.tipTitle}>{t('gettingMoreOffers', language)}</Text>
+              <Text style={styles.tipBody}>{t('gettingMoreOffersBody', language)}</Text>
             </View>
             <Text style={styles.tipChev}>›</Text>
           </TouchableOpacity>
@@ -622,7 +622,7 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.offersSection}>
             <View style={styles.offersHeader}>
               <View style={styles.offersPulse} />
-              <Text style={styles.offersTitle}>New offers nearby</Text>
+              <Text style={styles.offersTitle}>{t('newOffersNearby', language)}</Text>
               <View style={styles.offersBadge}>
                 <Text style={styles.offersBadgeText}>{nearbyOrders.length}</Text>
               </View>
@@ -662,19 +662,21 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.waitingEmoji}>📡</Text>
               </View>
             </View>
-            <Text style={styles.waitingTitle}>Looking for offers</Text>
-            <Text style={styles.waitingBody}>Stay in a busy area to receive more delivery offers.</Text>
+            <Text style={styles.waitingTitle}>{t('lookingForOffers', language)}</Text>
+            <Text style={styles.waitingBody}>{t('lookingForOffersBody', language)}</Text>
           </View>
         )}
 
         {/* Activity chart */}
         <View style={styles.chartSection}>
           <View style={styles.chartHeader}>
-            <Text style={styles.chartTitle}>Popular offer times: Today</Text>
+            <Text style={styles.chartTitle}>{t('popularOfferTimes', language)}</Text>
             <Text style={styles.chartChev}>›</Text>
           </View>
           <Text style={styles.chartSub}>
-            {hasActivityPattern ? `Based on ${activityHeatmap.totalOrders} past orders` : 'Typical busy hours (general guide)'}
+            {hasActivityPattern
+              ? tf('basedOnOrders', language, { n: activityHeatmap.totalOrders })
+              : t('typicalBusyHours', language)}
           </Text>
           <View style={styles.chart}>
             {HOURS.map((h, i) => {
@@ -705,7 +707,7 @@ export default function HomeScreen({ navigation }) {
           </View>
           {!hasActivityPattern && (
             <Text style={styles.chartFootnote}>
-              Complete {MIN_ORDERS_FOR_PATTERN}+ deliveries to see your own pattern instead of this general guide.
+              {tf('completeDeliveriesFootnote', language, { n: MIN_ORDERS_FOR_PATTERN })}
             </Text>
           )}
         </View>
@@ -727,7 +729,7 @@ export default function HomeScreen({ navigation }) {
         >
           <View style={styles.floatPillDot} />
           <Text style={styles.floatPillText}>
-            ⚡ {nearbyOrders.length} new offer{nearbyOrders.length !== 1 ? 's' : ''}
+            ⚡ {nearbyOrders.length} {t('newOffer', language)}{language === 'en' && nearbyOrders.length !== 1 ? 's' : ''}
           </Text>
           <Text style={styles.floatPillArrow}>↑</Text>
         </TouchableOpacity>
@@ -742,9 +744,9 @@ export default function HomeScreen({ navigation }) {
               <View style={styles.goOfflineHandle} />
 
               <Ionicons name="pause-circle" size={40} color={COLORS.text} style={styles.goOfflineEmoji} />
-              <Text style={styles.goOfflineTitle}>Stop receiving offers?</Text>
+              <Text style={styles.goOfflineTitle}>{t('stopReceivingOffers', language)}</Text>
               <Text style={styles.goOfflineSub}>
-                You won't receive new delivery offers while you're offline.
+                {t('wontReceiveOffers', language)}
               </Text>
 
               <TouchableOpacity
@@ -752,7 +754,7 @@ export default function HomeScreen({ navigation }) {
                 onPress={confirmGoOffline}
                 activeOpacity={0.85}
               >
-                <Text style={styles.goOfflineBtnText}>Go Offline</Text>
+                <Text style={styles.goOfflineBtnText}>{t('goOfflineBtn', language)}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -760,7 +762,7 @@ export default function HomeScreen({ navigation }) {
                 onPress={closeGoOfflineSheet}
                 activeOpacity={0.85}
               >
-                <Text style={styles.keepEarningBtnText}>Keep Earning</Text>
+                <Text style={styles.keepEarningBtnText}>{t('keepEarning', language)}</Text>
               </TouchableOpacity>
 
               <View style={{ height: 8 }} />

@@ -12,6 +12,7 @@ import { useSelector } from 'react-redux';
 import { orderAPI, uploadAPI } from '../services/api';
 import { COLORS, ORDER_STATUS_LABELS, GOOGLE_MAPS_API_KEY } from '../utils/constants';
 import { getColors } from '../utils/theme';
+import { t, tf } from '../utils/i18n';
 import SlideToConfirm from '../components/SlideToConfirm';
 
 function decodePolyline(encoded) {
@@ -32,16 +33,17 @@ function decodePolyline(encoded) {
 const STATUS_FLOW = ['DRIVER_ASSIGNED', 'DRIVER_AT_STORE', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERED'];
 
 // Action-oriented slide labels for each step, rather than a generic "Slide to <status>".
-const SLIDE_ACTION_LABELS = {
-  DRIVER_AT_STORE: 'Confirm Arrival',
-  PICKED_UP: 'Complete Pickup',
-  IN_TRANSIT: 'Navigate to Destination',
-  DELIVERED: 'Complete Delivery',
+const SLIDE_ACTION_KEYS = {
+  DRIVER_AT_STORE: 'confirmArrival',
+  PICKED_UP: 'completePickup',
+  IN_TRANSIT: 'navigateToDestination',
+  DELIVERED: 'completeDelivery',
 };
 
 export default function ActiveDeliveryScreen({ route, navigation }) {
   const { orderId, autoAccept } = route.params || {};
   const theme = useSelector((s) => s.settings.theme);
+  const language = useSelector((s) => s.settings.language);
   const C = getColors(theme);
   const insets = useSafeAreaInsets();
   const [order, setOrder] = useState(null);
@@ -65,7 +67,7 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
       setOrder(data.data);
       fetchRoute(data.data);
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.message || 'Failed to accept order');
+      Alert.alert(t('errorTitle', language), err.response?.data?.message || t('failedToAcceptOrder', language));
       navigation.goBack();
     } finally {
       setIsLoading(false);
@@ -78,7 +80,7 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
       setOrder(data.data);
       fetchRoute(data.data);
     } catch {
-      Alert.alert('Error', 'Failed to load order');
+      Alert.alert(t('errorTitle', language), t('failedToLoadOrder', language));
       navigation.goBack();
     } finally {
       setIsLoading(false);
@@ -123,7 +125,7 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
       await uploadAPI.cargoPhoto(orderId, uri);
       setPodPhotoUri(uri);
     } catch {
-      Alert.alert('Upload failed', 'Could not upload the photo. Please try again.');
+      Alert.alert(t('uploadFailedTitle', language), t('uploadFailedBody', language));
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -132,7 +134,7 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
   const handleTakePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Camera access is required for proof of delivery.');
+      Alert.alert(t('permissionNeededTitle', language), t('cameraPermBody', language));
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7, allowsEditing: false });
@@ -143,7 +145,7 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
   const handleChooseFromLibrary = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Photo library access is required for proof of delivery.');
+      Alert.alert(t('permissionNeededTitle', language), t('libraryPermBody', language));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7, allowsEditing: false });
@@ -163,13 +165,13 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
       if (newStatus !== 'DELIVERED') fetchRoute(updatedOrder);
       if (newStatus === 'DELIVERED') {
         Alert.alert(
-          '🎉 Delivery Complete!',
-          `You earned ETB ${order.driverFee}. Great job!`,
-          [{ text: 'OK', onPress: () => navigation.navigate('Home') }]
+          t('deliveryCompleteTitle', language),
+          tf('deliveryCompleteBody', language, { amount: order.driverFee }),
+          [{ text: t('ok', language), onPress: () => navigation.navigate('Home') }]
         );
       }
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.message || 'Failed to update status');
+      Alert.alert(t('errorTitle', language), err.response?.data?.message || t('updateStatusFailed', language));
     } finally {
       setIsUpdating(false);
     }
@@ -186,7 +188,7 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading order...</Text>
+        <Text style={styles.loadingText}>{t('loadingOrder', language)}</Text>
       </View>
     );
   }
@@ -210,8 +212,8 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
           latitudeDelta: 0.05, longitudeDelta: 0.05,
         }}
       >
-        <Marker coordinate={{ latitude: order.pickupLat, longitude: order.pickupLng }} title="Pickup" pinColor="green" />
-        <Marker coordinate={{ latitude: order.deliveryLat, longitude: order.deliveryLng }} title="Delivery" pinColor="red" />
+        <Marker coordinate={{ latitude: order.pickupLat, longitude: order.pickupLng }} title={t('pickup', language)} pinColor="green" />
+        <Marker coordinate={{ latitude: order.deliveryLat, longitude: order.deliveryLng }} title={t('delivery', language)} pinColor="red" />
         {routeCoords.length > 1 && (
           <Polyline coordinates={routeCoords} strokeColor={COLORS.primary} strokeWidth={4} />
         )}
@@ -220,8 +222,8 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
       <View style={[styles.overlayTop, { paddingTop: insets.top + 8 }]}>
         <View style={styles.topBar}>
           <View style={styles.topBarTitleWrap}>
-            <Text style={styles.topBarTitle}>Active Delivery</Text>
-            <Text style={styles.topBarSubtitle}>Order #{order.orderNumber}</Text>
+            <Text style={styles.topBarTitle}>{t('activeDelivery', language)}</Text>
+            <Text style={styles.topBarSubtitle}>{t('orderNumber', language)} #{order.orderNumber}</Text>
           </View>
           <View style={styles.topBarActions}>
             <TouchableOpacity
@@ -253,7 +255,7 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
             {eta && (
               <View style={styles.etaBadge}>
                 <Text style={styles.etaIcon}>🕐</Text>
-                <Text style={styles.etaText}>{eta} away</Text>
+                <Text style={styles.etaText}>{tf('etaAwayTemplate', language, { eta })}</Text>
               </View>
             )}
             {nextStepText ? <Text style={styles.stepText} numberOfLines={2}>↗ {nextStepText}</Text> : null}
@@ -263,7 +265,7 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
 
       <ScrollView style={styles.sheet}>
         <View style={[styles.statusHeader, { backgroundColor: ORDER_STATUS_LABELS[order.status]?.color || COLORS.primary }]}>
-          <Text style={styles.orderNumber}>Order #{order.orderNumber}</Text>
+          <Text style={styles.orderNumber}>{t('orderNumber', language)} #{order.orderNumber}</Text>
           <Text style={styles.statusLabel}>{ORDER_STATUS_LABELS[order.status]?.en}</Text>
           <Text style={styles.statusLabelAm}>{ORDER_STATUS_LABELS[order.status]?.am}</Text>
         </View>
@@ -271,68 +273,68 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
         <View style={styles.earningsRow}>
           <View style={styles.earningItem}>
             <Text style={styles.earningAmount}>ETB {order.driverFee?.toFixed(2)}</Text>
-            <Text style={styles.earningLabel}>Your Earnings</Text>
+            <Text style={styles.earningLabel}>{t('yourEarnings', language)}</Text>
           </View>
           <View style={styles.earningDivider} />
           <View style={styles.earningItem}>
             <Text style={styles.earningAmount}>{order.distanceKm?.toFixed(1)} km</Text>
-            <Text style={styles.earningLabel}>Distance</Text>
+            <Text style={styles.earningLabel}>{t('distance', language)}</Text>
           </View>
         </View>
 
         {isPickup ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📦 Pickup Location</Text>
+            <Text style={styles.sectionTitle}>{t('pickupLocationTitle', language)}</Text>
             <Text style={styles.address}>{order.store?.storeName}</Text>
             <Text style={styles.addressSub}>{order.pickupAddress}</Text>
-            {order.pickupNotes && <Text style={styles.notes}>Note: {order.pickupNotes}</Text>}
+            {order.pickupNotes && <Text style={styles.notes}>{t('note', language)}: {order.pickupNotes}</Text>}
             <TouchableOpacity
               style={styles.navBtn}
               onPress={() => Linking.openURL(`https://maps.google.com/?q=${order.pickupLat},${order.pickupLng}`)}
             >
-              <Text style={styles.navBtnText}>🗺️ Navigate to Pickup</Text>
+              <Text style={styles.navBtnText}>🗺️ {t('navigatePickup', language)}</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.pickupDoneRow}>
             <Text style={styles.pickupDoneIcon}>✓</Text>
-            <Text style={styles.pickupDoneText}>Picked up from {order.store?.storeName}</Text>
+            <Text style={styles.pickupDoneText}>{tf('pickedUpFromTemplate', language, { name: order.store?.storeName })}</Text>
           </View>
         )}
 
         <View style={[styles.section, !isPickup && styles.sectionActive]}>
-          <Text style={styles.sectionTitle}>🏠 Delivery Location</Text>
+          <Text style={styles.sectionTitle}>{t('deliveryLocationTitle', language)}</Text>
           <Text style={styles.address}>{order.recipientName}</Text>
           <Text style={styles.addressSub}>{order.deliveryAddress}</Text>
-          {order.deliveryNotes && <Text style={styles.notes}>Note: {order.deliveryNotes}</Text>}
+          {order.deliveryNotes && <Text style={styles.notes}>{t('note', language)}: {order.deliveryNotes}</Text>}
           <View style={styles.actionRow}>
             <TouchableOpacity
               style={[styles.navBtn, { flex: 1, marginRight: 8 }]}
               onPress={() => Linking.openURL(`https://maps.google.com/?q=${order.deliveryLat},${order.deliveryLng}`)}
             >
-              <Text style={styles.navBtnText}>🗺️ Navigate</Text>
+              <Text style={styles.navBtnText}>🗺️ {t('navigate', language)}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.callBtn, { flex: 1, marginLeft: 8 }]}
               onPress={() => Linking.openURL(`tel:${order.recipientPhone}`)}
             >
-              <Text style={styles.navBtnText}>📞 Call</Text>
+              <Text style={styles.navBtnText}>📞 {t('call', language)}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📋 Cargo Details</Text>
+          <Text style={styles.sectionTitle}>{t('cargoDetailsTitle', language)}</Text>
           <Text style={styles.cargoText}>{order.description}</Text>
-          {order.weight && <Text style={styles.cargoDetail}>Weight: {order.weight} kg</Text>}
-          {order.isFragile && <Text style={styles.cargoWarning}>⚠️ Fragile — Handle with Care!</Text>}
-          {order.requiresRefrigeration && <Text style={styles.cargoWarning}>❄️ Requires Refrigeration!</Text>}
+          {order.weight && <Text style={styles.cargoDetail}>{t('weight', language)}: {order.weight} kg</Text>}
+          {order.isFragile && <Text style={styles.cargoWarning}>{t('fragile', language)}</Text>}
+          {order.requiresRefrigeration && <Text style={styles.cargoWarning}>{t('refrigeration', language)}</Text>}
         </View>
 
         {nextStatus === 'DELIVERED' && (
           <View style={styles.podSection}>
-            <Text style={styles.podTitle}>📸 Photo Proof of Delivery</Text>
-            <Text style={styles.podSubtitle}>Required before completing the delivery</Text>
+            <Text style={styles.podTitle}>{t('podTitle', language)}</Text>
+            <Text style={styles.podSubtitle}>{t('podSubtitle', language)}</Text>
             {podPhotoUri && (
               <Image source={{ uri: podPhotoUri }} style={styles.podPreview} resizeMode="cover" />
             )}
@@ -345,7 +347,7 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
                 <ActivityIndicator color={COLORS.white} />
               ) : (
                 <Text style={styles.podButtonText}>
-                  {podPhotoUri ? '📷 Retake Photo' : '📷 Take Photo'}
+                  {podPhotoUri ? t('retakePhoto', language) : t('takePhoto', language)}
                 </Text>
               )}
             </TouchableOpacity>
@@ -354,7 +356,7 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
               onPress={handleChooseFromLibrary}
               disabled={isUploadingPhoto}
             >
-              <Text style={styles.podLibraryLinkText}>Or choose from photo library</Text>
+              <Text style={styles.podLibraryLinkText}>{t('chooseFromLibrary', language)}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -363,8 +365,8 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
           <View style={styles.slideWrap}>
             <SlideToConfirm
               key={nextStatus}
-              label={SLIDE_ACTION_LABELS[nextStatus] || `Slide to ${nextStatusLabel?.en?.toLowerCase()}`}
-              labelAm={nextStatusLabel?.am}
+              label={SLIDE_ACTION_KEYS[nextStatus] ? t(SLIDE_ACTION_KEYS[nextStatus], language) : `${t('navigate', language)} ${nextStatusLabel?.en?.toLowerCase()}`}
+              labelAm={language === 'en' ? nextStatusLabel?.am : undefined}
               loading={isUpdating}
               disabled={nextStatus === 'DELIVERED' && !podPhotoUri}
               color={COLORS.primary}

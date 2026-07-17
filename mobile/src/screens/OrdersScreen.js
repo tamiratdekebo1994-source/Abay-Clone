@@ -8,18 +8,20 @@ import { useSelector } from 'react-redux';
 import { orderAPI } from '../services/api';
 import { COLORS, ORDER_STATUS_LABELS, TAB_BAR_CLEARANCE } from '../utils/constants';
 import { getColors } from '../utils/theme';
+import { t } from '../utils/i18n';
 
 const FILTERS = [
-  { label: 'All',       value: '' },
-  { label: 'Active',    value: 'DRIVER_ASSIGNED,DRIVER_AT_STORE,PICKED_UP,IN_TRANSIT' },
-  { label: 'Delivered', value: 'DELIVERED' },
-  { label: 'Cancelled', value: 'CANCELLED,FAILED' },
+  { labelKey: 'filterAll',       value: '' },
+  { labelKey: 'filterActive',    value: 'DRIVER_ASSIGNED,DRIVER_AT_STORE,PICKED_UP,IN_TRANSIT' },
+  { labelKey: 'filterDelivered', value: 'DELIVERED' },
+  { labelKey: 'filterCancelled', value: 'CANCELLED,FAILED' },
 ];
 
 const ACTIVE_STATUSES = new Set(['DRIVER_ASSIGNED', 'DRIVER_AT_STORE', 'PICKED_UP', 'IN_TRANSIT']);
 
 export default function OrdersScreen({ navigation }) {
   const theme = useSelector((s) => s.settings.theme);
+  const language = useSelector((s) => s.settings.language);
   const C = getColors(theme);
   const S = getStyles(C);
 
@@ -74,7 +76,7 @@ export default function OrdersScreen({ navigation }) {
     const isActive = ACTIVE_STATUSES.has(item.status);
     const isDelivered = item.status === 'DELIVERED';
     const isCancelled = item.status === 'CANCELLED' || item.status === 'FAILED';
-    const storeName = item.store?.storeName || 'Store';
+    const storeName = item.store?.storeName || t('storeFallback', language);
 
     return (
       <TouchableOpacity
@@ -95,17 +97,17 @@ export default function OrdersScreen({ navigation }) {
           {isActive && (
             <View style={S.activePill}>
               <View style={S.activeDot} />
-              <Text style={S.activeText}>Active</Text>
+              <Text style={S.activeText}>{t('filterActive', language)}</Text>
             </View>
           )}
           {!isActive && (
             <View style={[S.statusBadge, { backgroundColor: statusInfo.color + '20' }]}>
-              <Text style={[S.statusText, { color: statusInfo.color }]}>{statusInfo.en}</Text>
+              <Text style={[S.statusText, { color: statusInfo.color }]}>{statusInfo[language] || statusInfo.en}</Text>
             </View>
           )}
         </View>
 
-        <Text style={S.orderNum}>Order #{item.orderNumber}</Text>
+        <Text style={S.orderNum}>{t('orderNumber', language)} #{item.orderNumber}</Text>
 
         {/* ── Route ── */}
         <View style={S.route}>
@@ -136,13 +138,13 @@ export default function OrdersScreen({ navigation }) {
 
           {item.isFragile && (
             <View style={[S.footerChip, S.fragileChip]}>
-              <Text style={S.footerChipText}>⚠️ Fragile</Text>
+              <Text style={S.footerChipText}>{t('fragileShort', language)}</Text>
             </View>
           )}
 
           {item.requiresRefrigeration && (
             <View style={[S.footerChip, S.coldChip]}>
-              <Text style={S.footerChipText}>❄️ Cold</Text>
+              <Text style={S.footerChipText}>{t('coldShort', language)}</Text>
             </View>
           )}
 
@@ -155,7 +157,7 @@ export default function OrdersScreen({ navigation }) {
               style={S.reviewBtn}
               onPress={() => navigation.navigate('Review', { orderId: item.id, order: item })}
             >
-              <Text style={S.reviewBtnText}>⭐ Rate</Text>
+              <Text style={S.reviewBtnText}>{t('rateBtn', language)}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -167,19 +169,19 @@ export default function OrdersScreen({ navigation }) {
     <View style={S.summaryBar}>
       <View style={S.summaryItem}>
         <Text style={S.summaryVal}>ETB {summaryEarnings.toFixed(0)}</Text>
-        <Text style={S.summaryLabel}>Earned</Text>
+        <Text style={S.summaryLabel}>{t('earned', language)}</Text>
       </View>
       <View style={S.summaryDivider} />
       <View style={S.summaryItem}>
         <Text style={S.summaryVal}>{orders.length}</Text>
-        <Text style={S.summaryLabel}>Trips</Text>
+        <Text style={S.summaryLabel}>{t('trips', language)}</Text>
       </View>
       <View style={S.summaryDivider} />
       <View style={S.summaryItem}>
         <Text style={S.summaryVal}>
           ETB {orders.length > 0 ? (summaryEarnings / orders.length).toFixed(0) : '0'}
         </Text>
-        <Text style={S.summaryLabel}>Avg / Trip</Text>
+        <Text style={S.summaryLabel}>{t('avgPerTrip', language)}</Text>
       </View>
     </View>
   ) : null;
@@ -188,7 +190,7 @@ export default function OrdersScreen({ navigation }) {
     <View style={S.container}>
       {/* ── Green header ── */}
       <SafeAreaView style={S.header} edges={['top']}>
-        <Text style={S.headerTitle}>Trips</Text>
+        <Text style={S.headerTitle}>{t('trips', language)}</Text>
       </SafeAreaView>
 
       {/* ── Filter pills ── */}
@@ -200,7 +202,7 @@ export default function OrdersScreen({ navigation }) {
             onPress={() => setFilter(f.value)}
           >
             <Text style={[S.filterText, filter === f.value && S.filterTextActive]}>
-              {f.label}
+              {t(f.labelKey, language)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -229,8 +231,7 @@ export default function OrdersScreen({ navigation }) {
           ListEmptyComponent={
             <View style={S.empty}>
               <Text style={S.emptyEmoji}>📦</Text>
-              <Text style={S.emptyTitle}>No orders yet</Text>
-              <Text style={S.emptySubtext}>ምንም ትዕዛዝ የለም</Text>
+              <Text style={S.emptyTitle}>{t('noOrdersYet', language)}</Text>
             </View>
           }
         />
@@ -336,5 +337,4 @@ const getStyles = (C) => StyleSheet.create({
   empty: { alignItems: 'center', paddingTop: 80 },
   emptyEmoji: { fontSize: 48, marginBottom: 16 },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: C.text },
-  emptySubtext: { fontSize: 14, color: C.gray, marginTop: 4 },
 });
