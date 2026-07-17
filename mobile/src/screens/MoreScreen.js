@@ -7,11 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout, updateDriver } from '../store/authStore';
-import { toggleTheme } from '../store/settingsStore';
+import { toggleTheme, changeLanguage } from '../store/settingsStore';
 import { uploadAPI } from '../services/api';
 import { COLORS, TAB_BAR_CLEARANCE } from '../utils/constants';
 import { getColors } from '../utils/theme';
-import { t, setLanguage, getLanguage } from '../utils/i18n';
 
 const MENU_SECTIONS = [
   {
@@ -42,8 +41,8 @@ export default function MoreScreen({ navigation }) {
   const dispatch = useDispatch();
   const { user, driver } = useSelector((s) => s.auth);
   const theme = useSelector((s) => s.settings.theme);
+  const lang = useSelector((s) => s.settings.language);
   const C = getColors(theme);
-  const [lang, setLang] = useState(getLanguage());
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const isDark = theme === 'dark';
 
@@ -96,11 +95,7 @@ export default function MoreScreen({ navigation }) {
       },
       {
         text: lang === 'am' ? '🇬🇧 English' : '🇪🇹 አማርኛ',
-        onPress: () => {
-          const next = lang === 'am' ? 'en' : 'am';
-          setLanguage(next);
-          setLang(next);
-        },
+        onPress: () => dispatch(changeLanguage(lang === 'am' ? 'en' : 'am')),
       },
       { text: 'Cancel', style: 'cancel' },
     ]);

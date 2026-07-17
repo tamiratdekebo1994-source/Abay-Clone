@@ -28,6 +28,7 @@ function getTimeAgo(dateStr) {
 
 export default function NotificationsScreen() {
   const theme = useSelector((s) => s.settings.theme);
+  const language = useSelector((s) => s.settings.language);
   const C = getColors(theme);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -124,7 +125,7 @@ export default function NotificationsScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>🔔</Text>
-            <Text style={styles.emptyText}>{t('notifications')} — ምንም የለም</Text>
+            <Text style={styles.emptyText}>{t('notifications', language)} — ምንም የለም</Text>
             <Text style={styles.emptySubtext}>No notifications yet</Text>
           </View>
         }

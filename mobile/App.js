@@ -5,12 +5,14 @@ import { registerRootComponent } from 'expo';
 import { View } from 'react-native';
 import { store } from './src/store';
 import { loadUser } from './src/store/authStore';
+import { loadLanguage } from './src/store/settingsStore';
 import AppNavigator from './src/navigation/AppNavigator';
 
 function AuthBootstrap() {
   const dispatch = useDispatch();
   useEffect(() => {
     dispatch(loadUser());
+    dispatch(loadLanguage());
   }, []);
   return null;
 }

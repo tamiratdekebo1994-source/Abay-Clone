@@ -259,6 +259,7 @@ function AuthStack() {
 export default function AppNavigator() {
   const dispatch = useDispatch();
   const { isAuthenticated, isLoading, driver, user } = useSelector((state) => state.auth);
+  const language = useSelector((state) => state.settings.language);
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
@@ -315,17 +316,17 @@ export default function AppNavigator() {
           <Stack.Screen
             name="Chat"
             component={ChatScreen}
-            options={{ title: t('chat'), headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
+            options={{ title: t('chat', language), headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
           />
           <Stack.Screen
             name="Notifications"
             component={NotificationsScreen}
-            options={{ title: t('notifications'), headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
+            options={{ title: t('notifications', language), headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
           />
           <Stack.Screen
             name="Orders"
             component={OrdersScreen}
-            options={{ title: t('deliveryHistory'), headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
+            options={{ title: t('deliveryHistory', language), headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
           />
           <Stack.Screen
             name="Review"

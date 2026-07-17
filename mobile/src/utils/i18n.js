@@ -144,20 +144,14 @@ const strings = {
   currency:      { en: 'ETB', am: 'ብር' },
 };
 
-// Default language (can be stored in AsyncStorage)
-let currentLang = 'am'; // Default to Amharic for Ethiopia
-
-export const setLanguage = (lang) => { currentLang = lang; };
-export const getLanguage = () => currentLang;
-
 /**
- * Translate a key
+ * Translate a key. Current language lives in Redux (state.settings.language) —
+ * read it with useSelector and pass it in, e.g. t('welcome', language).
  * @param {string} key - string key
- * @param {string} [lang] - override language ('en' | 'am')
+ * @param {string} [lang] - language ('en' | 'am'), defaults to Amharic
  */
-export const t = (key, lang) => {
-  const l = lang || currentLang;
-  return strings[key]?.[l] || strings[key]?.['en'] || key;
+export const t = (key, lang = 'am') => {
+  return strings[key]?.[lang] || strings[key]?.['en'] || key;
 };
 
 /**

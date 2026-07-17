@@ -14,6 +14,7 @@ export default function ChatScreen({ route }) {
   const { orderId, orderNumber } = route.params;
   const { user } = useSelector((s) => s.auth);
   const theme = useSelector((s) => s.settings.theme);
+  const language = useSelector((s) => s.settings.language);
   const C = getColors(theme);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -103,7 +104,7 @@ export default function ChatScreen({ route }) {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyEmoji}>💬</Text>
-            <Text style={styles.emptyText}>{t('noMessages')}</Text>
+            <Text style={styles.emptyText}>{t('noMessages', language)}</Text>
           </View>
         }
       />
@@ -113,7 +114,7 @@ export default function ChatScreen({ route }) {
           style={styles.textInput}
           value={input}
           onChangeText={setInput}
-          placeholder={t('typeMessage')}
+          placeholder={t('typeMessage', language)}
           placeholderTextColor={C.gray}
           multiline
           maxLength={500}
