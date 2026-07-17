@@ -7,12 +7,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { useSelector, useDispatch } from 'react-redux';
+import Constants from 'expo-constants';
 import { logout, updateDriver, refreshDriverStats } from '../store/authStore';
 import { toggleTheme, changeLanguage } from '../store/settingsStore';
 import { uploadAPI } from '../services/api';
 import { COLORS, TAB_BAR_CLEARANCE } from '../utils/constants';
 import { getColors } from '../utils/theme';
 import { t } from '../utils/i18n';
+
+const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
 const MENU_SECTIONS = [
   {
@@ -194,7 +197,7 @@ export default function MoreScreen({ navigation }) {
           <Text style={S.signOutText}>{t('signOut', lang)}</Text>
         </TouchableOpacity>
 
-        <Text style={[S.version, { color: C.gray }]}>ET Spark Driver v1.0.0</Text>
+        <Text style={[S.version, { color: C.gray }]}>ET Spark Driver v{APP_VERSION}</Text>
       </ScrollView>
     </View>
   );

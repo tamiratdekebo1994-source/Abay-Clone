@@ -593,14 +593,26 @@ app.post('/driver/register', async (req, res) => {
     await db.collection('drivers').doc(userId).set({
       userId,
       fullName: fullName.trim(),
+      dateOfBirth: dateOfBirth || null,
+      gender: gender || null,
+      nationalId: nationalId || null,
+      emergencyContactName: emergencyContactName || null,
+      emergencyContactPhone: emergencyContactPhone.trim(),
       city,
+      homeAddress: homeAddress || null,
       vehicleType,
+      vehicleMake: vehicleMake || null,
+      vehicleModel: vehicleModel || null,
+      vehicleYear: vehicleYear || null,
+      vehicleColor: vehicleColor || null,
       vehiclePlate: vehiclePlate.toUpperCase(),
       licenseNumber: licenseNumber.trim(),
+      licenseClass: licenseClass || null,
+      licenseExpiry,
       status: 'PENDING',
-      earnings: 0,
+      totalEarnings: 0,
       rating: 0,
-      totalRides: 0,
+      totalDeliveries: 0,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
@@ -614,6 +626,39 @@ app.post('/driver/register', async (req, res) => {
     console.error('[DRIVER/REGISTER] Error:', err.message);
     console.error('[DRIVER/REGISTER] Stack:', err.stack);
     res.status(400).json({ success: false, message: err.message || 'Registration failed' });
+  }
+});
+
+// Lets an approved/pending driver update the personal, vehicle, and license
+// details captured at registration — /auth/profile only covers fullName/email
+// on the users collection, this covers everything else on the drivers doc.
+app.patch('/driver/profile', verifyToken, async (req, res) => {
+  try {
+    const {
+      dateOfBirth, nationalId, emergencyContactName, emergencyContactPhone, homeAddress,
+      vehicleMake, vehicleModel, vehicleYear, vehicleColor, vehiclePlate,
+      licenseNumber, licenseClass, licenseExpiry,
+    } = req.body;
+
+    const update = { updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+    if (dateOfBirth !== undefined) update.dateOfBirth = dateOfBirth || null;
+    if (nationalId !== undefined) update.nationalId = nationalId || null;
+    if (emergencyContactName !== undefined) update.emergencyContactName = emergencyContactName || null;
+    if (emergencyContactPhone !== undefined) update.emergencyContactPhone = emergencyContactPhone || null;
+    if (homeAddress !== undefined) update.homeAddress = homeAddress || null;
+    if (vehicleMake !== undefined) update.vehicleMake = vehicleMake || null;
+    if (vehicleModel !== undefined) update.vehicleModel = vehicleModel || null;
+    if (vehicleYear !== undefined) update.vehicleYear = vehicleYear || null;
+    if (vehicleColor !== undefined) update.vehicleColor = vehicleColor || null;
+    if (vehiclePlate !== undefined) update.vehiclePlate = vehiclePlate ? vehiclePlate.toUpperCase() : null;
+    if (licenseNumber !== undefined) update.licenseNumber = licenseNumber || null;
+    if (licenseClass !== undefined) update.licenseClass = licenseClass || null;
+    if (licenseExpiry !== undefined) update.licenseExpiry = licenseExpiry || null;
+
+    await db.collection('drivers').doc(req.userId).set(update, { merge: true });
+    res.json({ success: true, message: 'Driver profile updated' });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
   }
 });
 
@@ -986,8 +1031,8 @@ app.patch('/orders/:orderId/status', verifyToken, async (req, res) => {
       // and per-driver earnings elsewhere are computed live from orders, but the admin
       // leaderboard view needs a running total on the driver doc itself.
       await db.collection('drivers').doc(req.userId).update({
-        earnings: admin.firestore.FieldValue.increment(data.driverFee || 0),
-        totalRides: admin.firestore.FieldValue.increment(1),
+        totalEarnings: admin.firestore.FieldValue.increment(data.driverFee || 0),
+        totalDeliveries: admin.firestore.FieldValue.increment(1),
       }).catch((err) => console.error('Driver earnings rollup failed:', err.message));
 
       await createNotification(req.userId, {
@@ -1369,7 +1414,7 @@ app.patch('/admin/driver-applications/:applicationId/reject', verifyToken, async
 app.get('/admin/drivers', verifyToken, async (req, res) => {
   try {
     const snapshot = await db.collection('drivers')
-      .orderBy('earnings', 'desc')
+      .orderBy('totalEarnings', 'desc')
       .limit(50)
       .get();
 

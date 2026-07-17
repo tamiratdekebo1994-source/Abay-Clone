@@ -351,7 +351,6 @@ const strings = {
   emailLabel:           { en: 'Email', am: 'ኢሜይል' },
   saveChanges:          { en: 'Save Changes', am: 'ለውጦችን አስቀምጥ' },
   vehicle:              { en: 'Vehicle', am: 'ተሽከርካሪ' },
-  makeModel:            { en: 'Make / Model', am: 'ዓይነት / ሞዴል' },
   licenseNumberShort:   { en: 'License #', am: 'የፍቃድ ቁጥር' },
   zone:                 { en: 'Zone', am: 'ዞን' },
   city:                 { en: 'City', am: 'ከተማ' },

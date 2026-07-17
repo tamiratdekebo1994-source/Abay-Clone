@@ -9,7 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useSelector, useDispatch } from 'react-redux';
 import Constants from 'expo-constants';
 import { loadUser, updateDriver, logout, refreshDriverStats } from '../store/authStore';
-import { authAPI, uploadAPI } from '../services/api';
+import { authAPI, driverAPI, uploadAPI } from '../services/api';
 import { COLORS, VEHICLE_TYPES } from '../utils/constants';
 import { t } from '../utils/i18n';
 
@@ -51,6 +51,24 @@ const STATUS_INFO_KEYS = {
   },
 };
 
+function driverFormFrom(driver) {
+  return {
+    dateOfBirth: driver?.dateOfBirth || '',
+    nationalId: driver?.nationalId || '',
+    emergencyContactName: driver?.emergencyContactName || '',
+    emergencyContactPhone: driver?.emergencyContactPhone || '',
+    homeAddress: driver?.homeAddress || '',
+    vehicleMake: driver?.vehicleMake || '',
+    vehicleModel: driver?.vehicleModel || '',
+    vehicleYear: driver?.vehicleYear ? String(driver.vehicleYear) : '',
+    vehicleColor: driver?.vehicleColor || '',
+    vehiclePlate: driver?.vehiclePlate || '',
+    licenseNumber: driver?.licenseNumber || '',
+    licenseClass: driver?.licenseClass || '',
+    licenseExpiry: driver?.licenseExpiry || '',
+  };
+}
+
 export default function ProfileScreen({ navigation }) {
   const dispatch = useDispatch();
   const { user, driver } = useSelector((s) => s.auth);
@@ -59,6 +77,7 @@ export default function ProfileScreen({ navigation }) {
   const [editing, setEditing] = useState(false);
   const [fullName, setFullName] = useState(user?.fullName || '');
   const [email, setEmail] = useState(user?.email || '');
+  const [form, setForm] = useState(() => driverFormFrom(driver));
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
@@ -80,6 +99,19 @@ export default function ProfileScreen({ navigation }) {
   const driverStatusLabel = driver?.status
     ? (DRIVER_STATUS_KEYS[driver.status] ? t(DRIVER_STATUS_KEYS[driver.status], language) : driver.status)
     : null;
+  const genderLabel = driver?.gender === 'MALE' ? t('genderMale', language)
+    : driver?.gender === 'FEMALE' ? t('genderFemale', language)
+    : '—';
+
+  // Syncs local edit fields to the latest server values — used both when entering
+  // edit mode (so a background refreshDriverStats() isn't overwritten by stale
+  // local state) and when cancelling (to discard unsaved edits).
+  const startOrCancelEditing = () => {
+    setFullName(user?.fullName || '');
+    setEmail(user?.email || '');
+    setForm(driverFormFrom(driver));
+    setEditing((e) => !e);
+  };
 
   const pickPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -109,9 +141,29 @@ export default function ProfileScreen({ navigation }) {
     if (!fullName.trim()) {
       Alert.alert(t('nameRequired', language)); return;
     }
+    if (form.licenseExpiry.trim() && isNaN(new Date(form.licenseExpiry.trim()).getTime())) {
+      Alert.alert(t('invalidTitle', language), t('enterExpiryFormatBody', language)); return;
+    }
     setSaving(true);
     try {
-      await authAPI.updateProfile({ fullName: fullName.trim(), email: email.trim() || undefined });
+      await Promise.all([
+        authAPI.updateProfile({ fullName: fullName.trim(), email: email.trim() || undefined }),
+        driverAPI.updateProfile({
+          dateOfBirth: form.dateOfBirth.trim() || undefined,
+          nationalId: form.nationalId.trim() || undefined,
+          emergencyContactName: form.emergencyContactName.trim() || undefined,
+          emergencyContactPhone: form.emergencyContactPhone.trim() || undefined,
+          homeAddress: form.homeAddress.trim() || undefined,
+          vehicleMake: form.vehicleMake.trim() || undefined,
+          vehicleModel: form.vehicleModel.trim() || undefined,
+          vehicleYear: form.vehicleYear.trim() ? parseInt(form.vehicleYear.trim(), 10) : undefined,
+          vehicleColor: form.vehicleColor.trim() || undefined,
+          vehiclePlate: form.vehiclePlate.trim() || undefined,
+          licenseNumber: form.licenseNumber.trim() || undefined,
+          licenseClass: form.licenseClass.trim() || undefined,
+          licenseExpiry: form.licenseExpiry.trim() || undefined,
+        }),
+      ]);
       await dispatch(loadUser());
       setEditing(false);
     } catch (err) {
@@ -145,18 +197,7 @@ export default function ProfileScreen({ navigation }) {
             <Text style={S.backIcon}>‹</Text>
           </TouchableOpacity>
           <Text style={S.headerTitle}>{t('myAccount', language)}</Text>
-          <TouchableOpacity
-            onPress={() => {
-              if (editing) {
-                setFullName(user?.fullName || '');
-                setEmail(user?.email || '');
-                setEditing(false);
-              } else {
-                setEditing(true);
-              }
-            }}
-            style={S.editBtn}
-          >
+          <TouchableOpacity onPress={startOrCancelEditing} style={S.editBtn}>
             <Text style={S.editBtnText}>{editing ? t('cancel', language) : t('edit', language)}</Text>
           </TouchableOpacity>
         </View>
@@ -259,6 +300,27 @@ export default function ProfileScreen({ navigation }) {
               editing={editing}
               onChangeText={setEmail}
               keyboardType="email-address"
+            />
+            <InfoField
+              icon="🎂"
+              label={t('dateOfBirth', language)}
+              value={editing ? form.dateOfBirth : (driver?.dateOfBirth || '—')}
+              editing={editing}
+              onChangeText={(v) => setForm((p) => ({ ...p, dateOfBirth: v }))}
+              placeholder="YYYY-MM-DD"
+            />
+            <InfoField
+              icon="⚧"
+              label={t('gender', language)}
+              value={genderLabel}
+              editing={false}
+            />
+            <InfoField
+              icon="🪪"
+              label={t('nationalIdNumber', language)}
+              value={editing ? form.nationalId : (driver?.nationalId || '—')}
+              editing={editing}
+              onChangeText={(v) => setForm((p) => ({ ...p, nationalId: v }))}
               last
             />
           </View>
@@ -278,6 +340,31 @@ export default function ProfileScreen({ navigation }) {
           )}
         </View>
 
+        {/* ── Emergency contact ── */}
+        {driver && (
+          <View style={S.section}>
+            <Text style={S.sectionTitle}>{t('emergencyContact', language)}</Text>
+            <View style={S.card}>
+              <InfoField
+                icon="👤"
+                label={t('contactName', language)}
+                value={editing ? form.emergencyContactName : (driver.emergencyContactName || '—')}
+                editing={editing}
+                onChangeText={(v) => setForm((p) => ({ ...p, emergencyContactName: v }))}
+              />
+              <InfoField
+                icon="📞"
+                label={t('contactPhone', language)}
+                value={editing ? form.emergencyContactPhone : (driver.emergencyContactPhone || '—')}
+                editing={editing}
+                onChangeText={(v) => setForm((p) => ({ ...p, emergencyContactPhone: v }))}
+                keyboardType="phone-pad"
+                last
+              />
+            </View>
+          </View>
+        )}
+
         {/* ── Vehicle info ── */}
         {driver && (
           <View style={S.section}>
@@ -293,15 +380,57 @@ export default function ProfileScreen({ navigation }) {
             </View>
 
             <View style={S.card}>
-              <VehicleRow label={t('makeModel', language)} value={`${driver.vehicleMake || ''} ${driver.vehicleModel || ''}`.trim() || '—'} />
-              <VehicleRow label={t('vehicleColor', language)} value={driver.vehicleColor || '—'} />
-              <VehicleRow label={t('vehicleYear', language)} value={driver.vehicleYear ? String(driver.vehicleYear) : '—'} />
-              <VehicleRow label={t('licenseNumberShort', language)} value={driver.licenseNumber || '—'} />
+              <VehicleRow
+                label={t('vehicleMakeLabel', language)}
+                value={editing ? form.vehicleMake : (driver.vehicleMake || '—')}
+                editing={editing}
+                onChangeText={(v) => setForm((p) => ({ ...p, vehicleMake: v }))}
+              />
+              <VehicleRow
+                label={t('modelLabel', language)}
+                value={editing ? form.vehicleModel : (driver.vehicleModel || '—')}
+                editing={editing}
+                onChangeText={(v) => setForm((p) => ({ ...p, vehicleModel: v }))}
+              />
+              <VehicleRow
+                label={t('vehicleColor', language)}
+                value={editing ? form.vehicleColor : (driver.vehicleColor || '—')}
+                editing={editing}
+                onChangeText={(v) => setForm((p) => ({ ...p, vehicleColor: v }))}
+              />
+              <VehicleRow
+                label={t('vehicleYear', language)}
+                value={editing ? form.vehicleYear : (driver.vehicleYear ? String(driver.vehicleYear) : '—')}
+                editing={editing}
+                onChangeText={(v) => setForm((p) => ({ ...p, vehicleYear: v }))}
+                keyboardType="numeric"
+              />
+              <VehicleRow
+                label={t('plateNumberRequired', language)}
+                value={editing ? form.vehiclePlate : (driver.vehiclePlate || '—')}
+                editing={editing}
+                onChangeText={(v) => setForm((p) => ({ ...p, vehiclePlate: v.toUpperCase() }))}
+              />
+              <VehicleRow
+                label={t('licenseNumberShort', language)}
+                value={editing ? form.licenseNumber : (driver.licenseNumber || '—')}
+                editing={editing}
+                onChangeText={(v) => setForm((p) => ({ ...p, licenseNumber: v }))}
+              />
+              <VehicleRow
+                label={t('licenseClassLabel', language)}
+                value={editing ? form.licenseClass : (driver.licenseClass || '—')}
+                editing={editing}
+                onChangeText={(v) => setForm((p) => ({ ...p, licenseClass: v }))}
+              />
               <VehicleRow
                 label={t('licenseExpiry', language)}
-                value={driver.licenseExpiry
+                value={editing ? form.licenseExpiry : (driver.licenseExpiry
                   ? new Date(driver.licenseExpiry).toLocaleDateString('en-ET', { year: 'numeric', month: 'short', day: 'numeric' })
-                  : '—'}
+                  : '—')}
+                editing={editing}
+                onChangeText={(v) => setForm((p) => ({ ...p, licenseExpiry: v }))}
+                placeholder="YYYY-MM-DD"
                 last
               />
             </View>
@@ -314,7 +443,13 @@ export default function ProfileScreen({ navigation }) {
             <Text style={S.sectionTitle}>{t('zone', language)}</Text>
             <View style={S.card}>
               <VehicleRow label={t('city', language)} value={driver.city} />
-              {driver.homeAddress && <VehicleRow label={t('homeAddress', language)} value={driver.homeAddress} last />}
+              <VehicleRow
+                label={t('homeAddress', language)}
+                value={editing ? form.homeAddress : (driver.homeAddress || '—')}
+                editing={editing}
+                onChangeText={(v) => setForm((p) => ({ ...p, homeAddress: v }))}
+                last
+              />
             </View>
           </View>
         )}
@@ -354,7 +489,7 @@ export default function ProfileScreen({ navigation }) {
   );
 }
 
-function InfoField({ icon, label, value, editing, onChangeText, keyboardType, last }) {
+function InfoField({ icon, label, value, editing, onChangeText, keyboardType, placeholder, last }) {
   return (
     <View style={[IF.row, !last && IF.border]}>
       <Text style={IF.icon}>{icon}</Text>
@@ -367,6 +502,7 @@ function InfoField({ icon, label, value, editing, onChangeText, keyboardType, la
             onChangeText={onChangeText}
             keyboardType={keyboardType || 'default'}
             autoCapitalize="words"
+            placeholder={placeholder}
             placeholderTextColor="#9CA3AF"
           />
         ) : (
@@ -377,11 +513,22 @@ function InfoField({ icon, label, value, editing, onChangeText, keyboardType, la
   );
 }
 
-function VehicleRow({ label, value, last }) {
+function VehicleRow({ label, value, editing, onChangeText, keyboardType, placeholder, last }) {
   return (
     <View style={[VR.row, !last && VR.border]}>
       <Text style={VR.label}>{label}</Text>
-      <Text style={VR.value} numberOfLines={1}>{value}</Text>
+      {editing && onChangeText ? (
+        <TextInput
+          style={VR.input}
+          value={value}
+          onChangeText={onChangeText}
+          keyboardType={keyboardType || 'default'}
+          placeholder={placeholder}
+          placeholderTextColor="#9CA3AF"
+        />
+      ) : (
+        <Text style={VR.value} numberOfLines={1}>{value}</Text>
+      )}
     </View>
   );
 }
@@ -417,6 +564,10 @@ const VR = StyleSheet.create({
   border: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F3F4F6' },
   label: { flex: 1, fontSize: 14, color: '#6B7280', fontWeight: '500' },
   value: { fontSize: 14, color: '#111827', fontWeight: '600', maxWidth: '55%', textAlign: 'right' },
+  input: {
+    flex: 1, fontSize: 14, color: '#111827', fontWeight: '600', textAlign: 'right',
+    borderBottomWidth: 1.5, borderBottomColor: COLORS.primary, paddingBottom: 2,
+  },
 });
 
 const LR = StyleSheet.create({

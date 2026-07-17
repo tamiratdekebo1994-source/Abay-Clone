@@ -50,6 +50,7 @@ export const authAPI = {
 export const driverAPI = {
   register: (data) => api.post('/driver/register', data),
   getProfile: () => api.get('/driver/profile'),
+  updateProfile: (data) => api.patch('/driver/profile', data),
   updateLocation: (lat, lng) => api.patch('/driver/location', { lat, lng }),
   toggleOnline: () => api.post('/driver/toggle-online'),
   getNearbyOrders: (lat, lng, radius = 10) =>
