@@ -685,7 +685,7 @@ export default function HomeScreen({ navigation }) {
               const level = hasActivityPattern
                 ? (activityHeatmap.normalized[HOURS_START + i] || 0)
                 : TYPICAL_HOURLY_PATTERN[i];
-              const fillH = 44 + level * 28; // compressed range — a calm near-uniform wall, not spiky
+              const fillH = 33 + level * 21; // compressed range — a calm near-uniform wall, not spiky
               return (
                 <View key={h} style={styles.barWrap}>
                   <View style={styles.barTrack}>
@@ -929,29 +929,29 @@ const styles = StyleSheet.create({
   typingDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: COLORS.primary },
   waitingBody: { fontSize: 13, color: '#6B7280', textAlign: 'center', lineHeight: 19 },
 
-  chartSection: { backgroundColor: '#F9FAFB', borderRadius: 14, padding: 16, marginBottom: 8 },
+  chartSection: { backgroundColor: '#F9FAFB', borderRadius: 14, padding: 14, marginBottom: 8 },
   chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   chartTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
   chartChev: { fontSize: 20, color: '#9CA3AF' },
-  chartSub: { fontSize: 12, color: '#6B7280', marginTop: 2, marginBottom: 16 },
-  chart: { flexDirection: 'row', alignItems: 'flex-end', paddingTop: 14 },
+  chartSub: { fontSize: 12, color: '#6B7280', marginTop: 2, marginBottom: 10 },
+  chart: { flexDirection: 'row', alignItems: 'flex-end', paddingTop: 10 },
   barWrap: { flex: 1, alignItems: 'center' },
   barTrack: {
-    width: '62%', height: 72,
+    width: '62%', height: 54,
     justifyContent: 'flex-end', overflow: 'visible',
   },
-  barFill: { width: '100%', borderRadius: 9 },
+  barFill: { width: '100%', borderRadius: 8 },
   barActive: { backgroundColor: COLORS.primary },
   barInactive: { backgroundColor: '#D8DCE1' },
   barEstimated: { opacity: 0.55 },
   nowNeedle: {
-    position: 'absolute', top: -14, left: '50%', marginLeft: -1,
-    width: 2, height: 86, borderRadius: 1, backgroundColor: COLORS.primary,
+    position: 'absolute', top: -10, left: '50%', marginLeft: -1,
+    width: 2, height: 64, borderRadius: 1, backgroundColor: COLORS.primary,
   },
-  barLabelSlot: { height: 16, marginTop: 6, alignItems: 'center' },
+  barLabelSlot: { height: 14, marginTop: 4, alignItems: 'center' },
   barLabel: { fontSize: 9, color: '#9CA3AF' },
   barLabelActive: { color: COLORS.primary, fontWeight: '700' },
-  chartFootnote: { fontSize: 11, color: '#9CA3AF', textAlign: 'center', marginTop: 12 },
+  chartFootnote: { fontSize: 11, color: '#9CA3AF', textAlign: 'center', marginTop: 8 },
 
   // Go Offline Modal
   modalOverlay: {
