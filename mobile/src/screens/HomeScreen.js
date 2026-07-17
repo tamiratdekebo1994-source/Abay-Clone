@@ -43,7 +43,6 @@ const ETHIOPIA_UTC_OFFSET_HOURS = 3; // EAT is UTC+3 year-round — matches the 
 // reference app's shape). Not demand data — just how full each hour's bar renders; color
 // (upcoming vs already-passed) is computed live from the current Addis Ababa hour below.
 const HOUR_SHAPE = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.6, 0.4];
-const DAILY_GOAL = 500;
 
 // Simulated surge zones around Addis Ababa
 const SURGE_ZONES = [
@@ -434,8 +433,6 @@ export default function HomeScreen({ navigation }) {
   }
 
   const streakCount = driver?.deliveryStreak ?? 0;
-  const earned = todayEarnings?.totalEarnings ?? 0;
-  const goalPct = Math.min(100, (earned / DAILY_GOAL) * 100);
 
   const mapHeight = SH * 0.46;
 
@@ -595,7 +592,7 @@ export default function HomeScreen({ navigation }) {
           </View>
         )}
 
-        {/* ── Today's earnings + goal tracker ── */}
+        {/* ── Today's earnings ── */}
         {todayEarnings && (
           <View style={styles.earningsCard}>
             <View style={styles.earningsRow}>
@@ -613,20 +610,6 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.earningsVal}>ETB {todayEarnings.avgPerTrip?.toFixed(0) || '0'}</Text>
                 <Text style={styles.earningsLabel}>{t('avgPerTrip', language)}</Text>
               </View>
-            </View>
-            <View style={styles.goalSection}>
-              <View style={styles.goalHeader}>
-                <Text style={styles.goalLabel}>{t('dailyGoal', language)} · ETB {DAILY_GOAL}</Text>
-                <Text style={styles.goalPct}>{Math.round(goalPct)}%</Text>
-              </View>
-              <View style={styles.goalTrack}>
-                <View style={[styles.goalFill, { width: `${goalPct}%` }]} />
-              </View>
-              {goalPct >= 100 && (
-                <View style={styles.goalCompleteBadge}>
-                  <Text style={styles.goalCompleteText}>{t('dailyGoalReached', language)}</Text>
-                </View>
-              )}
             </View>
           </View>
         )}
@@ -853,20 +836,6 @@ const styles = StyleSheet.create({
   earningsVal: { fontSize: 17, fontWeight: '800', color: COLORS.primary },
   earningsLabel: { fontSize: 10, color: '#6B7280', marginTop: 2 },
   earningsDivider: { width: 1, height: 28, backgroundColor: '#E5E7EB' },
-  goalSection: {
-    borderTopWidth: 1, borderTopColor: '#E5E7EB',
-    paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12,
-  },
-  goalHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  goalLabel: { fontSize: 11, color: '#6B7280', fontWeight: '600' },
-  goalPct: { fontSize: 11, color: COLORS.primary, fontWeight: '700' },
-  goalTrack: { height: 6, backgroundColor: '#E5E7EB', borderRadius: 3, overflow: 'hidden' },
-  goalFill: { height: '100%', backgroundColor: COLORS.primary, borderRadius: 3 },
-  goalCompleteBadge: {
-    backgroundColor: COLORS.accent, borderRadius: 8,
-    paddingVertical: 7, marginTop: 8, alignItems: 'center',
-  },
-  goalCompleteText: { fontSize: 12, color: COLORS.primary, fontWeight: '800' },
 
   driverInfoRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   streakChip: {

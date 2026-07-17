@@ -178,8 +178,6 @@ const strings = {
   dayStreak:            { en: 'Day Streak', am: 'ተከታታይ ቀናት' },
   pendingReviewMsg:     { en: "⏳ Application under review — you'll be notified once approved.", am: '⏳ ማመልከቻ በግምገማ ላይ ነው — ከጸደቀ በኋላ ይነገርዎታል።' },
   appNotApprovedMsg:    { en: '✕ Application not approved', am: '✕ ማመልከቻ አልጸደቀም' },
-  dailyGoal:            { en: 'Daily Goal', am: 'ዕለታዊ ግብ' },
-  dailyGoalReached:     { en: '🎉 Daily goal reached!', am: '🎉 ዕለታዊ ግብ ደርሷል!' },
   gettingMoreOffers:    { en: 'Getting more offers', am: 'ተጨማሪ ትዕዛዞችን ማግኘት' },
   gettingMoreOffersBody:{ en: 'Setting your location access to always sharing helps get more offers.', am: 'የአካባቢ መዳረሻዎን ሁልጊዜ ማጋራት ላይ ማዘጋጀት ተጨማሪ ትዕዛዞችን እንዲያገኙ ይረዳል።' },
   newOffersNearby:      { en: 'New offers nearby', am: 'አዳዲስ ትዕዛዞች በአቅራቢያ' },
