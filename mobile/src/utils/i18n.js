@@ -246,9 +246,6 @@ const strings = {
   signOut:              { en: 'Sign Out', am: 'ውጣ' },
   signOutConfirm:       { en: 'Are you sure you want to sign out?', am: 'እርግጠኛ ነዎት መውጣት ይፈልጋሉ?' },
   driverFallback:       { en: 'DRIVER', am: 'ሾፌር' },
-  navAppTitle:          { en: 'Navigation App', am: 'የአሰሳ መተግበሪያ' },
-  navAppComingSoonBody: { en: 'Coming soon — Google Maps, Waze, Apple Maps', am: 'በቅርቡ ይመጣል — Google Maps, Waze, Apple Maps' },
-  selectNavApp:         { en: 'Select my default navigation app', am: 'ነባሪ የአሰሳ መተግበሪያዬን ይምረጡ' },
   rating:               { en: 'Rating', am: 'ደረጃ' },
 
   // ─── Earnings screen ──────────────────────────────────────────────────────

@@ -146,16 +146,6 @@ export default function MoreScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Nav app selector */}
-        <TouchableOpacity
-          style={S.navAppRow}
-          onPress={() => Alert.alert(t('navAppTitle', lang), t('navAppComingSoonBody', lang))}
-        >
-          <Text style={S.navAppIcon}>🧭</Text>
-          <Text style={S.navAppText}>{t('selectNavApp', lang)}</Text>
-          <Text style={S.chevron}>›</Text>
-        </TouchableOpacity>
-
         {/* ── Driver stats strip ── */}
         {driver && (
           <View style={S.statsStrip}>
@@ -251,15 +241,6 @@ const S = StyleSheet.create({
   },
   statusOnline: { backgroundColor: 'rgba(40,167,69,0.3)' },
   statusPillText: { color: COLORS.primary, fontSize: 12, fontWeight: '600' },
-
-  navAppRow: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: 'rgba(27,67,50,0.10)',
-    marginHorizontal: 16, marginBottom: 16,
-    borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-  },
-  navAppIcon: { fontSize: 20, marginRight: 12 },
-  navAppText: { flex: 1, color: COLORS.primary, fontSize: 14, fontWeight: '600' },
 
   statsStrip: {
     flexDirection: 'row', marginHorizontal: 16, marginBottom: 16,
