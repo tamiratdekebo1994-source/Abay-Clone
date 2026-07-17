@@ -126,7 +126,7 @@ export default function ChatScreen({ route }) {
           disabled={!input.trim() || isSending}
         >
           {isSending
-            ? <ActivityIndicator size="small" color={COLORS.white} />
+            ? <ActivityIndicator size="small" color={COLORS.primary} />
             : <Text style={styles.sendBtnText}>↑</Text>}
         </TouchableOpacity>
       </View>
@@ -137,8 +137,8 @@ export default function ChatScreen({ route }) {
 const getStyles = (C) => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.background },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.background },
-  orderBadge: { backgroundColor: COLORS.primary, paddingHorizontal: 16, paddingVertical: 8, alignItems: 'center' },
-  orderBadgeText: { color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '600' },
+  orderBadge: { backgroundColor: COLORS.accent, paddingHorizontal: 16, paddingVertical: 8, alignItems: 'center' },
+  orderBadgeText: { color: 'rgba(27,67,50,0.8)', fontSize: 13, fontWeight: '600' },
   messageList: { padding: 16, paddingBottom: 8 },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
   emptyEmoji: { fontSize: 48 },
@@ -155,13 +155,13 @@ const getStyles = (C) => StyleSheet.create({
     maxWidth: '75%', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 2, elevation: 1,
   },
-  bubbleMe: { backgroundColor: COLORS.primary, borderBottomRightRadius: 4 },
+  bubbleMe: { backgroundColor: COLORS.accent, borderBottomRightRadius: 4 },
   bubbleThem: { backgroundColor: C.white, borderBottomLeftRadius: 4 },
   senderName: { fontSize: 11, fontWeight: '700', color: COLORS.primaryLight, marginBottom: 2 },
   msgText: { fontSize: 15, color: C.text, lineHeight: 21 },
-  msgTextMe: { color: COLORS.white },
+  msgTextMe: { color: COLORS.primary },
   msgTime: { fontSize: 11, color: C.gray, marginTop: 4, alignSelf: 'flex-end' },
-  msgTimeMe: { color: 'rgba(255,255,255,0.65)' },
+  msgTimeMe: { color: 'rgba(27,67,50,0.65)' },
   inputBar: {
     flexDirection: 'row', alignItems: 'flex-end',
     padding: 12, backgroundColor: C.white,
@@ -175,8 +175,8 @@ const getStyles = (C) => StyleSheet.create({
   },
   sendBtn: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center',
   },
   sendBtnDisabled: { opacity: 0.4 },
-  sendBtnText: { color: COLORS.white, fontSize: 20, fontWeight: '700' },
+  sendBtnText: { color: COLORS.primary, fontSize: 20, fontWeight: '700' },
 });

@@ -111,7 +111,7 @@ export default function PhoneEntryScreen({ navigation }) {
             activeOpacity={0.85}
           >
             {loading
-              ? <ActivityIndicator color={COLORS.white} />
+              ? <ActivityIndicator color={COLORS.primary} />
               : <Text style={S.ctaText}>{t('continueArrow', language)}</Text>
             }
           </TouchableOpacity>
@@ -166,9 +166,9 @@ const S = StyleSheet.create({
   },
   flagBadge: {
     paddingHorizontal: 7, paddingVertical: 3,
-    borderRadius: 6, backgroundColor: COLORS.primary,
+    borderRadius: 6, backgroundColor: COLORS.accent,
   },
-  flagBadgeText: { fontSize: 11, fontWeight: '800', color: COLORS.white, letterSpacing: 0.5 },
+  flagBadgeText: { fontSize: 11, fontWeight: '800', color: COLORS.primary, letterSpacing: 0.5 },
   code: { fontSize: 17, fontWeight: '700', color: '#111' },
   sep: { width: 1.5, height: 30, backgroundColor: '#E0E0E0' },
   input: {
@@ -177,10 +177,10 @@ const S = StyleSheet.create({
   },
 
   cta: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accent,
     borderRadius: 16, paddingVertical: 20,
     alignItems: 'center',
   },
   ctaDisabled: { opacity: 0.3 },
-  ctaText: { fontSize: 17, fontWeight: '800', color: COLORS.white, letterSpacing: 0.3 },
+  ctaText: { fontSize: 17, fontWeight: '800', color: COLORS.primary, letterSpacing: 0.3 },
 });

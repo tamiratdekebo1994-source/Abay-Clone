@@ -87,7 +87,7 @@ export default function LoginScreen({ navigation }) {
             disabled={isLoading}
           >
             {isLoading ? (
-              <ActivityIndicator color={COLORS.white} />
+              <ActivityIndicator color={COLORS.primary} />
             ) : (
               <Text style={styles.loginButtonText}>{t('login', language)}</Text>
             )}
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   scrollContent: { flexGrow: 1, padding: 24 },
   header: { alignItems: 'center', paddingVertical: 48 },
   logoContainer: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accent,
     width: 100, height: 100,
     borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3, shadowRadius: 8, elevation: 8,
   },
-  logoText: { color: COLORS.white, fontSize: 26, fontWeight: '900', letterSpacing: 1 },
+  logoText: { color: COLORS.primary, fontSize: 26, fontWeight: '900', letterSpacing: 1 },
   appName: { fontSize: 32, fontWeight: '900', color: COLORS.black, marginTop: 12 },
   tagline: { fontSize: 16, fontWeight: '600', color: COLORS.black, marginTop: 4 },
   form: { backgroundColor: COLORS.white, borderRadius: 16, padding: 24, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
@@ -145,12 +145,12 @@ const styles = StyleSheet.create({
   eyeButton: { position: 'absolute', right: 12, top: 14 },
   eyeText: { fontSize: 18 },
   loginButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accent,
     borderRadius: 12, padding: 16,
     alignItems: 'center', marginTop: 8,
   },
   loginButtonDisabled: { opacity: 0.7 },
-  loginButtonText: { color: COLORS.white, fontSize: 16, fontWeight: '700' },
+  loginButtonText: { color: COLORS.primary, fontSize: 16, fontWeight: '700' },
   registerLink: { alignItems: 'center', marginTop: 16 },
   registerLinkText: { color: COLORS.primaryLight, fontSize: 14 },
   footer: { alignItems: 'center', marginTop: 32 },

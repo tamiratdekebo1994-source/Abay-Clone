@@ -143,8 +143,8 @@ function MainTabs() {
       tabBar={(props) => <FloatingGlassTabBar {...props} />}
       screenOptions={{
         headerShown: true,
-        headerStyle: { backgroundColor: COLORS.primary },
-        headerTintColor: COLORS.white,
+        headerStyle: { backgroundColor: COLORS.accent },
+        headerTintColor: COLORS.primary,
         headerTitleStyle: { fontWeight: '700', fontSize: 18 },
         headerShadowVisible: false,
         sceneStyle: { backgroundColor: C.background },
@@ -316,32 +316,32 @@ export default function AppNavigator() {
           <Stack.Screen
             name="Chat"
             component={ChatScreen}
-            options={{ title: t('chat', language), headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
+            options={{ title: t('chat', language), headerStyle: { backgroundColor: COLORS.accent }, headerTintColor: COLORS.primary }}
           />
           <Stack.Screen
             name="Notifications"
             component={NotificationsScreen}
-            options={{ title: t('notifications', language), headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
+            options={{ title: t('notifications', language), headerStyle: { backgroundColor: COLORS.accent }, headerTintColor: COLORS.primary }}
           />
           <Stack.Screen
             name="Orders"
             component={OrdersScreen}
-            options={{ title: t('deliveryHistory', language), headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
+            options={{ title: t('deliveryHistory', language), headerStyle: { backgroundColor: COLORS.accent }, headerTintColor: COLORS.primary }}
           />
           <Stack.Screen
             name="Review"
             component={ReviewScreen}
-            options={{ title: '⭐ Rate Delivery', headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
+            options={{ title: '⭐ Rate Delivery', headerStyle: { backgroundColor: COLORS.accent }, headerTintColor: COLORS.primary }}
           />
           <Stack.Screen
             name="HelpSupport"
             component={HelpSupportScreen}
-            options={{ title: 'Help & Support / እርዳታ', headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
+            options={{ title: 'Help & Support / እርዳታ', headerStyle: { backgroundColor: COLORS.accent }, headerTintColor: COLORS.primary }}
           />
           <Stack.Screen
             name="OrderDetail"
             component={OrderDetailScreen}
-            options={{ title: 'Order Details', headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.white }}
+            options={{ title: 'Order Details', headerStyle: { backgroundColor: COLORS.accent }, headerTintColor: COLORS.primary }}
           />
           <Stack.Screen
             name="Profile"

@@ -134,7 +134,7 @@ export default function ReviewScreen({ route, navigation }) {
         disabled={rating === 0 || isSubmitting}
       >
         {isSubmitting ? (
-          <ActivityIndicator color={COLORS.white} />
+          <ActivityIndicator color={COLORS.primary} />
         ) : (
           <Text style={styles.submitText}>{t('submitReview', language)}</Text>
         )}
@@ -180,16 +180,16 @@ const getStyles = (C) => StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
     backgroundColor: C.grayLighter, borderWidth: 1, borderColor: C.border,
   },
-  tagActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  tagActive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
   tagText: { fontSize: 13, color: C.text, fontWeight: '500' },
-  tagTextActive: { color: COLORS.white },
+  tagTextActive: { color: COLORS.primary },
   submitBtn: {
-    backgroundColor: COLORS.primary, borderRadius: 14, padding: 18, alignItems: 'center', marginTop: 4,
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 },
+    backgroundColor: COLORS.accent, borderRadius: 14, padding: 18, alignItems: 'center', marginTop: 4,
+    shadowColor: COLORS.accentDark, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25, shadowRadius: 8, elevation: 6,
   },
   submitBtnDisabled: { opacity: 0.5, shadowOpacity: 0 },
-  submitText: { color: COLORS.white, fontSize: 18, fontWeight: '800' },
+  submitText: { color: COLORS.primary, fontSize: 18, fontWeight: '800' },
   skipBtn: { alignItems: 'center', paddingVertical: 14 },
   skipText: { color: C.gray, fontSize: 14 },
 });

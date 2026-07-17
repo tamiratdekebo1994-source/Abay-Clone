@@ -8,7 +8,7 @@ const TRACK_PADDING = 4;
 // Drag the thumb to the end to confirm — mirrors the "slide to complete" pattern used for
 // delivery status steps in apps like Walmart Spark Driver, instead of a tap + confirm dialog.
 export default function SlideToConfirm({
-  label, labelAm, onConfirm, disabled, loading, color = COLORS.primary, icon = '→',
+  label, labelAm, onConfirm, disabled, loading, color = COLORS.accent, icon = '→',
 }) {
   const [trackWidth, setTrackWidth] = useState(0);
   const translateX = useRef(new Animated.Value(0)).current;
@@ -76,7 +76,7 @@ export default function SlideToConfirm({
         ]}
       >
         {loading ? (
-          <ActivityIndicator color={COLORS.white} size="small" />
+          <ActivityIndicator color={COLORS.primary} size="small" />
         ) : (
           <Text style={styles.thumbIcon}>{icon}</Text>
         )}
@@ -114,5 +114,5 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25, shadowRadius: 4, elevation: 4,
   },
-  thumbIcon: { fontSize: 22, color: COLORS.white, fontWeight: '900' },
+  thumbIcon: { fontSize: 22, color: COLORS.primary, fontWeight: '900' },
 });

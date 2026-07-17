@@ -261,7 +261,7 @@ export default function ProfileScreen({ navigation }) {
               activeOpacity={0.85}
             >
               {saving
-                ? <ActivityIndicator color={COLORS.white} />
+                ? <ActivityIndicator color={COLORS.primary} />
                 : <Text style={S.saveBtnText}>{t('saveChanges', language)}</Text>
               }
             </TouchableOpacity>
@@ -503,12 +503,12 @@ const S = StyleSheet.create({
 
   // Save button
   saveBtn: {
-    backgroundColor: COLORS.primary, borderRadius: 50,
+    backgroundColor: COLORS.accent, borderRadius: 50,
     paddingVertical: 15, alignItems: 'center', marginTop: 12,
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 },
+    shadowColor: COLORS.accentDark, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3, shadowRadius: 8, elevation: 5,
   },
-  saveBtnText: { color: COLORS.white, fontSize: 15, fontWeight: '800' },
+  saveBtnText: { color: COLORS.primary, fontSize: 15, fontWeight: '800' },
 
   // Vehicle card
   vehicleCard: {

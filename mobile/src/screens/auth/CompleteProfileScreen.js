@@ -194,7 +194,7 @@ export default function CompleteProfileScreen({ navigation, route }) {
           activeOpacity={0.88}
         >
           {isLoading ? (
-            <ActivityIndicator color={COLORS.white} size="small" />
+            <ActivityIndicator color={COLORS.primary} size="small" />
           ) : (
             <Text style={S.ctaText}>
               {role === 'DRIVER' ? t('continueToDriverSetup', language) : t('createAccountArrow', language)}
@@ -260,10 +260,10 @@ const S = StyleSheet.create({
   },
   verifiedCheck: {
     width: 20, height: 20, borderRadius: 10,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accent,
     alignItems: 'center', justifyContent: 'center',
   },
-  verifiedCheckText: { color: COLORS.white, fontSize: 11, fontWeight: '900' },
+  verifiedCheckText: { color: COLORS.primary, fontSize: 11, fontWeight: '900' },
   verifiedPhone: { fontSize: 13, color: COLORS.primary, fontWeight: '700' },
 
   title: { fontSize: 26, fontWeight: '800', color: COLORS.black, marginBottom: 6 },
@@ -312,10 +312,10 @@ const S = StyleSheet.create({
   roleCheckBadge: {
     position: 'absolute', top: 10, right: 10,
     width: 24, height: 24, borderRadius: 12,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accent,
     alignItems: 'center', justifyContent: 'center',
   },
-  roleCheckBadgeText: { color: COLORS.white, fontSize: 12, fontWeight: '900' },
+  roleCheckBadgeText: { color: COLORS.primary, fontSize: 12, fontWeight: '900' },
   roleIconBox: {
     width: 60, height: 60, borderRadius: 30,
     backgroundColor: COLORS.grayLight,
@@ -331,15 +331,15 @@ const S = StyleSheet.create({
 
   /* ── CTA ── */
   cta: {
-    backgroundColor: COLORS.primary, borderRadius: 14,
+    backgroundColor: COLORS.accent, borderRadius: 14,
     paddingVertical: 18, alignItems: 'center',
     marginBottom: 16,
-    shadowColor: COLORS.primary,
+    shadowColor: COLORS.accentDark,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4, shadowRadius: 12, elevation: 8,
   },
   ctaOff: { opacity: 0.45, shadowOpacity: 0 },
-  ctaText: { color: COLORS.white, fontSize: 16, fontWeight: '800', letterSpacing: 0.4 },
+  ctaText: { color: COLORS.primary, fontSize: 16, fontWeight: '800', letterSpacing: 0.4 },
 
   terms: {
     fontSize: 12, color: COLORS.gray,

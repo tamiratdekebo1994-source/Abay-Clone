@@ -98,7 +98,7 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* ── Green header ── */}
+      {/* ── Header ── */}
       <SafeAreaView style={styles.header} edges={['top']}>
         <View style={styles.headerRow}>
           <Text style={styles.headerTitle}>Notifications</Text>
@@ -140,17 +140,17 @@ const getStyles = (C, theme) => StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.background },
 
   // Header
-  header: { backgroundColor: COLORS.primary },
+  header: { backgroundColor: COLORS.accent },
   headerRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14,
   },
-  headerTitle: { flex: 1, color: COLORS.white, fontSize: 20, fontWeight: '800' },
+  headerTitle: { flex: 1, color: COLORS.primary, fontSize: 20, fontWeight: '800' },
   markAllBtn: {
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(27,67,50,0.12)',
     borderRadius: 8, paddingVertical: 5, paddingHorizontal: 10, marginRight: 8,
   },
-  markAllText: { color: COLORS.white, fontWeight: '600', fontSize: 12 },
+  markAllText: { color: COLORS.primary, fontWeight: '600', fontSize: 12 },
   badge: {
     backgroundColor: COLORS.white, borderRadius: 10,
     minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5,

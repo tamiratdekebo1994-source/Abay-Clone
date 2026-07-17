@@ -245,9 +245,9 @@ const getStyles = (C) => StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   // Header
-  header: { backgroundColor: COLORS.primary },
+  header: { backgroundColor: COLORS.accent },
   headerTitle: {
-    color: COLORS.white, fontSize: 20, fontWeight: '800',
+    color: COLORS.primary, fontSize: 20, fontWeight: '800',
     paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14,
   },
 
@@ -262,9 +262,9 @@ const getStyles = (C) => StyleSheet.create({
     backgroundColor: C.background,
     borderWidth: 1, borderColor: C.border || '#E5E7EB',
   },
-  filterBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  filterBtnActive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
   filterText: { fontSize: 13, fontWeight: '600', color: C.gray },
-  filterTextActive: { color: COLORS.white },
+  filterTextActive: { color: COLORS.primary },
 
   // Summary bar (delivered filter)
   summaryBar: {

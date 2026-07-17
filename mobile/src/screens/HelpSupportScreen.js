@@ -124,9 +124,9 @@ export default function HelpSupportScreen() {
 
 const getStyles = (C) => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.background },
-  header: { backgroundColor: COLORS.primary, padding: 24, paddingTop: 32 },
-  headerTitle: { color: COLORS.white, fontSize: 24, fontWeight: '800' },
-  headerSubtitle: { color: 'rgba(255,255,255,0.75)', fontSize: 13, marginTop: 10, lineHeight: 20 },
+  header: { backgroundColor: COLORS.accent, padding: 24, paddingTop: 32 },
+  headerTitle: { color: COLORS.primary, fontSize: 24, fontWeight: '800' },
+  headerSubtitle: { color: 'rgba(27,67,50,0.75)', fontSize: 13, marginTop: 10, lineHeight: 20 },
   section: { padding: 16, paddingBottom: 0 },
   sectionTitle: { fontSize: 16, fontWeight: '800', color: C.text, marginBottom: 12 },
   contactGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },

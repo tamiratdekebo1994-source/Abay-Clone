@@ -293,12 +293,12 @@ const S = StyleSheet.create({
   loadingText: { color: COLORS.gray, fontSize: 14 },
 
   verifyBtn: {
-    backgroundColor: COLORS.primary, borderRadius: 14,
+    backgroundColor: COLORS.accent, borderRadius: 14,
     paddingVertical: 18, alignItems: 'center', marginBottom: 20,
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 },
+    shadowColor: COLORS.accentDark, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
   },
-  verifyBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '800' },
+  verifyBtnText: { color: COLORS.primary, fontSize: 16, fontWeight: '800' },
   verifyBtnGhost: { backgroundColor: '#F5F5F5', shadowOpacity: 0, elevation: 0 },
   verifyBtnGhostText: { color: COLORS.gray, fontSize: 14, fontWeight: '600' },
 

@@ -438,7 +438,7 @@ export default function DriverRegistrationScreen({ navigation }) {
           activeOpacity={0.85}
         >
           {loading ? (
-            <ActivityIndicator color={COLORS.white} />
+            <ActivityIndicator color={COLORS.primary} />
           ) : (
             <Text style={S.ctaText}>
               {step === TOTAL_STEPS ? t('submitApplication', language) : t('continueArrow', language)}
@@ -601,13 +601,13 @@ const S = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   cta: {
-    backgroundColor: COLORS.primary, borderRadius: 18,
+    backgroundColor: COLORS.accent, borderRadius: 18,
     paddingVertical: 18, alignItems: 'center',
-    shadowColor: COLORS.primary,
+    shadowColor: COLORS.accentDark,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25, shadowRadius: 16, elevation: 8,
   },
   ctaOff: { opacity: 0.5, shadowOpacity: 0 },
-  ctaText: { fontSize: 17, fontWeight: '800', color: COLORS.white, letterSpacing: 0.3 },
+  ctaText: { fontSize: 17, fontWeight: '800', color: COLORS.primary, letterSpacing: 0.3 },
   footerNote: { fontSize: 12, color: COLORS.gray, textAlign: 'center', marginTop: 8 },
 });

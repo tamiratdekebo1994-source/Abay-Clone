@@ -185,12 +185,12 @@ const getStyles = (C) => StyleSheet.create({
 
   // Chart / header
   chartSection: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accent,
     paddingHorizontal: 12,
     paddingBottom: 12,
   },
   earningsTitle: {
-    color: COLORS.white, fontSize: 20, fontWeight: '800',
+    color: COLORS.primary, fontSize: 20, fontWeight: '800',
     paddingHorizontal: 8, paddingTop: 10, paddingBottom: 8,
   },
   chartRow: { flexDirection: 'row', alignItems: 'flex-end', height: BAR_MAX_H + 24 },
@@ -198,15 +198,15 @@ const getStyles = (C) => StyleSheet.create({
   barTrack: {
     width: 10,
     height: BAR_MAX_H,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(27,67,50,0.15)',
     borderRadius: 5,
     justifyContent: 'flex-end',
     overflow: 'hidden',
   },
-  bar: { width: '100%', backgroundColor: 'rgba(255,255,255,0.45)', borderRadius: 5 },
-  barActive: { backgroundColor: COLORS.white },
-  barDay: { color: 'rgba(255,255,255,0.55)', fontSize: 10, fontWeight: '500', marginTop: 5 },
-  barDayActive: { color: COLORS.white, fontWeight: '800' },
+  bar: { width: '100%', backgroundColor: 'rgba(27,67,50,0.35)', borderRadius: 5 },
+  barActive: { backgroundColor: COLORS.primary },
+  barDay: { color: 'rgba(27,67,50,0.55)', fontSize: 10, fontWeight: '500', marginTop: 5 },
+  barDayActive: { color: COLORS.primary, fontWeight: '800' },
 
   // Week card
   weekCard: {

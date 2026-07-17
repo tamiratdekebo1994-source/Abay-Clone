@@ -232,10 +232,10 @@ const styles = StyleSheet.create({
   acceptBtn: {
     flex: 2, borderRadius: 50, paddingVertical: 15,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: COLORS.primary,
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35, shadowRadius: 8, elevation: 6,
+    backgroundColor: COLORS.accent,
+    shadowColor: COLORS.accentDark, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 8, elevation: 6,
   },
-  acceptBtnText: { fontSize: 15, fontWeight: '900', color: COLORS.white, letterSpacing: 0.5 },
+  acceptBtnText: { fontSize: 15, fontWeight: '900', color: COLORS.primary, letterSpacing: 0.5 },
   btnDisabled: { backgroundColor: '#9CA3AF', shadowOpacity: 0 },
 });

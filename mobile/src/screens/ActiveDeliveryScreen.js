@@ -344,7 +344,7 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
               disabled={isUploadingPhoto}
             >
               {isUploadingPhoto ? (
-                <ActivityIndicator color={COLORS.white} />
+                <ActivityIndicator color={COLORS.primary} />
               ) : (
                 <Text style={styles.podButtonText}>
                   {podPhotoUri ? t('retakePhoto', language) : t('takePhoto', language)}
@@ -369,7 +369,7 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
               labelAm={language === 'en' ? nextStatusLabel?.am : undefined}
               loading={isUpdating}
               disabled={nextStatus === 'DELIVERED' && !podPhotoUri}
-              color={COLORS.primary}
+              color={COLORS.accent}
               onConfirm={() => updateStatus(nextStatus)}
             />
           </View>
@@ -404,8 +404,8 @@ const getStyles = (C) => StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: C.grayLight, backgroundColor: '#F9FAFB',
   },
   pickupDoneIcon: {
-    width: 22, height: 22, borderRadius: 11, backgroundColor: COLORS.primary,
-    color: COLORS.white, fontSize: 13, fontWeight: '900', textAlign: 'center',
+    width: 22, height: 22, borderRadius: 11, backgroundColor: COLORS.accent,
+    color: COLORS.primary, fontSize: 13, fontWeight: '900', textAlign: 'center',
     lineHeight: 22, marginRight: 10, overflow: 'hidden',
   },
   pickupDoneText: { fontSize: 14, color: C.gray, fontWeight: '600' },
@@ -413,9 +413,9 @@ const getStyles = (C) => StyleSheet.create({
   addressSub: { fontSize: 14, color: C.gray, marginTop: 2 },
   notes: { fontSize: 13, color: COLORS.primaryLight, marginTop: 6, fontStyle: 'italic' },
   actionRow: { flexDirection: 'row', marginTop: 10 },
-  navBtn: { backgroundColor: COLORS.primary, borderRadius: 8, padding: 12, alignItems: 'center', marginTop: 10 },
+  navBtn: { backgroundColor: COLORS.accent, borderRadius: 8, padding: 12, alignItems: 'center', marginTop: 10 },
   callBtn: { backgroundColor: COLORS.accentDark || '#E8A82A', borderRadius: 8, padding: 12, alignItems: 'center', marginTop: 10 },
-  navBtnText: { color: COLORS.white, fontWeight: '600', fontSize: 14 },
+  navBtnText: { color: COLORS.primary, fontWeight: '600', fontSize: 14 },
   cargoText: { fontSize: 15, color: C.text },
   cargoDetail: { fontSize: 14, color: C.gray, marginTop: 4 },
   cargoWarning: { fontSize: 14, color: COLORS.error, marginTop: 6, fontWeight: '600' },
@@ -450,11 +450,11 @@ const getStyles = (C) => StyleSheet.create({
   },
   etaBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: COLORS.primary, alignSelf: 'flex-start',
+    backgroundColor: COLORS.accent, alignSelf: 'flex-start',
     borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
   },
   etaIcon: { fontSize: 13 },
-  etaText: { color: COLORS.white, fontSize: 14, fontWeight: '800' },
+  etaText: { color: COLORS.primary, fontSize: 14, fontWeight: '800' },
   stepText: { color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '500' },
   podSection: {
     margin: 16, padding: 16, backgroundColor: C.grayLighter,
@@ -463,9 +463,9 @@ const getStyles = (C) => StyleSheet.create({
   podTitle: { fontSize: 15, fontWeight: '700', color: C.text },
   podSubtitle: { fontSize: 13, color: C.gray, marginBottom: 12, marginTop: 2 },
   podPreview: { width: '100%', height: 160, borderRadius: 8, marginBottom: 12 },
-  podButton: { backgroundColor: COLORS.primaryLight, borderRadius: 8, padding: 12, alignItems: 'center' },
+  podButton: { backgroundColor: COLORS.accent, borderRadius: 8, padding: 12, alignItems: 'center' },
   podButtonDisabled: { opacity: 0.6 },
-  podButtonText: { color: COLORS.white, fontWeight: '700', fontSize: 14 },
+  podButtonText: { color: COLORS.primary, fontWeight: '700', fontSize: 14 },
   podLibraryLink: { alignItems: 'center', paddingVertical: 10 },
   podLibraryLinkText: { color: COLORS.primaryLight, fontWeight: '600', fontSize: 13 },
 });
