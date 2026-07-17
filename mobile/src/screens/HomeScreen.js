@@ -108,7 +108,6 @@ export default function HomeScreen({ navigation }) {
   const bannerAnim = useRef(new Animated.Value(0)).current;
   const sheetAnim = useRef(new Animated.Value(300)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
-  const bounceAnim = useRef(new Animated.Value(0)).current;
   const dot1Anim = useRef(new Animated.Value(0.3)).current;
   const dot2Anim = useRef(new Animated.Value(0.3)).current;
   const dot3Anim = useRef(new Animated.Value(0.3)).current;
@@ -136,19 +135,11 @@ export default function HomeScreen({ navigation }) {
     }).start();
   }, [showFloatPill]);
 
-  // Gentle bounce on the search icon + a staggered "typing indicator" style dot wave for the
-  // "Looking for offers" waiting state, so it reads as actively searching instead of a static,
-  // possibly-frozen-looking card.
+  // Staggered "typing indicator" style dot wave for the "Looking for offers" waiting state, so
+  // it reads as actively searching instead of a static, possibly-frozen-looking card.
   const showWaiting = isOnline && !activeOrder && nearbyOrders.length === 0 && !showOnlineBanner;
   useEffect(() => {
     if (!showWaiting) return;
-
-    const bounceLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(bounceAnim, { toValue: -8, duration: 500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(bounceAnim, { toValue: 0, duration: 500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ])
-    );
 
     const makeDotLoop = (val, delay) => Animated.loop(
       Animated.sequence([
@@ -163,17 +154,14 @@ export default function HomeScreen({ navigation }) {
     const dotLoop2 = makeDotLoop(dot2Anim, 200);
     const dotLoop3 = makeDotLoop(dot3Anim, 400);
 
-    bounceLoop.start();
     dotLoop1.start();
     dotLoop2.start();
     dotLoop3.start();
 
     return () => {
-      bounceLoop.stop();
       dotLoop1.stop();
       dotLoop2.stop();
       dotLoop3.stop();
-      bounceAnim.setValue(0);
       dot1Anim.setValue(0.3);
       dot2Anim.setValue(0.3);
       dot3Anim.setValue(0.3);
@@ -668,9 +656,6 @@ export default function HomeScreen({ navigation }) {
         {/* ── Waiting for offers (online, no offers) ── */}
         {showWaiting && (
           <View style={styles.waitingCard}>
-            <Animated.Text style={[styles.waitingBounceIcon, { transform: [{ translateY: bounceAnim }] }]}>
-              🔍
-            </Animated.Text>
             <View style={styles.waitingTitleRow}>
               <Text style={styles.waitingTitle}>{t('lookingForOffers', language)}</Text>
               <View style={styles.typingDots}>
@@ -938,9 +923,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB', borderRadius: 14,
     padding: 20, marginBottom: 16, alignItems: 'center',
   },
-  waitingBounceIcon: { fontSize: 30, marginBottom: 10 },
-  waitingTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 },
-  waitingTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
+  waitingTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  waitingTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
   typingDots: { flexDirection: 'row', gap: 3 },
   typingDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: COLORS.primary },
   waitingBody: { fontSize: 13, color: '#6B7280', textAlign: 'center', lineHeight: 19 },
