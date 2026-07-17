@@ -500,6 +500,8 @@ export default function HomeScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
         scrollEventThrottle={60}
+        bounces={false}
+        overScrollMode="never"
       >
         <View style={styles.dragHandle} />
 
