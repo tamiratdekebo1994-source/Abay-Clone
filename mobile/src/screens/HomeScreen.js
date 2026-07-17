@@ -685,7 +685,7 @@ export default function HomeScreen({ navigation }) {
               const level = hasActivityPattern
                 ? (activityHeatmap.normalized[HOURS_START + i] || 0)
                 : TYPICAL_HOURLY_PATTERN[i];
-              const fillH = 19 + level * 35; // wide enough that peak vs quiet hours are visibly different
+              const fillH = 28 + level * 42; // tall wall like Spark Driver's reference, with peak/quiet contrast
               return (
                 <View key={h} style={styles.barWrap}>
                   <View style={styles.barTrack}>
@@ -937,7 +937,7 @@ const styles = StyleSheet.create({
   chart: { flexDirection: 'row', alignItems: 'flex-end', paddingTop: 10 },
   barWrap: { flex: 1, alignItems: 'center' },
   barTrack: {
-    width: '62%', height: 54,
+    width: '62%', height: 70,
     justifyContent: 'flex-end', overflow: 'visible',
   },
   barFill: { width: '100%', borderRadius: 8 },
@@ -946,7 +946,7 @@ const styles = StyleSheet.create({
   barEstimated: { opacity: 0.55 },
   nowNeedle: {
     position: 'absolute', top: -10, left: '50%', marginLeft: -1,
-    width: 2, height: 64, borderRadius: 1, backgroundColor: COLORS.primary,
+    width: 2, height: 80, borderRadius: 1, backgroundColor: COLORS.primary,
   },
   barLabelSlot: { height: 14, marginTop: 4, alignItems: 'center' },
   barLabel: { fontSize: 9, color: '#9CA3AF' },
