@@ -70,7 +70,7 @@ async function registerPushToken() {
 function TabIcon({ name, focused }) {
   return (
     <View style={[tabStyles.iconWrap, focused && tabStyles.iconWrapActive]}>
-      <Ionicons name={name} size={26} color={focused ? COLORS.white : '#6B6B70'} />
+      <Ionicons name={name} size={26} color={focused ? COLORS.primary : '#6B6B70'} />
     </View>
   );
 }
@@ -229,7 +229,7 @@ const tabStyles = StyleSheet.create({
     width: 50, height: 50, borderRadius: 25,
     alignItems: 'center', justifyContent: 'center',
   },
-  iconWrapActive: { backgroundColor: COLORS.primary },
+  iconWrapActive: { backgroundColor: COLORS.accent },
 });
 
 function AuthStack() {

@@ -544,7 +544,6 @@ export default function HomeScreen({ navigation }) {
           <TouchableOpacity
             style={[
               styles.sparkBtn,
-              isOnline && styles.sparkBtnOnline,
               (isLoading || offlineLoading) && { opacity: 0.7 },
             ]}
             onPress={isOnline ? openGoOfflineSheet : goOnline}
@@ -552,15 +551,15 @@ export default function HomeScreen({ navigation }) {
             activeOpacity={0.88}
           >
             {(isLoading || offlineLoading)
-              ? <ActivityIndicator color={isOnline ? COLORS.primary : COLORS.white} />
+              ? <ActivityIndicator color={COLORS.primary} />
               : (
                 <View style={styles.sparkBtnInner}>
                   <Ionicons
                     name={isOnline ? 'pause' : 'flash'}
                     size={18}
-                    color={isOnline ? COLORS.primary : COLORS.white}
+                    color={COLORS.primary}
                   />
-                  <Text style={[styles.sparkBtnText, isOnline && styles.sparkBtnTextOnline]}>{isOnline ? t('goOfflineCaps', language) : t('sparkNow', language)}</Text>
+                  <Text style={styles.sparkBtnText}>{isOnline ? t('goOfflineCaps', language) : t('sparkNow', language)}</Text>
                 </View>
               )
             }
@@ -797,29 +796,23 @@ const styles = StyleSheet.create({
 
   activeBanner: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.primary, borderRadius: 14,
+    backgroundColor: COLORS.accent, borderRadius: 14,
     padding: 16, marginBottom: 16,
   },
   activeBannerIcon: { fontSize: 22, marginRight: 12 },
-  activeBannerTitle: { color: COLORS.white, fontWeight: '700', fontSize: 14 },
-  activeBannerAddr: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 },
-  activeBannerChev: { color: COLORS.accent, fontSize: 24 },
+  activeBannerTitle: { color: COLORS.primary, fontWeight: '700', fontSize: 14 },
+  activeBannerAddr: { color: 'rgba(27,67,50,0.7)', fontSize: 13, marginTop: 2 },
+  activeBannerChev: { color: COLORS.primary, fontSize: 24 },
 
   // SPARK NOW / GO OFFLINE button
   sparkBtn: {
-    backgroundColor: COLORS.primary, borderRadius: 50,
+    backgroundColor: COLORS.accent, borderRadius: 50,
     paddingVertical: 19, alignItems: 'center', marginBottom: 20,
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35, shadowRadius: 14, elevation: 8,
-  },
-  sparkBtnOnline: {
-    backgroundColor: COLORS.accent,
-    shadowColor: COLORS.accentDark,
-    shadowOpacity: 0.3,
+    shadowColor: COLORS.accentDark, shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3, shadowRadius: 14, elevation: 8,
   },
   sparkBtnInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  sparkBtnText: { color: COLORS.white, fontSize: 17, fontWeight: '900', letterSpacing: 1.5 },
-  sparkBtnTextOnline: { color: COLORS.primary },
+  sparkBtnText: { color: COLORS.primary, fontSize: 17, fontWeight: '900', letterSpacing: 1.5 },
 
   pendingCard: { backgroundColor: '#FEF3C7', borderRadius: 12, padding: 14, marginBottom: 16 },
   pendingText: { color: '#92400E', fontSize: 13 },
@@ -890,10 +883,10 @@ const styles = StyleSheet.create({
   offersPulse: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.primary },
   offersTitle: { fontSize: 15, fontWeight: '700', color: '#111827', flex: 1 },
   offersBadge: {
-    backgroundColor: COLORS.primary, borderRadius: 10,
+    backgroundColor: COLORS.accent, borderRadius: 10,
     paddingHorizontal: 8, paddingVertical: 2,
   },
-  offersBadgeText: { color: COLORS.white, fontSize: 12, fontWeight: '700' },
+  offersBadgeText: { color: COLORS.primary, fontSize: 12, fontWeight: '700' },
 
   // Waiting card
   waitingCard: {
@@ -918,7 +911,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end', overflow: 'visible',
   },
   barFill: { width: '100%', borderRadius: 8 },
-  barUpcoming: { backgroundColor: COLORS.primary },
+  barUpcoming: { backgroundColor: COLORS.accent },
   barPast: { backgroundColor: '#D8DCE1' },
   barLabelSlot: { height: 14, marginTop: 4, alignItems: 'center' },
   barLabel: { fontSize: 9, color: '#9CA3AF' },
@@ -947,9 +940,9 @@ const styles = StyleSheet.create({
   keepEarningBtn: {
     borderRadius: 50, paddingVertical: 17,
     alignItems: 'center',
-    backgroundColor: COLORS.primary,
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 },
+    backgroundColor: COLORS.accent,
+    shadowColor: COLORS.accentDark, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3, shadowRadius: 10, elevation: 6,
   },
-  keepEarningBtnText: { fontSize: 16, fontWeight: '900', color: COLORS.white, letterSpacing: 0.5 },
+  keepEarningBtnText: { fontSize: 16, fontWeight: '900', color: COLORS.primary, letterSpacing: 0.5 },
 });
