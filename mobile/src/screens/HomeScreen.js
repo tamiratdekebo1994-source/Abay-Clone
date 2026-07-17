@@ -108,8 +108,10 @@ export default function HomeScreen({ navigation }) {
   const bannerAnim = useRef(new Animated.Value(0)).current;
   const sheetAnim = useRef(new Animated.Value(300)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
-  const radarAnim1 = useRef(new Animated.Value(0)).current;
-  const radarAnim2 = useRef(new Animated.Value(0)).current;
+  const bounceAnim = useRef(new Animated.Value(0)).current;
+  const dot1Anim = useRef(new Animated.Value(0.3)).current;
+  const dot2Anim = useRef(new Animated.Value(0.3)).current;
+  const dot3Anim = useRef(new Animated.Value(0.3)).current;
 
   const currentHour = new Date().getHours();
   const currentHourIdx = Math.max(0, Math.min(currentHour - 6, HOURS.length - 1));
@@ -134,30 +136,47 @@ export default function HomeScreen({ navigation }) {
     }).start();
   }, [showFloatPill]);
 
-  // Pulsing radar rings for the "Looking for offers" waiting state, so it reads as actively
-  // searching instead of a static, possibly-frozen-looking card.
+  // Gentle bounce on the search icon + a staggered "typing indicator" style dot wave for the
+  // "Looking for offers" waiting state, so it reads as actively searching instead of a static,
+  // possibly-frozen-looking card.
   const showWaiting = isOnline && !activeOrder && nearbyOrders.length === 0 && !showOnlineBanner;
   useEffect(() => {
     if (!showWaiting) return;
 
-    const makeRingLoop = (val, delay) => Animated.loop(
+    const bounceLoop = Animated.loop(
       Animated.sequence([
-        Animated.delay(delay),
-        Animated.timing(val, { toValue: 1, duration: 1800, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-        Animated.timing(val, { toValue: 0, duration: 0, useNativeDriver: true }),
+        Animated.timing(bounceAnim, { toValue: -8, duration: 500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(bounceAnim, { toValue: 0, duration: 500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ])
     );
 
-    const loop1 = makeRingLoop(radarAnim1, 0);
-    const loop2 = makeRingLoop(radarAnim2, 900);
-    loop1.start();
-    loop2.start();
+    const makeDotLoop = (val, delay) => Animated.loop(
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(val, { toValue: 1, duration: 350, useNativeDriver: true }),
+        Animated.timing(val, { toValue: 0.3, duration: 350, useNativeDriver: true }),
+        Animated.delay(700),
+      ])
+    );
+
+    const dotLoop1 = makeDotLoop(dot1Anim, 0);
+    const dotLoop2 = makeDotLoop(dot2Anim, 200);
+    const dotLoop3 = makeDotLoop(dot3Anim, 400);
+
+    bounceLoop.start();
+    dotLoop1.start();
+    dotLoop2.start();
+    dotLoop3.start();
 
     return () => {
-      loop1.stop();
-      loop2.stop();
-      radarAnim1.setValue(0);
-      radarAnim2.setValue(0);
+      bounceLoop.stop();
+      dotLoop1.stop();
+      dotLoop2.stop();
+      dotLoop3.stop();
+      bounceAnim.setValue(0);
+      dot1Anim.setValue(0.3);
+      dot2Anim.setValue(0.3);
+      dot3Anim.setValue(0.3);
     };
   }, [showWaiting]);
 
@@ -649,20 +668,17 @@ export default function HomeScreen({ navigation }) {
         {/* ── Waiting for offers (online, no offers) ── */}
         {showWaiting && (
           <View style={styles.waitingCard}>
-            <View style={styles.radarWrap}>
-              <Animated.View style={[styles.radarRing, {
-                opacity: radarAnim1.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0] }),
-                transform: [{ scale: radarAnim1.interpolate({ inputRange: [0, 1], outputRange: [1, 2.4] }) }],
-              }]} />
-              <Animated.View style={[styles.radarRing, {
-                opacity: radarAnim2.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0] }),
-                transform: [{ scale: radarAnim2.interpolate({ inputRange: [0, 1], outputRange: [1, 2.4] }) }],
-              }]} />
-              <View style={styles.radarCore}>
-                <Text style={styles.waitingEmoji}>📡</Text>
+            <Animated.Text style={[styles.waitingBounceIcon, { transform: [{ translateY: bounceAnim }] }]}>
+              🔍
+            </Animated.Text>
+            <View style={styles.waitingTitleRow}>
+              <Text style={styles.waitingTitle}>{t('lookingForOffers', language)}</Text>
+              <View style={styles.typingDots}>
+                <Animated.View style={[styles.typingDot, { opacity: dot1Anim }]} />
+                <Animated.View style={[styles.typingDot, { opacity: dot2Anim }]} />
+                <Animated.View style={[styles.typingDot, { opacity: dot3Anim }]} />
               </View>
             </View>
-            <Text style={styles.waitingTitle}>{t('lookingForOffers', language)}</Text>
             <Text style={styles.waitingBody}>{t('lookingForOffersBody', language)}</Text>
           </View>
         )}
@@ -922,23 +938,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB', borderRadius: 14,
     padding: 20, marginBottom: 16, alignItems: 'center',
   },
-  radarWrap: {
-    width: 64, height: 64,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 10,
-  },
-  radarRing: {
-    position: 'absolute',
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: COLORS.primary,
-  },
-  radarCore: {
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: '#EEF2FF',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  waitingEmoji: { fontSize: 26 },
-  waitingTitle: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 4 },
+  waitingBounceIcon: { fontSize: 30, marginBottom: 10 },
+  waitingTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 },
+  waitingTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
+  typingDots: { flexDirection: 'row', gap: 3 },
+  typingDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: COLORS.primary },
   waitingBody: { fontSize: 13, color: '#6B7280', textAlign: 'center', lineHeight: 19 },
 
   chartSection: { backgroundColor: '#F9FAFB', borderRadius: 14, padding: 16, marginBottom: 8 },
