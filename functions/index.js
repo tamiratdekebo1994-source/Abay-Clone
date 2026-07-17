@@ -737,6 +737,8 @@ app.get('/driver/surge', verifyToken, async (req, res) => {
   }
 });
 
+const ETHIOPIA_UTC_OFFSET_HOURS = 3; // EAT is UTC+3 year-round — no DST to account for
+
 app.get('/driver/activity-heatmap', verifyToken, async (req, res) => {
   try {
     // Aggregates ALL historical orders by hour-of-day (not just "today"), same approach
@@ -750,7 +752,10 @@ app.get('/driver/activity-heatmap', verifyToken, async (req, res) => {
     snapshot.forEach((doc) => {
       const date = doc.data().createdAt?.toDate?.();
       if (!date) return;
-      hourCounts[date.getHours()] += 1;
+      // Cloud Functions run in UTC — bucket by Ethiopia local hour, not the server's,
+      // otherwise every order lands ~3 hours off from when it actually happened locally.
+      const addisHour = (date.getUTCHours() + ETHIOPIA_UTC_OFFSET_HOURS) % 24;
+      hourCounts[addisHour] += 1;
       totalOrders += 1;
     });
 
