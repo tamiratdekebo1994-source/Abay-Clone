@@ -175,7 +175,7 @@ export default function ProfileScreen({ navigation }) {
         {driver?.status && (
           <View style={[S.statusBadge, { backgroundColor: statusColor + '33', borderColor: statusColor + '66' }]}>
             <View style={[S.statusDot, { backgroundColor: statusColor }]} />
-            <Text style={[S.statusText, { color: COLORS.white }]}>
+            <Text style={[S.statusText, { color: COLORS.primary }]}>
               {driverStatusLabel}
             </Text>
           </View>
@@ -422,30 +422,30 @@ const S = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#F1F5F9' },
 
   // Header
-  header: { backgroundColor: COLORS.primary },
+  header: { backgroundColor: COLORS.accent },
   headerRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4,
   },
   backBtn: { width: 36, height: 36, justifyContent: 'center' },
-  backIcon: { fontSize: 32, color: COLORS.white, lineHeight: 36 },
-  headerTitle: { flex: 1, color: COLORS.white, fontSize: 17, fontWeight: '700', textAlign: 'center' },
+  backIcon: { fontSize: 32, color: COLORS.primary, lineHeight: 36 },
+  headerTitle: { flex: 1, color: COLORS.primary, fontSize: 17, fontWeight: '700', textAlign: 'center' },
   editBtn: { width: 48, alignItems: 'flex-end' },
-  editBtnText: { color: '#FCBF49', fontSize: 15, fontWeight: '700' },
+  editBtnText: { color: COLORS.primary, fontSize: 15, fontWeight: '700' },
 
   // Avatar
   avatarWrap: { alignSelf: 'center', marginTop: 12, marginBottom: 8, position: 'relative' },
   avatar: {
     width: 88, height: 88, borderRadius: 44,
-    borderWidth: 3, borderColor: 'rgba(255,255,255,0.5)',
+    borderWidth: 3, borderColor: 'rgba(27,67,50,0.4)',
   },
   avatarFallback: {
     width: 88, height: 88, borderRadius: 44,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderWidth: 3, borderColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(27,67,50,0.15)',
+    borderWidth: 3, borderColor: 'rgba(27,67,50,0.4)',
     alignItems: 'center', justifyContent: 'center',
   },
-  avatarInitials: { color: COLORS.white, fontSize: 30, fontWeight: '800' },
+  avatarInitials: { color: COLORS.primary, fontSize: 30, fontWeight: '800' },
   avatarEditBadge: {
     position: 'absolute', bottom: 2, right: 2,
     width: 26, height: 26, borderRadius: 13,
