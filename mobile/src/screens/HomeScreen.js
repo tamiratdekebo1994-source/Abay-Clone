@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   ScrollView, Alert, RefreshControl, ActivityIndicator,
-  Platform, Animated, Dimensions, Modal, Linking, Easing,
+  Platform, Animated, Dimensions, Modal, Linking, Easing, AppState,
 } from 'react-native';
 import MapView, { Marker, Polygon, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
@@ -237,15 +237,24 @@ export default function HomeScreen({ navigation }) {
     }, [user?.role])
   );
 
-  // Re-check on every focus (not just mount) so returning from the OS Settings app after
-  // granting "Always" location correctly hides the tip without needing a manual reload.
-  useFocusEffect(
-    useCallback(() => {
-      Location.getBackgroundPermissionsAsync()
-        .then((bg) => setHasAlwaysLocation(bg.status === 'granted'))
-        .catch(() => {});
-    }, [])
-  );
+  // Re-check on every in-app focus AND whenever the app itself returns to the foreground —
+  // granting "Always" location happens in the iOS Settings app, which backgrounds this app
+  // entirely rather than triggering a React Navigation focus change, so useFocusEffect alone
+  // never sees the user coming back from Settings.
+  const checkAlwaysLocation = useCallback(() => {
+    Location.getBackgroundPermissionsAsync()
+      .then((bg) => setHasAlwaysLocation(bg.status === 'granted'))
+      .catch(() => {});
+  }, []);
+
+  useFocusEffect(checkAlwaysLocation);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') checkAlwaysLocation();
+    });
+    return () => sub.remove();
+  }, [checkAlwaysLocation]);
 
   const resolveStoreName = async (storeId) => {
     if (!storeId) return 'Store';
