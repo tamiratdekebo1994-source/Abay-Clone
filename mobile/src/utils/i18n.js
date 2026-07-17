@@ -186,9 +186,6 @@ const strings = {
   lookingForOffers:     { en: 'Looking for offers', am: 'ትዕዛዞችን በመፈለግ ላይ' },
   lookingForOffersBody: { en: 'Stay in a busy area to receive more delivery offers.', am: 'ተጨማሪ ትዕዛዞችን ለመቀበል በተጨናነቀ አካባቢ ይቆዩ።' },
   popularOfferTimes:    { en: 'Popular offer times: Today', am: 'ታዋቂ የትዕዛዝ ሰዓቶች፡ ዛሬ' },
-  basedOnOrders:        { en: 'Based on {n} past orders', am: 'በ{n} ያለፉ ትዕዛዞች መሰረት' },
-  typicalBusyHours:     { en: 'Typical busy hours (general guide)', am: 'የተለመዱ የስራ ሰዓቶች (አጠቃላይ መመሪያ)' },
-  completeDeliveriesFootnote: { en: 'Complete {n}+ deliveries to see your own pattern instead of this general guide.', am: '{n}+ ማድረሻዎችን ካጠናቀቁ በኋላ ከዚህ አጠቃላይ መመሪያ ይልቅ የራስዎን ንድፍ ያያሉ።' },
   newOffer:             { en: 'new offer', am: 'አዲስ ትዕዛዝ' },
   stopReceivingOffers:  { en: 'Stop receiving offers?', am: 'ትዕዛዞችን መቀበል ማቆም ይፈልጋሉ?' },
   wontReceiveOffers:    { en: "You won't receive new delivery offers while you're offline.", am: 'ኦፍላይን በሚሆኑበት ጊዜ አዳዲስ የማድረስ ትዕዛዞችን አይቀበሉም።' },
@@ -490,6 +487,9 @@ const strings = {
   licensePrefix:        { en: 'License:', am: 'ፍቃድ:' },
   submitApplication:    { en: 'Submit Application ✓', am: 'ማመልከቻ አስገባ ✓' },
   applicationReviewNote:{ en: 'Your application will be reviewed within 24 hours', am: 'ማመልከቻዎ በ24 ሰዓት ውስጥ ይገመገማል' },
+
+  // ─── Home screen: hours-remaining-today chart ────────────────────────────
+  exploreDaysSubtitle: { en: 'Explore additional days to drive this week.', am: 'በዚህ ሳምንት ለመስራት ተጨማሪ ቀናትን ይመልከቱ።' },
 };
 
 /**
@@ -504,7 +504,7 @@ export const t = (key, lang = 'am') => {
 
 /**
  * Translate a key and fill in {placeholder} tokens, e.g.
- * tf('basedOnOrders', language, { n: 42 }) -> "Based on 42 past orders"
+ * tf('youRatedTemplate', language, { rating: 5 }) -> "⭐ You rated 5/5"
  */
 export const tf = (key, lang, vars) => {
   let result = t(key, lang);

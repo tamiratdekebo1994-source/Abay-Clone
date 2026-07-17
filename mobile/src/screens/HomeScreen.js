@@ -37,12 +37,12 @@ function haversineKm(lat1, lng1, lat2, lng2) {
 const HOURS = ['6a','7a','8a','9a','10a','11a','12p','1p','2p','3p','4p','5p','6p','7p','8p','9p'];
 const HOURS_START = 6; // HOURS[i] corresponds to real hour-of-day (HOURS_START + i)
 const ETHIOPIA_UTC_OFFSET_HOURS = 3; // EAT is UTC+3 year-round — matches the backend's bucketing
-const MIN_ORDERS_FOR_PATTERN = 10; // below this, fall back to the general typical-hours guide
 
-// General guide only (not this driver's data) — approximate Addis Ababa delivery demand shape:
-// a morning-commute bump, a lunch rush, and the largest dinner-time peak. Shown until a driver
-// has enough of their own completed orders (MIN_ORDERS_FOR_PATTERN) for a real personal chart.
-const TYPICAL_HOURLY_PATTERN = [0.2, 0.55, 0.75, 0.5, 0.3, 0.35, 0.7, 0.85, 0.5, 0.3, 0.35, 0.6, 0.85, 1.0, 0.75, 0.4];
+// Static bar shape for the "hours remaining today" chart — tall and roughly even through the
+// working day, tapering in the last couple of slots as the day winds down (matches the
+// reference app's shape). Not demand data — just how full each hour's bar renders; color
+// (upcoming vs already-passed) is computed live from the current Addis Ababa hour below.
+const HOUR_SHAPE = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.6, 0.4];
 const DAILY_GOAL = 500;
 
 // Simulated surge zones around Addis Ababa
@@ -95,8 +95,6 @@ export default function HomeScreen({ navigation }) {
   const [goOfflineSheet, setGoOfflineSheet] = useState(false);
   const [showOnlineBanner, setShowOnlineBanner] = useState(false);
   const [surgeZones, setSurgeZones] = useState([]);
-  const [activityHeatmap, setActivityHeatmap] = useState(null);
-  const [heatmapLoaded, setHeatmapLoaded] = useState(false);
 
   const [scrollY, setScrollY] = useState(0);
 
@@ -114,15 +112,9 @@ export default function HomeScreen({ navigation }) {
   const dot2Anim = useRef(new Animated.Value(0.3)).current;
   const dot3Anim = useRef(new Animated.Value(0.3)).current;
 
-  // Addis Ababa local hour, independent of the device's own timezone — otherwise "now" on a
-  // Mac/simulator set to a different timezone lands on the wrong bar (or gets clamped to an
-  // edge bar), while the real order data (bucketed server-side by Addis time) sits elsewhere.
+  // Addis Ababa local hour, independent of the device's own timezone — used to mark which
+  // hours in the chart below have already passed today vs are still ahead.
   const currentHour = (new Date().getUTCHours() + ETHIOPIA_UTC_OFFSET_HOURS) % 24;
-  const currentHourIdx = (currentHour >= HOURS_START && currentHour < HOURS_START + HOURS.length)
-    ? currentHour - HOURS_START
-    : -1;
-
-  const hasActivityPattern = !!activityHeatmap && activityHeatmap.totalOrders >= MIN_ORDERS_FOR_PATTERN;
 
   useEffect(() => {
     setupLocation();
@@ -219,21 +211,16 @@ export default function HomeScreen({ navigation }) {
   const loadData = async () => {
     if (user?.role !== 'DRIVER') return;
     try {
-      const [earningsRes, ordersRes, heatmapRes] = await Promise.all([
+      const [earningsRes, ordersRes] = await Promise.all([
         driverAPI.getEarnings('today'),
         orderAPI.getMyOrders({ status: 'DRIVER_ASSIGNED,DRIVER_AT_STORE,PICKED_UP,IN_TRANSIT' }),
-        driverAPI.getActivityHeatmap().catch(() => null),
       ]);
       setTodayEarnings(earningsRes.data.data);
       const active = ordersRes.data.data.orders?.find((o) =>
         ['DRIVER_ASSIGNED','DRIVER_AT_STORE','PICKED_UP','IN_TRANSIT'].includes(o.status)
       );
       setActiveOrder(active || null);
-      if (heatmapRes) setActivityHeatmap(heatmapRes.data.data);
-    } catch {
-    } finally {
-      setHeatmapLoaded(true);
-    }
+    } catch {}
   };
 
   // loadData() in the mount effect above only runs once — without this, completing a
@@ -680,57 +667,36 @@ export default function HomeScreen({ navigation }) {
           </View>
         )}
 
-        {/* Activity chart */}
+        {/* Hours-remaining-today chart */}
         <View style={styles.chartSection}>
           <View style={styles.chartHeader}>
             <Text style={styles.chartTitle}>{t('popularOfferTimes', language)}</Text>
             <Text style={styles.chartChev}>›</Text>
           </View>
-          {!heatmapLoaded ? (
-            <View style={styles.chartLoading}>
-              <ActivityIndicator color={COLORS.primary} />
-            </View>
-          ) : (
-            <>
-              <Text style={styles.chartSub}>
-                {hasActivityPattern
-                  ? tf('basedOnOrders', language, { n: activityHeatmap.totalOrders })
-                  : t('typicalBusyHours', language)}
-              </Text>
-              <View style={styles.chart}>
-                {HOURS.map((h, i) => {
-                  const isCurrent = i === currentHourIdx;
-                  const level = hasActivityPattern
-                    ? (activityHeatmap.normalized[HOURS_START + i] || 0)
-                    : TYPICAL_HOURLY_PATTERN[i];
-                  const fillH = 52 + level * 78; // tall wall like Spark Driver's reference, with peak/quiet contrast
-                  return (
-                    <View key={h} style={styles.barWrap}>
-                      <View style={styles.barTrack}>
-                        {isCurrent && <View style={[styles.nowDot, { bottom: fillH + 6 }]} />}
-                        <View style={[
-                          styles.barFill,
-                          { height: fillH },
-                          isCurrent ? styles.barActive : styles.barInactive,
-                          !hasActivityPattern && styles.barEstimated,
-                        ]} />
-                      </View>
-                      <View style={styles.barLabelSlot}>
-                        {(i % 4 === 0) && (
-                          <Text style={[styles.barLabel, isCurrent && styles.barLabelActive]}>{h}</Text>
-                        )}
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-              {!hasActivityPattern && (
-                <Text style={styles.chartFootnote}>
-                  {tf('completeDeliveriesFootnote', language, { n: MIN_ORDERS_FOR_PATTERN })}
-                </Text>
-              )}
-            </>
-          )}
+          <Text style={styles.chartSub}>{t('exploreDaysSubtitle', language)}</Text>
+          <View style={styles.chart}>
+            {HOURS.map((h, i) => {
+              const hour = HOURS_START + i;
+              const isPast = hour < currentHour;
+              const fillH = 52 + HOUR_SHAPE[i] * 78;
+              return (
+                <View key={h} style={styles.barWrap}>
+                  <View style={styles.barTrack}>
+                    <View style={[
+                      styles.barFill,
+                      { height: fillH },
+                      isPast ? styles.barPast : styles.barUpcoming,
+                    ]} />
+                  </View>
+                  <View style={styles.barLabelSlot}>
+                    {(i % 4 === 0) && (
+                      <Text style={styles.barLabel}>{h}</Text>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
         </View>
       </ScrollView>
 
@@ -954,7 +920,6 @@ const styles = StyleSheet.create({
   chartTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
   chartChev: { fontSize: 20, color: '#9CA3AF' },
   chartSub: { fontSize: 12, color: '#6B7280', marginTop: 2, marginBottom: 10 },
-  chartLoading: { height: 180, alignItems: 'center', justifyContent: 'center' },
   chart: { flexDirection: 'row', alignItems: 'flex-end', paddingTop: 10 },
   barWrap: { flex: 1, alignItems: 'center' },
   barTrack: {
@@ -962,17 +927,10 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end', overflow: 'visible',
   },
   barFill: { width: '100%', borderRadius: 8 },
-  barActive: { backgroundColor: COLORS.primary },
-  barInactive: { backgroundColor: '#D8DCE1' },
-  barEstimated: { opacity: 0.55 },
-  nowDot: {
-    position: 'absolute', left: '50%', marginLeft: -3,
-    width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.primary,
-  },
+  barUpcoming: { backgroundColor: COLORS.primary },
+  barPast: { backgroundColor: '#D8DCE1' },
   barLabelSlot: { height: 14, marginTop: 4, alignItems: 'center' },
   barLabel: { fontSize: 9, color: '#9CA3AF' },
-  barLabelActive: { color: COLORS.primary, fontWeight: '700' },
-  chartFootnote: { fontSize: 11, color: '#9CA3AF', textAlign: 'center', marginTop: 8 },
 
   // Go Offline Modal
   modalOverlay: {
