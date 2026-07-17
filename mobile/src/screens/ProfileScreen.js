@@ -163,6 +163,9 @@ export default function ProfileScreen({ navigation }) {
               <Text style={S.avatarInitials}>{initials}</Text>
             </View>
           )}
+          {driver?.status && !statusInfoConfig && (
+            <View style={[S.statusDotIndicator, { backgroundColor: statusColor }]} />
+          )}
           <View style={S.avatarEditBadge}>
             {uploadingPhoto
               ? <ActivityIndicator size="small" color={COLORS.white} />
@@ -171,8 +174,8 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </TouchableOpacity>
 
-        {/* ── Driver status badge ── */}
-        {driver?.status && (
+        {/* ── Driver status badge (only when it needs explaining — Pending/Suspended) ── */}
+        {driver?.status && statusInfoConfig && (
           <View style={[S.statusBadge, { backgroundColor: statusColor + '33', borderColor: statusColor + '66' }]}>
             <View style={[S.statusDot, { backgroundColor: statusColor }]} />
             <Text style={[S.statusText, { color: COLORS.primary }]}>
@@ -434,26 +437,31 @@ const S = StyleSheet.create({
   editBtnText: { color: COLORS.primary, fontSize: 15, fontWeight: '700' },
 
   // Avatar
-  avatarWrap: { alignSelf: 'center', marginTop: 12, marginBottom: 8, position: 'relative' },
+  avatarWrap: { alignSelf: 'center', marginTop: 10, marginBottom: 14, position: 'relative' },
   avatar: {
-    width: 88, height: 88, borderRadius: 44,
-    borderWidth: 3, borderColor: 'rgba(27,67,50,0.4)',
+    width: 72, height: 72, borderRadius: 36,
+    borderWidth: 2.5, borderColor: 'rgba(27,67,50,0.4)',
   },
   avatarFallback: {
-    width: 88, height: 88, borderRadius: 44,
+    width: 72, height: 72, borderRadius: 36,
     backgroundColor: 'rgba(27,67,50,0.15)',
-    borderWidth: 3, borderColor: 'rgba(27,67,50,0.4)',
+    borderWidth: 2.5, borderColor: 'rgba(27,67,50,0.4)',
     alignItems: 'center', justifyContent: 'center',
   },
-  avatarInitials: { color: COLORS.primary, fontSize: 30, fontWeight: '800' },
+  avatarInitials: { color: COLORS.primary, fontSize: 24, fontWeight: '800' },
   avatarEditBadge: {
-    position: 'absolute', bottom: 2, right: 2,
-    width: 26, height: 26, borderRadius: 13,
+    position: 'absolute', bottom: 0, right: 0,
+    width: 22, height: 22, borderRadius: 11,
     backgroundColor: COLORS.primary,
     borderWidth: 2, borderColor: COLORS.white,
     alignItems: 'center', justifyContent: 'center',
   },
-  avatarEditIcon: { fontSize: 12 },
+  avatarEditIcon: { fontSize: 10 },
+  statusDotIndicator: {
+    position: 'absolute', bottom: 1, left: 1,
+    width: 16, height: 16, borderRadius: 8,
+    borderWidth: 2, borderColor: COLORS.accent,
+  },
 
   // Status badge
   statusBadge: {
