@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Image, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { useSelector, useDispatch } from 'react-redux';
 import Constants from 'expo-constants';
-import { loadUser, updateDriver, logout } from '../store/authStore';
+import { loadUser, updateDriver, logout, refreshDriverStats } from '../store/authStore';
 import { authAPI, uploadAPI } from '../services/api';
 import { COLORS, VEHICLE_TYPES } from '../utils/constants';
 import { t } from '../utils/i18n';
@@ -60,6 +61,12 @@ export default function ProfileScreen({ navigation }) {
   const [email, setEmail] = useState(user?.email || '');
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      dispatch(refreshDriverStats());
+    }, [dispatch])
+  );
 
   const initials = user?.fullName
     ? user.fullName.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)

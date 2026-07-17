@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, Alert, Image, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { useSelector, useDispatch } from 'react-redux';
-import { logout, updateDriver } from '../store/authStore';
+import { logout, updateDriver, refreshDriverStats } from '../store/authStore';
 import { toggleTheme, changeLanguage } from '../store/settingsStore';
 import { uploadAPI } from '../services/api';
 import { COLORS, TAB_BAR_CLEARANCE } from '../utils/constants';
@@ -16,23 +17,9 @@ import { t } from '../utils/i18n';
 const MENU_SECTIONS = [
   {
     items: [
-      { id: 'metrics',    icon: '📊', labelKey: 'myMetrics',         screen: null },
-      { id: 'incentives', icon: '🎁', labelKey: 'incentivePrograms', screen: null },
-      { id: 'resources',  icon: '📚', labelKey: 'resourceCenter',    screen: null },
-      { id: 'certs',      icon: '🏅', labelKey: 'certifications',    screen: null },
-    ],
-  },
-  {
-    items: [
-      { id: 'help',       icon: '❓', labelKey: 'help',            screen: 'HelpSupport' },
-      { id: 'license',    icon: '🪪', labelKey: 'driversLicense',  screen: null },
-      { id: 'vehicles',   icon: '🚗', labelKey: 'vehicles',        screen: null },
-    ],
-  },
-  {
-    items: [
       { id: 'wallet',     icon: '💰', labelKey: 'wallet',   screen: 'Wallet' },
       { id: 'account',    icon: '👤', labelKey: 'account',  screen: null },
+      { id: 'help',       icon: '❓', labelKey: 'help',     screen: 'HelpSupport' },
       { id: 'settings',   icon: '⚙️',  labelKey: 'settings', screen: null },
     ],
   },
@@ -46,6 +33,12 @@ export default function MoreScreen({ navigation }) {
   const C = getColors(theme);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const isDark = theme === 'dark';
+
+  useFocusEffect(
+    useCallback(() => {
+      dispatch(refreshDriverStats());
+    }, [dispatch])
+  );
 
   const pickPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -83,9 +76,7 @@ export default function MoreScreen({ navigation }) {
     }
     if (item.id === 'settings') {
       showSettings();
-      return;
     }
-    Alert.alert(t(item.labelKey, lang), t('comingSoon', lang));
   };
 
   const showSettings = () => {

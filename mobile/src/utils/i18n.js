@@ -229,15 +229,9 @@ const strings = {
   noOrdersYet:          { en: 'No orders yet', am: 'ምንም ትዕዛዝ የለም' },
 
   // ─── More / Settings screen ────────────────────────────────────────────────
-  myMetrics:            { en: 'My Metrics', am: 'የእኔ መለኪያዎች' },
-  incentivePrograms:    { en: 'Incentive Programs', am: 'የማበረታቻ ፕሮግራሞች' },
-  resourceCenter:       { en: 'Resource Center', am: 'የግብዓት ማዕከል' },
-  certifications:       { en: 'Certifications', am: 'ማረጋገጫዎች' },
   help:                 { en: 'Help', am: 'እርዳታ' },
   driversLicense:       { en: "Driver's License", am: 'የሾፌር ፍቃድ' },
-  vehicles:             { en: 'Vehicles', am: 'ተሽከርካሪዎች' },
   account:              { en: 'Account', am: 'መለያ' },
-  comingSoon:           { en: 'Coming soon', am: 'በቅርቡ ይመጣል' },
   allowPhotoAccessBody: { en: 'Allow photo access to update your profile picture.', am: 'የመገለጫ ፎቶዎን ለማዘመን የፎቶ መዳረሻን ይፍቀዱ።' },
   profilePhotoFailedBody:{ en: 'Could not update your profile photo. Try again.', am: 'የመገለጫ ፎቶዎን ማዘመን አልተቻለም። እንደገና ይሞክሩ።' },
   chooseAnOption:       { en: 'Choose an option', am: 'አማራጭ ይምረጡ' },

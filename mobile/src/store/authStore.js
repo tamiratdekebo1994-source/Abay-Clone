@@ -11,6 +11,18 @@ export const loadUser = createAsyncThunk('auth/loadUser', async (_, { rejectWith
   }
 });
 
+// Silently refreshes user/driver fields (stats, status, etc.) without the isLoading
+// flag loadUser() toggles — that flag drives AppNavigator's full-screen splash gate,
+// which would flash on every screen focus if reused here.
+export const refreshDriverStats = createAsyncThunk('auth/refreshDriverStats', async (_, { rejectWithValue }) => {
+  try {
+    const { data } = await api.get('/auth/me');
+    return data.data;
+  } catch {
+    return rejectWithValue(null);
+  }
+});
+
 export const logout = createAsyncThunk('auth/logout', async () => {
   try {
     await SecureStore.deleteItemAsync('firebaseIdToken');
@@ -57,6 +69,12 @@ const authSlice = createSlice({
       .addCase(loadUser.rejected, (state) => {
         state.isLoading = false;
         state.isAuthenticated = false;
+      })
+      .addCase(refreshDriverStats.fulfilled, (state, action) => {
+        if (action.payload) {
+          state.user = action.payload;
+          state.driver = action.payload.driver ?? state.driver;
+        }
       })
       .addCase(logout.fulfilled, (state) => {
         state.user = null;

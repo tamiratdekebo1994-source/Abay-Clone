@@ -8,11 +8,12 @@ import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { orderAPI, uploadAPI } from '../services/api';
 import { COLORS, ORDER_STATUS_LABELS, GOOGLE_MAPS_API_KEY } from '../utils/constants';
 import { getColors } from '../utils/theme';
 import { t, tf } from '../utils/i18n';
+import { refreshDriverStats } from '../store/authStore';
 import SlideToConfirm from '../components/SlideToConfirm';
 
 function decodePolyline(encoded) {
@@ -42,6 +43,7 @@ const SLIDE_ACTION_KEYS = {
 
 export default function ActiveDeliveryScreen({ route, navigation }) {
   const { orderId, autoAccept } = route.params || {};
+  const dispatch = useDispatch();
   const theme = useSelector((s) => s.settings.theme);
   const language = useSelector((s) => s.settings.language);
   const C = getColors(theme);
@@ -164,6 +166,7 @@ export default function ActiveDeliveryScreen({ route, navigation }) {
       setNextStepText('');
       if (newStatus !== 'DELIVERED') fetchRoute(updatedOrder);
       if (newStatus === 'DELIVERED') {
+        dispatch(refreshDriverStats());
         Alert.alert(
           t('deliveryCompleteTitle', language),
           tf('deliveryCompleteBody', language, { amount: order.driverFee }),
