@@ -685,7 +685,7 @@ export default function HomeScreen({ navigation }) {
               const level = hasActivityPattern
                 ? (activityHeatmap.normalized[HOURS_START + i] || 0)
                 : TYPICAL_HOURLY_PATTERN[i];
-              const fillH = 33 + level * 21; // compressed range — a calm near-uniform wall, not spiky
+              const fillH = 19 + level * 35; // wide enough that peak vs quiet hours are visibly different
               return (
                 <View key={h} style={styles.barWrap}>
                   <View style={styles.barTrack}>
