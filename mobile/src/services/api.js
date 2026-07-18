@@ -38,18 +38,15 @@ export const authAPI = {
   requestOtp: (phone, purpose) => api.post('/auth/otp/request', { phone, purpose }),
   verifyOtpLogin: (phone, code) => api.post('/auth/otp/verify-login', { phone, code }),
   verifyOtpRegister: (phone, code) => api.post('/auth/otp/verify-register', { phone, code }),
-  completeRegistration: (data) => api.post('/auth/register/complete', data),
   // Legacy password (admin) - Firebase Cloud Functions endpoint
   login: (data) => api.post('/login', data),
   getMe: () => api.get('/auth/me'),
   updateProfile: (data) => api.patch('/auth/profile', data),
-  logout: (refreshToken) => api.post('/auth/logout', { refreshToken }),
 };
 
 // Driver
 export const driverAPI = {
   register: (data) => api.post('/driver/register', data),
-  getProfile: () => api.get('/driver/profile'),
   updateProfile: (data) => api.patch('/driver/profile', data),
   updateLocation: (lat, lng) => api.patch('/driver/location', { lat, lng }),
   toggleOnline: () => api.post('/driver/toggle-online'),
@@ -70,13 +67,6 @@ export const orderAPI = {
   updateStatus: (id, status) => api.patch(`/orders/${id}/status`, { status }),
   cancelOrder: (id, reason) => api.post(`/orders/${id}/cancel`, { reason }),
   submitReview: (id, data) => api.post(`/orders/${id}/review`, data),
-};
-
-// Chat
-export const chatAPI = {
-  getMessages: (orderId) => api.get(`/chat/order/${orderId}`),
-  sendMessage: (orderId, message) => api.post(`/chat/order/${orderId}`, { message }),
-  getUnreadCount: () => api.get('/chat/unread'),
 };
 
 // Notifications
@@ -104,13 +94,6 @@ export const uploadAPI = {
       transformRequest: (data) => data,
     });
   },
-};
-
-// Payments
-export const paymentAPI = {
-  initiateTelebirr: (orderId) => api.post('/payments/telebirr/initiate', { orderId }),
-  initiateCBE: (orderId) => api.post('/payments/cbe/initiate', { orderId }),
-  checkStatus: (paymentRef) => api.get(`/payments/status/${paymentRef}`),
 };
 
 export default api;
