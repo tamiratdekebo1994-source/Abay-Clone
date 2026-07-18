@@ -59,7 +59,7 @@ export default function SlideToConfirm({
 
       <Animated.View style={[styles.labelWrap, { opacity: labelOpacity }]} pointerEvents="none">
         {loading ? (
-          <ActivityIndicator color={disabled ? '#9CA3AF' : color} />
+          <ActivityIndicator color={disabled ? '#9CA3AF' : COLORS.primary} />
         ) : (
           <>
             <Text style={[styles.label, disabled && styles.labelDisabled]}>{label}</Text>
