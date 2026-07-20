@@ -1300,25 +1300,101 @@ app.patch('/notifications/:notificationId/read', verifyToken, async (req, res) =
 
 // ─── Admin Routes ───────────────────────────────────────────────────────────
 
+const ACTIVE_ORDER_STATUSES = ['SEARCHING_DRIVER', 'DRIVER_ASSIGNED', 'DRIVER_AT_STORE', 'PICKED_UP', 'IN_TRANSIT'];
+
+// Addis Ababa is UTC+3 with no DST — used everywhere else in this file for
+// day/hour bucketing so "today" lines up with the driver's actual local day
+// rather than the server's UTC day.
+function addisDateKey(date) {
+  const shifted = new Date(date.getTime() + ETHIOPIA_UTC_OFFSET_HOURS * 3600 * 1000);
+  return shifted.toISOString().slice(0, 10); // YYYY-MM-DD in Addis-local terms
+}
+
 app.get('/admin/dashboard', verifyToken, async (req, res) => {
   try {
-    const driversSnapshot = await db.collection('drivers').get();
-    const storesSnapshot = await db.collection('stores').get();
-    const ordersSnapshot = await db.collection('orders').get();
+    const [driversSnapshot, storesSnapshot, ordersSnapshot] = await Promise.all([
+      db.collection('drivers').get(),
+      db.collection('stores').get(),
+      db.collection('orders').get(),
+    ]);
 
-    const totalRevenue = (await db.collection('orders').get()).docs.reduce((sum, doc) => {
-      return sum + (doc.data().totalAmount || 0);
-    }, 0);
+    const todayKey = addisDateKey(new Date());
+    let onlineDrivers = 0, pendingDrivers = 0;
+    driversSnapshot.forEach((doc) => {
+      const status = doc.data().status;
+      if (status === 'ONLINE') onlineDrivers += 1;
+      if (status === 'PENDING') pendingDrivers += 1;
+    });
+
+    let totalRevenue = 0, todayRevenue = 0, activeOrders = 0, completedOrders = 0;
+    ordersSnapshot.forEach((doc) => {
+      const o = doc.data();
+      totalRevenue += o.totalAmount || 0;
+      if (o.status === 'DELIVERED') {
+        completedOrders += 1;
+        const deliveredKey = o.deliveredAt?.toDate ? addisDateKey(o.deliveredAt.toDate()) : null;
+        if (deliveredKey === todayKey) todayRevenue += o.totalAmount || 0;
+      } else if (ACTIVE_ORDER_STATUSES.includes(o.status)) {
+        activeOrders += 1;
+      }
+    });
 
     res.json({
       success: true,
       data: {
-        drivers: { total: driversSnapshot.size },
+        drivers: { total: driversSnapshot.size, online: onlineDrivers, pending: pendingDrivers },
         stores: { total: storesSnapshot.size },
-        orders: { total: ordersSnapshot.size },
-        revenue: { total: totalRevenue }
+        orders: { total: ordersSnapshot.size, active: activeOrders, completed: completedOrders },
+        revenue: { total: totalRevenue, today: todayRevenue },
       }
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/admin/analytics', verifyToken, async (req, res) => {
+  try {
+    const days = Math.min(90, Math.max(1, parseInt(req.query.period, 10) || 7));
+
+    const dayKeys = [];
+    for (let i = days - 1; i >= 0; i--) {
+      dayKeys.push(addisDateKey(new Date(Date.now() - i * 24 * 3600 * 1000)));
+    }
+    const byDay = Object.fromEntries(dayKeys.map((k) => [k, { orders: 0, revenue: 0, newDrivers: 0 }]));
+    const dayLabel = (key) => {
+      const [y, m, d] = key.split('-').map(Number);
+      return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+    };
+
+    const [ordersSnapshot, driversSnapshot] = await Promise.all([
+      db.collection('orders').get(),
+      db.collection('drivers').get(),
+    ]);
+
+    let totalRevenue = 0;
+    ordersSnapshot.forEach((doc) => {
+      const o = doc.data();
+      if (!o.createdAt?.toDate) return;
+      const key = addisDateKey(o.createdAt.toDate());
+      if (!byDay[key]) return;
+      byDay[key].orders += 1;
+      if (o.status === 'DELIVERED') {
+        byDay[key].revenue += o.totalAmount || 0;
+        totalRevenue += o.totalAmount || 0;
+      }
+    });
+
+    driversSnapshot.forEach((doc) => {
+      const d = doc.data();
+      if (!d.createdAt?.toDate) return;
+      const key = addisDateKey(d.createdAt.toDate());
+      if (byDay[key]) byDay[key].newDrivers += 1;
+    });
+
+    const timeSeries = dayKeys.map((key) => ({ day: dayLabel(key), ...byDay[key] }));
+
+    res.json({ success: true, data: { summary: { totalRevenue }, timeSeries } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

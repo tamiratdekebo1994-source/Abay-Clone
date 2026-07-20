@@ -37,15 +37,17 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
+    setIsLoading(true);
+    Promise.allSettled([
       adminAPI.getDashboard(),
       adminAPI.getAnalytics(period),
     ])
       .then(([dash, ana]) => {
-        setDashData(dash.data.data);
-        setAnalytics(ana.data.data);
+        if (dash.status === 'fulfilled') setDashData(dash.value.data.data);
+        else console.error(dash.reason);
+        if (ana.status === 'fulfilled') setAnalytics(ana.value.data.data);
+        else console.error(ana.reason);
       })
-      .catch(console.error)
       .finally(() => setIsLoading(false));
   }, [period]);
 

@@ -56,6 +56,7 @@ export const orderAPI = {
 
 export const adminAPI = {
   getDashboard: () => api.get('/admin/dashboard'),
+  getAnalytics: (period) => api.get('/admin/analytics', { params: { period } }),
   getDrivers: () => api.get('/admin/drivers'),
   getCustomers: () => api.get('/admin/customers'),
   blockCustomer: (id, reason) => api.patch(`/admin/customers/${id}/block`, { reason }),
