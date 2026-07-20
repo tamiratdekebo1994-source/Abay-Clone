@@ -109,7 +109,7 @@ export default function TrackingPage() {
       <header className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-primary-700 rounded-lg flex items-center justify-center text-white font-black text-lg">⚡</div>
+            <div className="w-8 h-8 bg-gradient-to-br from-accent to-accent-dark rounded-lg flex items-center justify-center text-primary font-black text-lg">⚡</div>
             <span className="font-black text-gray-900 text-lg">ET SPARK</span>
           </div>
           <div className="text-right">
@@ -120,8 +120,8 @@ export default function TrackingPage() {
       </header>
 
       {/* Status Banner */}
-      <div className={`py-4 text-center text-white font-semibold text-lg ${
-        isDelivered ? 'bg-green-600' : 'bg-primary-600'
+      <div className={`py-4 text-center font-semibold text-lg ${
+        isDelivered ? 'bg-green-600 text-white' : 'bg-accent text-primary'
       }`}>
         {currentStep?.icon} {currentStep?.label}
         <div className="text-sm font-normal opacity-90">{currentStep?.am}</div>
@@ -158,7 +158,7 @@ export default function TrackingPage() {
                 return (
                   <div key={step.key} className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center text-base flex-shrink-0 ${
-                      isDone ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-400'
+                      isDone ? 'bg-accent text-primary' : 'bg-gray-100 text-gray-400'
                     } ${isCurrent ? 'ring-2 ring-primary-600 ring-offset-2' : ''}`}>
                       {step.icon}
                     </div>

@@ -110,7 +110,7 @@ export default function StoreProfile() {
         {!isEditing ? (
           <button
             onClick={() => setIsEditing(true)}
-            className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700"
+            className="flex items-center gap-2 bg-accent text-primary px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent-dark"
           >
             ✏️ Edit Profile
           </button>
@@ -125,7 +125,7 @@ export default function StoreProfile() {
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50"
+              className="px-4 py-2 bg-accent text-primary rounded-lg text-sm font-semibold hover:bg-accent-dark disabled:opacity-50"
             >
               {isSaving ? 'Saving...' : '✓ Save Changes'}
             </button>
@@ -134,15 +134,15 @@ export default function StoreProfile() {
       </div>
 
       {/* Store Header Card */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-2xl p-6 mb-6 text-white">
+      <div className="bg-gradient-to-r from-accent to-accent-dark rounded-2xl p-6 mb-6 text-primary">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl">
+          <div className="w-16 h-16 bg-primary/15 rounded-2xl flex items-center justify-center text-3xl">
             {storeTypeInfo?.label.split(' ')[0] || '🏪'}
           </div>
           <div>
             <h2 className="text-xl font-bold">{profile.storeName}</h2>
-            <p className="text-primary-200 text-sm mt-0.5">{storeTypeInfo?.label}</p>
-            <div className="flex items-center gap-3 mt-2 text-sm text-primary-200">
+            <p className="text-primary/70 text-sm mt-0.5">{storeTypeInfo?.label}</p>
+            <div className="flex items-center gap-3 mt-2 text-sm text-primary/70">
               <span>📍 {profile.city}{profile.subcity ? `, ${profile.subcity}` : ''}</span>
               <span>•</span>
               <span>📦 {profile._count?.orders || 0} orders</span>

@@ -114,7 +114,7 @@ export default function CreateOrder() {
                 <button key={loc.name} type="button" onClick={() => handlePickupLocation(loc)}
                   className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
                     form.pickupAddress.includes(loc.name)
-                      ? 'bg-primary-600 text-white border-primary-600'
+                      ? 'bg-accent text-primary border-accent'
                       : 'bg-white text-gray-600 border-gray-200 hover:border-primary-300'
                   }`}>{loc.name}</button>
               ))}
@@ -268,7 +268,7 @@ export default function CreateOrder() {
           <button type="submit" disabled={isLoading} className="btn-primary flex-1 flex items-center justify-center gap-2">
             {isLoading ? (
               <>
-                <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                <span className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
                 Creating...
               </>
             ) : `🚀 Create Order${estimate ? ` — ETB ${estimate.totalAmount?.toFixed(0)}` : ''}`}

@@ -187,7 +187,7 @@ export default function OrderTracking() {
                 return (
                   <div key={step.key} className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${
-                      isDone ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-400'
+                      isDone ? 'bg-accent text-primary' : 'bg-gray-100 text-gray-400'
                     } ${isCurrent ? 'ring-2 ring-primary-600 ring-offset-2' : ''}`}>
                       {step.icon}
                     </div>
@@ -262,7 +262,7 @@ export default function OrderTracking() {
                       <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[75%] px-3 py-2 rounded-xl text-sm ${
                           isMe
-                            ? 'bg-primary-600 text-white rounded-br-sm'
+                            ? 'bg-accent text-primary rounded-br-sm'
                             : 'bg-gray-100 text-gray-800 rounded-bl-sm'
                         }`}>
                           {!isMe && (
@@ -271,7 +271,7 @@ export default function OrderTracking() {
                             </div>
                           )}
                           <div>{msg.message}</div>
-                          <div className={`text-xs mt-1 ${isMe ? 'text-primary-200' : 'text-gray-400'}`}>
+                          <div className={`text-xs mt-1 ${isMe ? 'text-primary/60' : 'text-gray-400'}`}>
                             {new Date(msg.createdAt).toLocaleTimeString('en-ET', { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </div>
@@ -295,7 +295,7 @@ export default function OrderTracking() {
                 <button
                   onClick={sendMessage}
                   disabled={!chatInput.trim() || isSending}
-                  className="bg-primary-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-primary-700 disabled:opacity-50 font-medium"
+                  className="bg-accent text-primary px-3 py-2 rounded-lg text-sm hover:bg-accent-dark disabled:opacity-50 font-medium"
                 >
                   {isSending ? '...' : '→'}
                 </button>

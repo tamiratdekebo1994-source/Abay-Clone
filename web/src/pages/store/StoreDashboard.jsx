@@ -161,14 +161,14 @@ export default function StoreDashboard() {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { title: 'Place Delivery', titleAm: 'ማድረስ ልዑካን', icon: '🚀', to: '/store/orders/new', color: 'bg-primary-600' },
-          { title: 'Order History', titleAm: 'የትዕዛዝ ታሪክ', icon: '📋', to: '/store/orders', color: 'bg-blue-600' },
-          { title: 'Get Help', titleAm: 'እርዳታ ያግኙ', icon: '💬', to: '#', color: 'bg-gray-600' },
+          { title: 'Place Delivery', titleAm: 'ማድረስ ልዑካን', icon: '🚀', to: '/store/orders/new', color: 'bg-accent', textColor: 'text-primary' },
+          { title: 'Order History', titleAm: 'የትዕዛዝ ታሪክ', icon: '📋', to: '/store/orders', color: 'bg-blue-600', textColor: 'text-white' },
+          { title: 'Get Help', titleAm: 'እርዳታ ያግኙ', icon: '💬', to: '#', color: 'bg-gray-600', textColor: 'text-white' },
         ].map((action) => (
           <Link
             key={action.to}
             to={action.to}
-            className={`${action.color} text-white rounded-xl p-5 flex items-center gap-4 hover:opacity-90 transition-opacity`}
+            className={`${action.color} ${action.textColor} rounded-xl p-5 flex items-center gap-4 hover:opacity-90 transition-opacity`}
           >
             <span className="text-3xl">{action.icon}</span>
             <div>

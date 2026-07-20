@@ -90,16 +90,16 @@ export default function Layout() {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-primary-600 text-white flex flex-col transition-all duration-300 flex-shrink-0`}>
+      <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-accent text-primary flex flex-col transition-all duration-300 flex-shrink-0`}>
         {/* Logo */}
-        <div className="flex items-center p-4 border-b border-primary-500">
-          <div className="w-10 h-10 bg-gradient-to-br from-accent to-yellow-400 rounded-lg flex items-center justify-center flex-shrink-0 text-lg font-bold">
+        <div className="flex items-center p-4 border-b border-primary/20">
+          <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-700 text-accent rounded-lg flex items-center justify-center flex-shrink-0 text-lg font-bold">
             ⚡
           </div>
           {sidebarOpen && (
             <div className="ml-3">
               <div className="font-black text-base leading-none">ET SPARK</div>
-              <div className="text-primary-300 text-xs mt-0.5">
+              <div className="text-primary/70 text-xs mt-0.5">
                 {user?.role === 'ADMIN' ? 'Admin Dashboard' : 'Store Dashboard'}
               </div>
             </div>
@@ -116,8 +116,8 @@ export default function Layout() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                   isActive
-                    ? 'bg-white text-primary-700 font-semibold'
-                    : 'text-primary-100 hover:bg-primary-500'
+                    ? 'bg-primary text-accent font-semibold'
+                    : 'text-primary hover:bg-primary/10'
                 }`
               }
             >
@@ -128,16 +128,16 @@ export default function Layout() {
         </nav>
 
         {/* User section */}
-        <div className="p-3 border-t border-primary-500">
+        <div className="p-3 border-t border-primary/20">
           {sidebarOpen && (
             <div className="mb-2 px-3">
               <div className="text-sm font-semibold truncate">{user?.fullName}</div>
-              <div className="text-xs text-primary-300">{user?.phone}</div>
+              <div className="text-xs text-primary/70">{user?.phone}</div>
             </div>
           )}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 text-primary-100 hover:bg-primary-500 rounded-lg transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-2.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
           >
             <span className="text-xl flex-shrink-0">🚪</span>
             {sidebarOpen && <span className="text-sm">Logout</span>}
@@ -159,7 +159,7 @@ export default function Layout() {
           </button>
           <div className="flex items-center gap-3">
             <span className="text-sm text-gray-500">🇪🇹 Ethiopia</span>
-            <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-8 h-8 bg-accent rounded-full flex items-center justify-center text-primary font-bold text-sm">
               {user?.fullName?.charAt(0)}
             </div>
           </div>
@@ -167,18 +167,18 @@ export default function Layout() {
 
         {/* Real-time order alert banner */}
         {orderAlert && (
-          <div className="bg-primary-600 text-white px-6 py-3 flex items-center justify-between text-sm animate-pulse-once flex-shrink-0">
+          <div className="bg-accent text-primary px-6 py-3 flex items-center justify-between text-sm animate-pulse-once flex-shrink-0">
             <span>
               📦 <strong>Order #{orderAlert.orderNumber}</strong> — {orderAlert.status?.replace(/_/g, ' ')}
             </span>
             <div className="flex items-center gap-3">
               <Link
                 to={`/store/orders/${orderAlert.orderId}/track`}
-                className="bg-white text-primary-700 font-semibold px-3 py-1 rounded-lg text-xs hover:bg-primary-50"
+                className="bg-primary text-accent font-semibold px-3 py-1 rounded-lg text-xs hover:bg-primary-700"
               >
                 Track →
               </Link>
-              <button onClick={() => setOrderAlert(null)} className="text-primary-200 hover:text-white text-lg leading-none">×</button>
+              <button onClick={() => setOrderAlert(null)} className="text-primary/60 hover:text-primary text-lg leading-none">×</button>
             </div>
           </div>
         )}

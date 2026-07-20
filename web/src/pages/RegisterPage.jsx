@@ -141,29 +141,29 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-700 via-primary-800 to-primary-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-accent flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-accent to-yellow-400 rounded-3xl mb-4 shadow-2xl">
-            <span className="text-primary-900 text-3xl">⚡</span>
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary to-primary-700 rounded-3xl mb-4 shadow-2xl">
+            <span className="text-accent text-3xl">⚡</span>
           </div>
-          <h1 className="text-3xl font-black text-white">Join ET SPARK</h1>
-          <p className="text-accent font-bold text-xs mt-2">DELIVERY NETWORK</p>
-          <p className="text-primary-300 text-sm mt-2">Register your store / መደብርዎን ይመዝገቡ</p>
+          <h1 className="text-3xl font-black text-primary">Join ET SPARK</h1>
+          <p className="text-primary font-bold text-xs mt-2">DELIVERY NETWORK</p>
+          <p className="text-primary/60 text-sm mt-2">Register your store / መደብርዎን ይመዝገቡ</p>
         </div>
 
         {/* Step indicator */}
         <div className="flex items-center justify-center gap-2 mb-6">
           {STEP_LABELS.map((label, idx) => (
             <React.Fragment key={idx}>
-              <div className={`flex items-center gap-1.5 ${idx + 1 <= step ? 'text-white' : 'text-primary-400'}`}>
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${idx + 1 < step ? 'bg-accent text-primary-800' : idx + 1 === step ? 'bg-white text-primary-700' : 'bg-primary-500 text-primary-200'}`}>
+              <div className={`flex items-center gap-1.5 ${idx + 1 <= step ? 'text-primary' : 'text-primary/40'}`}>
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${idx + 1 < step ? 'bg-primary text-accent' : idx + 1 === step ? 'bg-white text-primary-700' : 'bg-primary-500 text-primary-200'}`}>
                   {idx + 1 < step ? '✓' : idx + 1}
                 </div>
                 <span className="text-xs hidden sm:block">{label}</span>
               </div>
-              {idx < 2 && <div className={`flex-1 h-0.5 max-w-12 ${idx + 1 < step ? 'bg-accent' : 'bg-primary-500'}`} />}
+              {idx < 2 && <div className={`flex-1 h-0.5 max-w-12 ${idx + 1 < step ? 'bg-primary' : 'bg-primary-500'}`} />}
             </React.Fragment>
           ))}
         </div>
@@ -322,9 +322,9 @@ export default function RegisterPage() {
           )}
         </div>
 
-        <p className="text-center mt-4 text-primary-200 text-sm">
+        <p className="text-center mt-4 text-primary/70 text-sm">
           Already have an account?{' '}
-          <Link to="/login" className="text-accent font-semibold hover:underline">Sign in</Link>
+          <Link to="/login" className="text-primary font-semibold hover:underline">Sign in</Link>
         </p>
       </div>
     </div>

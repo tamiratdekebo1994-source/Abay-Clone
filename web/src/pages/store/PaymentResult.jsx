@@ -143,7 +143,7 @@ export default function PaymentResult() {
             <div className="mt-6 flex flex-col gap-3">
               <Link
                 to={`/store/orders/${orderId || order?.id}/track`}
-                className="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold transition-colors"
+                className="w-full py-3 bg-accent hover:bg-accent-dark text-primary rounded-xl font-semibold transition-colors"
               >
                 📍 Track Delivery
               </Link>
@@ -174,7 +174,7 @@ export default function PaymentResult() {
               {orderId && (
                 <Link
                   to={`/store/orders/${orderId}/track`}
-                  className="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold transition-colors"
+                  className="w-full py-3 bg-accent hover:bg-accent-dark text-primary rounded-xl font-semibold transition-colors"
                 >
                   Back to Order
                 </Link>
@@ -217,7 +217,7 @@ export default function PaymentResult() {
             <div className="mt-6 flex flex-col gap-3">
               <button
                 onClick={() => { setStatus('checking'); setPollCount(0); checkStatus(); }}
-                className="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold transition-colors"
+                className="w-full py-3 bg-accent hover:bg-accent-dark text-primary rounded-xl font-semibold transition-colors"
               >
                 ↻ Check Again
               </button>

@@ -24,17 +24,17 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-700 via-primary-800 to-primary-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-accent flex items-center justify-center p-4">
       <div className="w-full max-w-md">
 
         {/* Logo & Branding */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-accent to-yellow-400 rounded-3xl mb-6 shadow-2xl">
-            <span className="text-primary-900 font-black text-4xl">⚡</span>
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-primary to-primary-700 rounded-3xl mb-6 shadow-2xl">
+            <span className="text-accent font-black text-4xl">⚡</span>
           </div>
-          <h1 className="text-5xl font-black text-white tracking-tighter">ET SPARK</h1>
-          <p className="text-accent font-bold text-sm mt-2">DELIVERY NETWORK</p>
-          <p className="text-primary-300 mt-3 text-xs">Fast • Reliable • Connected</p>
+          <h1 className="text-5xl font-black text-primary tracking-tighter">ET SPARK</h1>
+          <p className="text-primary font-bold text-sm mt-2">DELIVERY NETWORK</p>
+          <p className="text-primary/60 mt-3 text-xs">Fast • Reliable • Connected</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
@@ -79,18 +79,18 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
-              <button type="submit" className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-3.5 rounded-xl transition-colors disabled:opacity-40" disabled={isLoading}>
+              <button type="submit" className="w-full bg-accent hover:bg-accent-dark text-primary font-bold py-3.5 rounded-xl transition-colors disabled:opacity-40" disabled={isLoading}>
                 {isLoading ? 'Signing in...' : 'Sign In →'}
               </button>
             </form>
           </div>
         </div>
 
-        <p className="text-center text-primary-200 text-sm mt-8">
+        <p className="text-center text-primary/70 text-sm mt-8">
           Don't have an account?{' '}
-          <Link to="/register" className="text-accent font-bold hover:text-yellow-300 transition-colors">Create Account</Link>
+          <Link to="/register" className="text-primary font-bold hover:text-primary-700 transition-colors">Create Account</Link>
         </p>
-        <p className="text-center text-primary-400 text-xs mt-3">© 2025 ET SPARK • Powering Ethiopia</p>
+        <p className="text-center text-primary/50 text-xs mt-3">© 2025 ET SPARK • Powering Ethiopia</p>
       </div>
     </div>
   );
