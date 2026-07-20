@@ -1160,7 +1160,7 @@ app.get('/orders', verifyToken, async (req, res) => {
       success: true,
       data: {
         orders: paged,
-        pagination: { total, page, limit },
+        pagination: { total, page, limit, pages: Math.max(1, Math.ceil(total / limit)) },
       },
     });
   } catch (err) {

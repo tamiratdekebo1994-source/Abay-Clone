@@ -50,8 +50,8 @@ export const storeAPI = {
 
 export const orderAPI = {
   create: (data) => api.post('/orders', data),
-  list: () => api.get('/orders'),
-  get: (id) => api.get(`/orders/${id}`),
+  getMyOrders: (params) => api.get('/orders', { params }),
+  getOrder: (id) => api.get(`/orders/${id}`),
 };
 
 export const adminAPI = {

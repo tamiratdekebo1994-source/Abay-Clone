@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../store/authSlice';
 import { io } from 'socket.io-client';
 import { SOCKET_URL } from '../services/api';
+import ErrorBoundary from './ErrorBoundary';
 
 const storeNav = [
   { to: '/store', label: 'Dashboard', icon: '📊', end: true },
@@ -32,6 +33,7 @@ export default function Layout() {
   const { user } = useSelector((s) => s.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [orderAlert, setOrderAlert] = useState(null); // { orderId, orderNumber, status }
   const socketRef = useRef(null);
@@ -185,7 +187,9 @@ export default function Layout() {
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto">
-          <Outlet />
+          <ErrorBoundary key={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>
