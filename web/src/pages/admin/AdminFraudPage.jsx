@@ -72,7 +72,7 @@ export default function AdminFraudPage() {
             key={status}
             onClick={() => { setStatusFilter(status); setPage(1); }}
             className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${
-              statusFilter === status ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              statusFilter === status ? 'bg-accent text-primary' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
             {status.replace(/_/g, ' ')}

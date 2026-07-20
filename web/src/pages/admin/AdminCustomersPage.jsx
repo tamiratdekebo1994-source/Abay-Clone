@@ -69,7 +69,7 @@ export default function AdminCustomersPage() {
         <button
           onClick={() => { setShowBlocked(false); setPage(1); }}
           className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${
-            !showBlocked ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            !showBlocked ? 'bg-accent text-primary' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
           Active Customers

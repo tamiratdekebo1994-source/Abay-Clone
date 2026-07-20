@@ -225,7 +225,7 @@ export default function AdminSurge() {
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="flex-1 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-semibold hover:bg-primary-700 disabled:opacity-50"
+                className="flex-1 py-2.5 bg-accent text-primary rounded-xl text-sm font-semibold hover:bg-accent-dark disabled:opacity-50"
               >
                 {isSaving ? 'Saving...' : 'Apply Override'}
               </button>

@@ -61,7 +61,7 @@ export default function AdminOrders() {
         <div className="flex flex-wrap gap-2">
           {['', 'SEARCHING_DRIVER', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'].map((s) => (
             <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }}
-              className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${statusFilter === s ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${statusFilter === s ? 'bg-accent text-primary' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
               {s === '' ? 'All' : STATUS_CONFIG[s]?.label || s}
             </button>
           ))}

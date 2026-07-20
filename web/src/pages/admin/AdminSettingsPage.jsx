@@ -224,7 +224,7 @@ export default function AdminSettingsPage() {
           <button
             type="submit"
             disabled={isSaving || totalPct !== 100}
-            className="flex-1 py-3 bg-primary-600 text-white rounded-lg font-bold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 py-3 bg-accent text-primary rounded-lg font-bold hover:bg-accent-dark disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? 'Saving...' : 'Save Settings'}
           </button>

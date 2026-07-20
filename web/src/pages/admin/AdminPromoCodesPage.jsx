@@ -73,7 +73,7 @@ export default function AdminPromoCodesPage() {
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700"
+          className="px-4 py-2 bg-accent text-primary rounded-lg font-medium hover:bg-accent-dark"
         >
           + Create Promo Code
         </button>
@@ -251,7 +251,7 @@ export default function AdminPromoCodesPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700"
+                  className="flex-1 py-2 bg-accent text-primary rounded-lg font-medium hover:bg-accent-dark"
                 >
                   Create Code
                 </button>

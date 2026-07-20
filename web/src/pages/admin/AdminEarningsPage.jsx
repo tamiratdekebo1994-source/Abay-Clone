@@ -50,7 +50,7 @@ export default function AdminEarningsPage() {
             key={opt.value}
             onClick={() => { setSortBy(opt.value); setPage(1); }}
             className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${
-              sortBy === opt.value ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              sortBy === opt.value ? 'bg-accent text-primary' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
             {opt.label}

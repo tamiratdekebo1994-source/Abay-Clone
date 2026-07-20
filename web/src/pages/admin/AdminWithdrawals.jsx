@@ -215,7 +215,7 @@ export default function AdminWithdrawals() {
                       {w.status === 'PENDING' && (
                         <button
                           onClick={() => { setSelectedWithdrawal(w); setActionStatus('COMPLETED'); }}
-                          className="text-xs bg-primary-600 text-white px-3 py-1.5 rounded-lg hover:bg-primary-700 font-medium"
+                          className="text-xs bg-accent text-primary px-3 py-1.5 rounded-lg hover:bg-accent-dark font-medium"
                         >
                           Process
                         </button>
