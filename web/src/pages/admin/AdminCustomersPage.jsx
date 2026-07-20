@@ -22,8 +22,8 @@ export default function AdminCustomersPage() {
         page,
         limit: 20,
       });
-      setCustomers(data.customers);
-      setTotal(data.total);
+      setCustomers(data.data.customers);
+      setTotal(data.data.total);
     } catch (err) {
       console.error(err);
     } finally {

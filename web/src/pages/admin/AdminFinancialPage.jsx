@@ -15,7 +15,7 @@ export default function AdminFinancialPage() {
     setIsLoading(true);
     try {
       const { data } = await adminAPI.getFinancialReport(period);
-      setData(data);
+      setData(data.data);
     } catch (err) {
       console.error(err);
     } finally {

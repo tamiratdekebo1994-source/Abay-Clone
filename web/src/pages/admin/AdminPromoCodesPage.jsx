@@ -27,8 +27,8 @@ export default function AdminPromoCodesPage() {
     setIsLoading(true);
     try {
       const { data } = await adminAPI.getPromoCodes({ page, limit: 20 });
-      setCodes(data.codes);
-      setTotal(data.total);
+      setCodes(data.data.codes);
+      setTotal(data.data.total);
     } catch (err) {
       console.error(err);
     } finally {

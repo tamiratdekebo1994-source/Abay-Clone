@@ -424,6 +424,65 @@ app.post('/auth/firebase/provision-simple', async (req, res) => {
   }
 });
 
+// Finishes the web store-signup flow: exchanges the phone-verified JWT from
+// POST /auth/otp/verify-register for a real account, same underlying logic as
+// /auth/firebase/provision-simple but driven by the verification token (so the
+// phone number can't be spoofed by the client) rather than a raw phone field.
+app.post('/auth/register/complete', async (req, res) => {
+  try {
+    const { verificationToken, fullName, email, role } = req.body;
+    if (!verificationToken || !fullName || !role) {
+      return res.status(400).json({ success: false, message: 'verificationToken, fullName, and role are required' });
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(verificationToken, 'et-spark-secret-key');
+    } catch {
+      return res.status(401).json({ success: false, message: 'Verification expired — please verify your phone again' });
+    }
+    if (decoded.purpose !== 'REGISTER' || !decoded.phone) {
+      return res.status(401).json({ success: false, message: 'Invalid verification token' });
+    }
+    const phone = decoded.phone;
+
+    const existing = await db.collection('users').where('phone', '==', phone).limit(1).get();
+    if (!existing.empty) {
+      return res.status(409).json({ success: false, message: 'An account with this phone number already exists' });
+    }
+
+    let userRecord;
+    try {
+      userRecord = await auth.createUser({ phoneNumber: phone, email: email || undefined, displayName: fullName });
+    } catch (createErr) {
+      if (createErr.code === 'auth/phone-number-already-exists') {
+        userRecord = await auth.getUserByPhoneNumber(phone);
+      } else {
+        throw createErr;
+      }
+    }
+
+    await db.collection('users').doc(userRecord.uid).set({
+      phone,
+      fullName,
+      email: email || null,
+      role,
+      isVerified: true,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    const accessToken = jwt.sign({ uid: userRecord.uid, phone }, 'et-spark-secret-key', { expiresIn: '7d' });
+    res.json({
+      success: true,
+      data: { accessToken, user: { uid: userRecord.uid, fullName, phone, email: email || null, role } },
+    });
+  } catch (err) {
+    console.error('Register/complete error:', err.message);
+    res.status(400).json({ success: false, message: err.message || 'Registration failed' });
+  }
+});
+
 // ─── Driver Routes ──────────────────────────────────────────────────────────
 
 app.get('/drivers', async (req, res) => {
@@ -763,20 +822,35 @@ app.get('/driver/orders/nearby', verifyToken, async (req, res) => {
   }
 });
 
+const SURGE_CITIES = ['Addis Ababa', 'Dire Dawa', 'Hawassa', 'Bahir Dar', 'Mekelle', 'Adama', 'Jimma', 'Dessie', 'Gondar'];
+const SURGE_PEAK_WINDOWS = [
+  { start: 7, end: 9, multiplier: 1.3, reason: 'Morning rush' },
+  { start: 12, end: 14, multiplier: 1.2, reason: 'Lunch rush' },
+  { start: 17, end: 20, multiplier: 1.4, reason: 'Evening rush' },
+];
+
+// A manual admin override (set via PATCH /admin/surge) always wins; otherwise falls
+// back to a fixed Addis-time peak-hour schedule. Shared by /driver/surge,
+// /admin/surge, and the order fare estimate so all three agree on the same number.
+async function computeSurgeForCity(city) {
+  const overrideDoc = await db.collection('surgeOverrides').doc(city).get();
+  const manualOverride = overrideDoc.exists ? (overrideDoc.data().multiplier || 1.0) : 1.0;
+  if (manualOverride > 1.0) {
+    return { city, isSurge: true, multiplier: manualOverride, reason: 'Manual override', manualOverride };
+  }
+
+  const hour = (new Date().getUTCHours() + ETHIOPIA_UTC_OFFSET_HOURS) % 24;
+  const active = SURGE_PEAK_WINDOWS.find((w) => hour >= w.start && hour < w.end);
+  if (active) {
+    return { city, isSurge: true, multiplier: active.multiplier, reason: active.reason, manualOverride: 1.0 };
+  }
+  return { city, isSurge: false, multiplier: 1.0, reason: null, manualOverride: 1.0 };
+}
+
 app.get('/driver/surge', verifyToken, async (req, res) => {
   try {
-    const hour = new Date().getHours();
-    const peakWindows = [[7, 9], [12, 14], [17, 20]];
-    const isSurge = peakWindows.some(([start, end]) => hour >= start && hour < end);
-
-    res.json({
-      success: true,
-      data: {
-        city: req.query.city || 'Addis Ababa',
-        isSurge,
-        multiplier: isSurge ? 1.5 : 1.0,
-      },
-    });
+    const surge = await computeSurgeForCity(req.query.city || 'Addis Ababa');
+    res.json({ success: true, data: surge });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -892,9 +966,167 @@ app.post('/stores', verifyToken, async (req, res) => {
   }
 });
 
+// The store-signup flow's final step (RegisterPage.jsx) — separate from the
+// generic POST /stores above, which only captures a minimal subset of fields.
+app.post('/store/register', verifyToken, async (req, res) => {
+  try {
+    const { storeName, storeType, address, city, subcity, phone, description, lat, lng } = req.body;
+    if (!storeName || !city || !address) {
+      return res.status(400).json({ success: false, message: 'storeName, city, and address are required' });
+    }
+
+    const existing = await db.collection('stores').where('userId', '==', req.userId).limit(1).get();
+    const payload = {
+      userId: req.userId,
+      storeName,
+      storeType: storeType || 'OTHER',
+      address,
+      city,
+      subcity: subcity || null,
+      phone: phone || null,
+      description: description || null,
+      lat: lat != null ? Number(lat) : null,
+      lng: lng != null ? Number(lng) : null,
+      isVerified: false,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    let storeId;
+    if (existing.empty) {
+      const docRef = await db.collection('stores').add({
+        ...payload,
+        status: 'PENDING',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      storeId = docRef.id;
+    } else {
+      storeId = existing.docs[0].id;
+      await db.collection('stores').doc(storeId).set(payload, { merge: true });
+    }
+
+    res.json({ success: true, data: { id: storeId } });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+async function getStoreDocByUserId(userId) {
+  const snap = await db.collection('stores').where('userId', '==', userId).limit(1).get();
+  return snap.empty ? null : snap.docs[0];
+}
+
+app.get('/store/profile', verifyToken, async (req, res) => {
+  try {
+    const storeDoc = await getStoreDocByUserId(req.userId);
+    if (!storeDoc) {
+      return res.status(404).json({ success: false, message: 'Store profile not found' });
+    }
+
+    const ordersSnap = await db.collection('orders').where('storeId', '==', req.userId).get();
+
+    res.json({
+      success: true,
+      data: { id: storeDoc.id, ...storeDoc.data(), _count: { orders: ordersSnap.size } },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.patch('/store/profile', verifyToken, async (req, res) => {
+  try {
+    const storeDoc = await getStoreDocByUserId(req.userId);
+    if (!storeDoc) {
+      return res.status(404).json({ success: false, message: 'Store profile not found' });
+    }
+
+    const { storeName, storeType, phone, address, city, subcity, woreda, description } = req.body;
+    const update = { updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+    if (storeName !== undefined) update.storeName = storeName;
+    if (storeType !== undefined) update.storeType = storeType;
+    if (phone !== undefined) update.phone = phone;
+    if (address !== undefined) update.address = address;
+    if (city !== undefined) update.city = city;
+    if (subcity !== undefined) update.subcity = subcity;
+    if (woreda !== undefined) update.woreda = woreda;
+    if (description !== undefined) update.description = description;
+
+    await db.collection('stores').doc(storeDoc.id).set(update, { merge: true });
+    res.json({ success: true, data: update });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/store/dashboard', verifyToken, async (req, res) => {
+  try {
+    const ordersSnap = await db.collection('orders').where('storeId', '==', req.userId).get();
+    const orders = [];
+    ordersSnap.forEach((doc) => orders.push({ id: doc.id, ...doc.data() }));
+    orders.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+
+    const todayKey = addisDateKey(new Date());
+    let todayOrders = 0, activeOrders = 0, completedOrders = 0, totalSpent = 0;
+    orders.forEach((o) => {
+      const createdKey = o.createdAt?.toDate ? addisDateKey(o.createdAt.toDate()) : null;
+      if (createdKey === todayKey) todayOrders += 1;
+      if (o.status === 'DELIVERED') {
+        completedOrders += 1;
+        totalSpent += o.totalAmount || 0;
+      } else if (ACTIVE_ORDER_STATUSES.includes(o.status)) {
+        activeOrders += 1;
+      }
+    });
+
+    const recentOrders = await Promise.all(
+      orders.slice(0, 10).map((o) => attachDriverInfo(o))
+    );
+
+    res.json({
+      success: true,
+      data: {
+        stats: { todayOrders, activeOrders, completedOrders, totalSpent },
+        recentOrders,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ─── Order Routes ───────────────────────────────────────────────────────────
 
 const ORDER_STATUS_FLOW = ['DRIVER_ASSIGNED', 'DRIVER_AT_STORE', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERED'];
+
+// Base fare model: flat starting fee + per-km rate, with the fragile/refrigeration
+// surcharges shown on the create-order form (+10%/+20%) and the current city surge
+// multiplier applied on top. Shared by the live estimate and order creation itself,
+// so what a store sees while filling out the form is what actually gets charged.
+const BASE_FARE_ETB = 30;
+const PER_KM_RATE_ETB = 8;
+
+async function computeFareEstimate({ pickupLat, pickupLng, deliveryLat, deliveryLng, isFragile, requiresRefrigeration, city }) {
+  const distanceKm = haversineKm(Number(pickupLat), Number(pickupLng), Number(deliveryLat), Number(deliveryLng));
+
+  let subtotal = BASE_FARE_ETB + distanceKm * PER_KM_RATE_ETB;
+  if (isFragile) subtotal *= 1.10;
+  if (requiresRefrigeration) subtotal *= 1.20;
+
+  const surge = await computeSurgeForCity(city || 'Addis Ababa');
+  const totalAmount = Math.round(subtotal * surge.multiplier);
+
+  const commissionDoc = await db.collection('commissionSettings').doc('default').get();
+  const driverCommissionPercent = commissionDoc.exists ? (commissionDoc.data().driverCommissionPercent ?? 85) : 85;
+  const driverFee = Math.round(totalAmount * (driverCommissionPercent / 100));
+  const platformFee = totalAmount - driverFee;
+
+  return { distanceKm: Math.round(distanceKm * 10) / 10, totalAmount, driverFee, platformFee, surge };
+}
+
+async function getRequestingStoreCity(userId) {
+  const storeSnap = await db.collection('stores').where('userId', '==', userId).limit(1).get();
+  return storeSnap.empty ? 'Addis Ababa' : (storeSnap.docs[0].data().city || 'Addis Ababa');
+}
 
 async function attachStoreName(order) {
   if (!order.storeId) return order;
@@ -902,24 +1134,81 @@ async function attachStoreName(order) {
   return { ...order, store: { storeName: storeSnap.empty ? 'Store' : storeSnap.docs[0].data().storeName } };
 }
 
+async function attachDriverInfo(order) {
+  if (!order.driverId) return order;
+  const [driverDoc, userDoc] = await Promise.all([
+    db.collection('drivers').doc(order.driverId).get(),
+    db.collection('users').doc(order.driverId).get(),
+  ]);
+  if (!driverDoc.exists) return order;
+  return {
+    ...order,
+    driver: {
+      ...driverDoc.data(),
+      user: userDoc.exists ? { fullName: userDoc.data().fullName, phone: userDoc.data().phone } : null,
+    },
+  };
+}
+
+app.post('/orders/estimate', verifyToken, async (req, res) => {
+  try {
+    const { pickupLat, pickupLng, deliveryLat, deliveryLng, isFragile, requiresRefrigeration } = req.body;
+    if ([pickupLat, pickupLng, deliveryLat, deliveryLng].some((v) => v === undefined || v === null || v === '')) {
+      return res.status(400).json({ success: false, message: 'Pickup and delivery coordinates are required' });
+    }
+
+    const city = await getRequestingStoreCity(req.userId);
+    const estimate = await computeFareEstimate({ pickupLat, pickupLng, deliveryLat, deliveryLng, isFragile, requiresRefrigeration, city });
+
+    res.json({ success: true, data: estimate });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
 app.post('/orders', verifyToken, async (req, res) => {
   try {
-    const { pickupAddress, deliveryAddress, totalAmount, pickupLat, pickupLng, deliveryLat, deliveryLng } = req.body;
+    const {
+      pickupAddress, pickupNotes, deliveryAddress, deliveryNotes,
+      pickupLat, pickupLng, deliveryLat, deliveryLng,
+      recipientName, recipientPhone, description, weight,
+      isFragile, requiresRefrigeration, paymentMethod,
+    } = req.body;
+
+    const city = await getRequestingStoreCity(req.userId);
+    const { distanceKm, totalAmount, driverFee, platformFee, surge } = await computeFareEstimate({
+      pickupLat, pickupLng, deliveryLat, deliveryLng, isFragile, requiresRefrigeration, city,
+    });
+    const orderNumber = String(Math.floor(100000 + Math.random() * 900000));
 
     const docRef = await db.collection('orders').add({
       storeId: req.userId,
-      pickupAddress,
-      deliveryAddress,
+      orderNumber,
+      pickupAddress: pickupAddress || '',
+      pickupNotes: pickupNotes || null,
+      deliveryAddress: deliveryAddress || '',
+      deliveryNotes: deliveryNotes || null,
+      pickupLat: Number(pickupLat),
+      pickupLng: Number(pickupLng),
+      deliveryLat: Number(deliveryLat),
+      deliveryLng: Number(deliveryLng),
+      recipientName: recipientName || '',
+      recipientPhone: recipientPhone || '',
+      description: description || '',
+      weight: weight ? Number(weight) : null,
+      isFragile: !!isFragile,
+      requiresRefrigeration: !!requiresRefrigeration,
+      paymentMethod: paymentMethod || 'CASH',
+      distanceKm,
       totalAmount,
-      pickupLat,
-      pickupLng,
-      deliveryLat,
-      deliveryLng,
+      driverFee,
+      platformFee,
+      surgeMultiplier: surge.multiplier,
       status: 'SEARCHING_DRIVER',
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    res.json({ success: true, data: { id: docRef.id } });
+    res.json({ success: true, data: { id: docRef.id, orderNumber, totalAmount } });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }
@@ -933,7 +1222,26 @@ app.get('/orders/:orderId', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    const order = await attachStoreName({ id: doc.id, ...doc.data() });
+    let order = await attachStoreName({ id: doc.id, ...doc.data() });
+    order = await attachDriverInfo(order);
+    res.json({ success: true, data: order });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Public — powers the customer-facing tracking link (no login), same shape as
+// GET /orders/:orderId above.
+app.get('/track/:orderId', async (req, res) => {
+  try {
+    const doc = await db.collection('orders').doc(req.params.orderId).get();
+
+    if (!doc.exists) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    let order = await attachStoreName({ id: doc.id, ...doc.data() });
+    order = await attachDriverInfo(order);
     res.json({ success: true, data: order });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -1400,6 +1708,73 @@ app.get('/admin/analytics', verifyToken, async (req, res) => {
   }
 });
 
+app.get('/admin/surge', verifyToken, async (req, res) => {
+  try {
+    const [driversSnapshot, storesSnapshot, ordersSnapshot] = await Promise.all([
+      db.collection('drivers').get(),
+      db.collection('stores').get(),
+      db.collection('orders').get(),
+    ]);
+
+    const onlineByCity = {};
+    driversSnapshot.forEach((doc) => {
+      const d = doc.data();
+      if (d.status === 'ONLINE' && d.city) onlineByCity[d.city] = (onlineByCity[d.city] || 0) + 1;
+    });
+
+    const cityByStoreUserId = {};
+    storesSnapshot.forEach((doc) => {
+      const s = doc.data();
+      if (s.userId) cityByStoreUserId[s.userId] = s.city;
+    });
+
+    const pendingByCity = {};
+    ordersSnapshot.forEach((doc) => {
+      const o = doc.data();
+      if (!ACTIVE_ORDER_STATUSES.includes(o.status)) return;
+      const city = cityByStoreUserId[o.storeId];
+      if (city) pendingByCity[city] = (pendingByCity[city] || 0) + 1;
+    });
+
+    const surgeData = await Promise.all(SURGE_CITIES.map(async (city) => {
+      const surge = await computeSurgeForCity(city);
+      return {
+        city,
+        onlineDrivers: onlineByCity[city] || 0,
+        pendingOrders: pendingByCity[city] || 0,
+        ...surge,
+      };
+    }));
+
+    res.json({ success: true, data: surgeData });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/admin/surge', verifyToken, async (req, res) => {
+  try {
+    const { city, multiplier } = req.body;
+    const value = Number(multiplier);
+    if (!city || !SURGE_CITIES.includes(city)) {
+      return res.status(400).json({ success: false, message: 'Invalid city' });
+    }
+    if (isNaN(value) || value < 1.0 || value > 2.5) {
+      return res.status(400).json({ success: false, message: 'Multiplier must be between 1.0 and 2.5' });
+    }
+
+    await db.collection('surgeOverrides').doc(city).set({
+      multiplier: value,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedBy: req.userId,
+    });
+
+    res.json({ success: true, message: `${city} surge set to ${value}x` });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
 app.get('/admin/driver-applications', verifyToken, async (req, res) => {
   try {
     const statusFilter = req.query.status || 'PENDING';
@@ -1487,19 +1862,111 @@ app.patch('/admin/driver-applications/:applicationId/reject', verifyToken, async
   }
 });
 
+async function attachUserInfo(docs) {
+  const userIds = [...new Set(docs.map((d) => d.id))];
+  const userDocs = await Promise.all(userIds.map((id) => db.collection('users').doc(id).get()));
+  const userById = Object.fromEntries(userDocs.map((d) => [d.id, d.exists ? d.data() : null]));
+  return docs.map((d) => ({
+    ...d,
+    user: userById[d.id] ? { fullName: userById[d.id].fullName, phone: userById[d.id].phone } : null,
+  }));
+}
+
 app.get('/admin/drivers', verifyToken, async (req, res) => {
   try {
-    const snapshot = await db.collection('drivers')
-      .orderBy('totalEarnings', 'desc')
-      .limit(50)
-      .get();
+    const snapshot = await db.collection('drivers').get();
+    let drivers = [];
+    snapshot.forEach(doc => drivers.push({ id: doc.id, ...doc.data() }));
 
-    const drivers = [];
-    snapshot.forEach(doc => {
-      drivers.push({ id: doc.id, ...doc.data() });
+    const statusFilter = req.query.status;
+    if (statusFilter) drivers = drivers.filter((d) => d.status === statusFilter);
+    drivers.sort((a, b) => (b.totalEarnings || 0) - (a.totalEarnings || 0));
+
+    const total = drivers.length;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit, 10) || 15);
+    const paged = await attachUserInfo(drivers.slice((page - 1) * limit, page * limit));
+
+    res.json({ success: true, data: { drivers: paged, total } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+const DRIVER_ACTION_STATUS = { approve: 'OFFLINE', suspend: 'SUSPENDED' };
+
+app.post('/admin/drivers/:driverId/action', verifyToken, async (req, res) => {
+  try {
+    const { action } = req.body;
+    const newStatus = DRIVER_ACTION_STATUS[action];
+    if (!newStatus) {
+      return res.status(400).json({ success: false, message: 'action must be "approve" or "suspend"' });
+    }
+
+    await db.collection('drivers').doc(req.params.driverId).set({
+      status: newStatus,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    res.json({ success: true, data: { status: newStatus } });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/admin/orders', verifyToken, async (req, res) => {
+  try {
+    const snapshot = await db.collection('orders').get();
+    let orders = [];
+    snapshot.forEach((doc) => orders.push({ id: doc.id, ...doc.data() }));
+
+    const statusParam = req.query.status;
+    const statuses = typeof statusParam === 'string' && statusParam
+      ? statusParam.split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
+    if (statuses.length > 0) orders = orders.filter((o) => statuses.includes(o.status));
+
+    orders.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+
+    const total = orders.length;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit, 10) || 15);
+    const paged = orders.slice((page - 1) * limit, page * limit);
+
+    const withStoreAndDriver = await Promise.all(
+      paged.map(async (o) => attachDriverInfo(await attachStoreName(o)))
+    );
+
+    res.json({ success: true, data: { orders: withStoreAndDriver, total } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/admin/drivers/earnings', verifyToken, async (req, res) => {
+  try {
+    const snapshot = await db.collection('drivers').get();
+    let drivers = [];
+    snapshot.forEach((doc) => {
+      const d = doc.data();
+      drivers.push({
+        id: doc.id,
+        ...d,
+        unpaidAmount: d.totalEarnings || 0,
+        unpaidOrders: d.totalDeliveries || 0,
+      });
     });
 
-    res.json({ success: true, data: { drivers } });
+    const sortBy = req.query.sortBy === 'rating' ? 'rating' : 'totalEarnings';
+    drivers.sort((a, b) => (b[sortBy] || 0) - (a[sortBy] || 0));
+
+    const totalUnpaidEarnings = drivers.reduce((sum, d) => sum + (d.unpaidAmount || 0), 0);
+    const total = drivers.length;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit, 10) || 30);
+    const paged = await attachUserInfo(drivers.slice((page - 1) * limit, page * limit));
+
+    res.json({ success: true, data: { drivers: paged, total, totalUnpaidEarnings } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1507,16 +1974,20 @@ app.get('/admin/drivers', verifyToken, async (req, res) => {
 
 app.get('/admin/customers', verifyToken, async (req, res) => {
   try {
-    const snapshot = await db.collection('customers')
-      .limit(100)
-      .get();
+    const snapshot = await db.collection('customers').get();
+    let customers = [];
+    snapshot.forEach(doc => customers.push({ id: doc.id, ...doc.data() }));
 
-    const customers = [];
-    snapshot.forEach(doc => {
-      customers.push({ id: doc.id, ...doc.data() });
-    });
+    const isBlockedFilter = req.query.isBlocked;
+    if (isBlockedFilter === 'true') customers = customers.filter((c) => c.isBlocked);
+    else if (isBlockedFilter === 'false') customers = customers.filter((c) => !c.isBlocked);
 
-    res.json({ success: true, data: { customers, total: customers.length } });
+    const total = customers.length;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit, 10) || 20);
+    const paged = customers.slice((page - 1) * limit, page * limit);
+
+    res.json({ success: true, data: { customers: paged, total } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1526,11 +1997,11 @@ app.patch('/admin/customers/:customerId/block', verifyToken, async (req, res) =>
   try {
     const { reason } = req.body;
 
-    await db.collection('customers').doc(req.params.customerId).update({
+    await db.collection('customers').doc(req.params.customerId).set({
       isBlocked: true,
       blockedReason: reason,
       blockedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    }, { merge: true });
 
     res.json({ success: true, message: 'Customer blocked' });
   } catch (err) {
@@ -1538,18 +2009,150 @@ app.patch('/admin/customers/:customerId/block', verifyToken, async (req, res) =>
   }
 });
 
-app.get('/admin/promo-codes', verifyToken, async (req, res) => {
+app.patch('/admin/customers/:customerId/unblock', verifyToken, async (req, res) => {
   try {
-    const snapshot = await db.collection('promoCodes')
-      .limit(50)
-      .get();
+    await db.collection('customers').doc(req.params.customerId).set({
+      isBlocked: false,
+      blockedReason: null,
+      unblockedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
 
-    const promoCodes = [];
-    snapshot.forEach(doc => {
-      promoCodes.push({ id: doc.id, ...doc.data() });
+    res.json({ success: true, message: 'Customer unblocked' });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/admin/stores', verifyToken, async (req, res) => {
+  try {
+    const [storesSnapshot, ordersSnapshot] = await Promise.all([
+      db.collection('stores').get(),
+      db.collection('orders').get(),
+    ]);
+
+    const orderCountByStoreUserId = {};
+    ordersSnapshot.forEach((doc) => {
+      const storeId = doc.data().storeId;
+      if (storeId) orderCountByStoreUserId[storeId] = (orderCountByStoreUserId[storeId] || 0) + 1;
     });
 
-    res.json({ success: true, data: { promoCodes } });
+    let stores = [];
+    storesSnapshot.forEach((doc) => {
+      const s = doc.data();
+      stores.push({ id: doc.id, ...s, _count: { orders: orderCountByStoreUserId[s.userId] || 0 } });
+    });
+    stores.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+
+    const total = stores.length;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit, 10) || 15);
+    const paged = stores.slice((page - 1) * limit, page * limit);
+
+    const userDocs = await Promise.all(paged.map((s) => db.collection('users').doc(s.userId).get()));
+    const withUser = paged.map((s, i) => ({
+      ...s,
+      user: userDocs[i].exists ? { fullName: userDocs[i].data().fullName, phone: userDocs[i].data().phone, isActive: userDocs[i].data().isActive !== false } : null,
+    }));
+
+    res.json({ success: true, data: { stores: withUser, total } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.patch('/admin/stores/:storeId/status', verifyToken, async (req, res) => {
+  try {
+    const { action } = req.body;
+    const storeRef = db.collection('stores').doc(req.params.storeId);
+    const storeDoc = await storeRef.get();
+    if (!storeDoc.exists) return res.status(404).json({ success: false, message: 'Store not found' });
+
+    if (action === 'verify' || action === 'unverify') {
+      await storeRef.set({ isVerified: action === 'verify' }, { merge: true });
+    } else if (action === 'suspend' || action === 'unsuspend') {
+      const storeUserId = storeDoc.data().userId;
+      await db.collection('users').doc(storeUserId).set({ isActive: action === 'unsuspend' }, { merge: true });
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid action' });
+    }
+
+    res.json({ success: true, message: `Store ${action}ed` });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// ─── Wallet Withdrawals (admin review) ─────────────────────────────────────
+// There's currently no in-app way for a driver to request a withdrawal, so this
+// collection is empty until that flow exists elsewhere — but the admin review
+// page itself works correctly against it rather than crashing.
+app.get('/wallet/pending', verifyToken, async (req, res) => {
+  try {
+    const snapshot = await db.collection('withdrawals').get();
+    let withdrawals = [];
+    snapshot.forEach((doc) => withdrawals.push({ id: doc.id, ...doc.data() }));
+
+    const statusFilter = req.query.status;
+    if (statusFilter) withdrawals = withdrawals.filter((w) => w.status === statusFilter);
+    withdrawals.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+
+    const driverIds = [...new Set(withdrawals.map((w) => w.driverId).filter(Boolean))];
+    const [driverDocs, userDocs] = await Promise.all([
+      Promise.all(driverIds.map((id) => db.collection('drivers').doc(id).get())),
+      Promise.all(driverIds.map((id) => db.collection('users').doc(id).get())),
+    ]);
+    const driverById = Object.fromEntries(driverDocs.map((d, i) => [driverIds[i], {
+      ...(d.exists ? d.data() : {}),
+      user: userDocs[i].exists ? { fullName: userDocs[i].data().fullName, phone: userDocs[i].data().phone } : null,
+    }]));
+
+    const withWallet = withdrawals.map((w) => ({
+      ...w,
+      createdAt: w.createdAt?.toDate?.().toISOString() ?? null,
+      wallet: { driver: driverById[w.driverId] || null },
+    }));
+
+    res.json({ success: true, data: { withdrawals: withWallet } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.patch('/wallet/:withdrawalId/process', verifyToken, async (req, res) => {
+  try {
+    const { status, txRef, failureReason } = req.body;
+    if (!['COMPLETED', 'FAILED'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'status must be COMPLETED or FAILED' });
+    }
+
+    const update = {
+      status,
+      processedAt: admin.firestore.FieldValue.serverTimestamp(),
+      processedBy: req.userId,
+    };
+    if (txRef) update.reference = txRef;
+    if (status === 'FAILED' && failureReason) update.failureReason = failureReason;
+
+    await db.collection('withdrawals').doc(req.params.withdrawalId).set(update, { merge: true });
+    res.json({ success: true, message: `Withdrawal marked ${status.toLowerCase()}` });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/admin/promo-codes', verifyToken, async (req, res) => {
+  try {
+    const snapshot = await db.collection('promoCodes').get();
+    const allCodes = [];
+    snapshot.forEach(doc => allCodes.push({ id: doc.id, ...doc.data() }));
+    allCodes.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+
+    const total = allCodes.length;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit, 10) || 20);
+    const codes = allCodes.slice((page - 1) * limit, page * limit);
+
+    res.json({ success: true, data: { codes, total } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1557,13 +2160,24 @@ app.get('/admin/promo-codes', verifyToken, async (req, res) => {
 
 app.post('/admin/promo-codes', verifyToken, async (req, res) => {
   try {
-    const { code, discountType, discountValue, maxUses } = req.body;
+    const {
+      code, description, discountType, discountValue,
+      maxUses, minOrderAmount, maxDiscount, validFrom, validTo,
+    } = req.body;
+    if (!code || !discountType || discountValue == null) {
+      return res.status(400).json({ success: false, message: 'code, discountType, and discountValue are required' });
+    }
 
     const docRef = await db.collection('promoCodes').add({
-      code,
+      code: String(code).toUpperCase(),
+      description: description || null,
       discountType,
-      discountValue,
-      maxUses,
+      discountValue: Number(discountValue),
+      maxUses: maxUses != null ? Number(maxUses) : null,
+      minOrderAmount: minOrderAmount != null ? Number(minOrderAmount) : 0,
+      maxDiscount: maxDiscount != null ? Number(maxDiscount) : null,
+      validFrom: validFrom || null,
+      validTo: validTo || null,
       usedCount: 0,
       isActive: true,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -1579,6 +2193,19 @@ app.post('/admin/promo-codes', verifyToken, async (req, res) => {
     });
 
     res.json({ success: true, data: { id: docRef.id } });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.patch('/admin/promo-codes/:codeId/deactivate', verifyToken, async (req, res) => {
+  try {
+    await db.collection('promoCodes').doc(req.params.codeId).set({
+      isActive: false,
+      deactivatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    res.json({ success: true, message: 'Promo code deactivated' });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }
@@ -1674,43 +2301,36 @@ app.patch('/admin/fraud-flags/:flagId/resolve', verifyToken, async (req, res) =>
 
 app.get('/admin/financial-reports', verifyToken, async (req, res) => {
   try {
+    const days = Math.min(90, Math.max(1, parseInt(req.query.period, 10) || 30));
+    const cutoffMs = Date.now() - days * 24 * 3600 * 1000;
+
     const snapshot = await db.collection('orders').get();
     const orders = [];
-    snapshot.forEach(doc => orders.push(doc.data()));
+    snapshot.forEach((doc) => {
+      const o = doc.data();
+      const ms = o.createdAt?.toMillis?.();
+      if (ms == null || ms >= cutoffMs) orders.push(o);
+    });
 
     const totalRevenue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
     const delivered = orders.filter((o) => o.status === 'DELIVERED');
-    const cancelled = orders.filter((o) => o.status === 'CANCELLED' || o.status === 'FAILED');
-    const totalDriverPayouts = delivered.reduce((sum, o) => sum + (o.driverFee || 0), 0);
-    const platformEarnings = totalRevenue - totalDriverPayouts;
-
-    const dayBuckets = {};
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      dayBuckets[key] = { date: key, revenue: 0, orders: 0 };
-    }
-    orders.forEach((o) => {
-      const ms = o.createdAt?.toMillis?.();
-      if (!ms) return;
-      const key = new Date(ms).toISOString().slice(0, 10);
-      if (dayBuckets[key]) {
-        dayBuckets[key].revenue += o.totalAmount || 0;
-        dayBuckets[key].orders += 1;
-      }
-    });
+    const driverPayouts = delivered.reduce((sum, o) => sum + (o.driverFee || 0), 0);
+    const platformFees = totalRevenue - driverPayouts;
+    const conversionRate = orders.length > 0 ? Math.round((delivered.length / orders.length) * 1000) / 10 : 0;
 
     res.json({
       success: true,
       data: {
-        totalRevenue,
-        totalDriverPayouts,
-        platformEarnings,
-        totalOrders: orders.length,
-        deliveredOrders: delivered.length,
-        cancelledOrders: cancelled.length,
-        last7Days: Object.values(dayBuckets),
+        period: `Last ${days} days`,
+        metrics: {
+          totalRevenue,
+          platformFees,
+          profit: platformFees,
+          driverPayouts,
+          conversionRate,
+          totalOrders: orders.length,
+          deliveredOrders: delivered.length,
+        },
       },
     });
   } catch (err) {

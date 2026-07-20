@@ -17,9 +17,9 @@ export default function AdminEarningsPage() {
     setIsLoading(true);
     try {
       const { data } = await adminAPI.getDriverEarnings({ sortBy, page, limit: 30 });
-      setDrivers(data.drivers);
-      setTotal(data.total);
-      setTotalUnpaid(data.totalUnpaidEarnings);
+      setDrivers(data.data.drivers);
+      setTotal(data.data.total);
+      setTotalUnpaid(data.data.totalUnpaidEarnings);
     } catch (err) {
       console.error(err);
     } finally {

@@ -36,6 +36,9 @@ api.interceptors.response.use(
 export const authAPI = {
   login: (data) => api.post('/login', data),
   register: (data) => api.post('/register', data),
+  requestOtp: (phone, purpose) => api.post('/auth/otp/request', { phone, purpose }),
+  verifyOtpRegister: (phone, code) => api.post('/auth/otp/verify-register', { phone, code }),
+  completeRegistration: (data) => api.post('/auth/register/complete', data),
 };
 
 export const driverAPI = {
@@ -44,12 +47,15 @@ export const driverAPI = {
 };
 
 export const storeAPI = {
-  list: () => api.get('/stores'),
-  create: (data) => api.post('/stores', data),
+  register: (data) => api.post('/store/register', data),
+  getDashboard: () => api.get('/store/dashboard'),
+  getProfile: () => api.get('/store/profile'),
+  updateProfile: (data) => api.patch('/store/profile', data),
 };
 
 export const orderAPI = {
   create: (data) => api.post('/orders', data),
+  estimate: (data) => api.post('/orders/estimate', data),
   getMyOrders: (params) => api.get('/orders', { params }),
   getOrder: (id) => api.get(`/orders/${id}`),
 };
@@ -57,11 +63,21 @@ export const orderAPI = {
 export const adminAPI = {
   getDashboard: () => api.get('/admin/dashboard'),
   getAnalytics: (period) => api.get('/admin/analytics', { params: { period } }),
-  getDrivers: () => api.get('/admin/drivers'),
-  getCustomers: () => api.get('/admin/customers'),
+  getDrivers: (params) => api.get('/admin/drivers', { params }),
+  approveDriver: (driverId, action) => api.post(`/admin/drivers/${driverId}/action`, { action }),
+  getDriverEarnings: (params) => api.get('/admin/drivers/earnings', { params }),
+  getAllOrders: (params) => api.get('/admin/orders', { params }),
+  getStores: (params) => api.get('/admin/stores', { params }),
+  updateStoreStatus: (storeId, action) => api.patch(`/admin/stores/${storeId}/status`, { action }),
+  getCustomers: (params) => api.get('/admin/customers', { params }),
   blockCustomer: (id, reason) => api.patch(`/admin/customers/${id}/block`, { reason }),
-  getPromoCodes: () => api.get('/admin/promo-codes'),
+  unblockCustomer: (id) => api.patch(`/admin/customers/${id}/unblock`),
+  getPromoCodes: (params) => api.get('/admin/promo-codes', { params }),
   createPromoCode: (data) => api.post('/admin/promo-codes', data),
+  deactivatePromoCode: (id) => api.patch(`/admin/promo-codes/${id}/deactivate`),
+  getSurge: () => api.get('/admin/surge'),
+  setSurge: (city, multiplier) => api.post('/admin/surge', { city, multiplier }),
+  getFinancialReport: (period) => api.get('/admin/financial-reports', { params: { period } }),
   getAuditLogs: () => api.get('/admin/audit-logs'),
   getFraudFlags: () => api.get('/admin/fraud-flags'),
   createFraudFlag: (data) => api.post('/admin/fraud-flags', data),

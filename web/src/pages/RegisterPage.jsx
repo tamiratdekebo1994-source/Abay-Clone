@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { authAPI, storeAPI } from '../services/api';
 
 const STEP_LABELS = ['Phone Verification', 'Your Details', 'Store Information'];
 
@@ -63,12 +64,7 @@ export default function RegisterPage() {
     if (phone.length < 13) { setError('Please enter a valid phone number'); return; }
     setIsLoading(true); setError('');
     try {
-      const res = await fetch('/api/auth/otp/request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, purpose: 'REGISTER' }),
-      });
-      const data = await res.json();
+      const { data } = await authAPI.requestOtp(phone, 'REGISTER');
       if (!data.success) { setError(data.message); return; }
       setOtpSent(true);
       setCountdown(60);
@@ -78,7 +74,7 @@ export default function RegisterPage() {
         setOtp(data.data.devCode);
         setError(`[Dev] Code: ${data.data.devCode}`);
       }
-    } catch { setError('Network error. Please try again.'); }
+    } catch (err) { setError(err.response?.data?.message || 'Network error. Please try again.'); }
     finally { setIsLoading(false); }
   };
 
@@ -86,16 +82,11 @@ export default function RegisterPage() {
     if (otp.length !== 6) { setError('Please enter the 6-digit code'); return; }
     setIsLoading(true); setError('');
     try {
-      const res = await fetch('/api/auth/otp/verify-register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, code: otp }),
-      });
-      const data = await res.json();
+      const { data } = await authAPI.verifyOtpRegister(phone, otp);
       if (!data.success) { setError(data.message); return; }
       setVerificationToken(data.data.verificationToken);
       setStep(2);
-    } catch { setError('Verification failed. Please try again.'); }
+    } catch (err) { setError(err.response?.data?.message || 'Verification failed. Please try again.'); }
     finally { setIsLoading(false); }
   };
 
@@ -103,17 +94,14 @@ export default function RegisterPage() {
     if (!fullName.trim()) { setError('Please enter your full name'); return; }
     setIsLoading(true); setError('');
     try {
-      const res = await fetch('/api/auth/register/complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ verificationToken, fullName, email: email || undefined, role: 'STORE' }),
+      const { data } = await authAPI.completeRegistration({
+        verificationToken, fullName, email: email || undefined, role: 'STORE',
       });
-      const data = await res.json();
       if (!data.success) { setError(data.message); return; }
       localStorage.setItem('accessToken', data.data.accessToken);
       localStorage.setItem('userId', data.data.user?.uid);
       setStep(3);
-    } catch { setError('Failed to create account.'); }
+    } catch (err) { setError(err.response?.data?.message || 'Failed to create account.'); }
     finally { setIsLoading(false); }
   };
 
@@ -124,19 +112,13 @@ export default function RegisterPage() {
     setIsLoading(true); setError('');
     try {
       const coords = AREA_COORDS[subcity] || { lat: 9.0192, lng: 38.7525 };
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch('/api/store/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          storeName, storeType, address, city, subcity, phone: storePhone || phone,
-          description, lat: coords.lat, lng: coords.lng,
-        }),
+      const { data } = await storeAPI.register({
+        storeName, storeType, address, city, subcity, phone: storePhone || phone,
+        description, lat: coords.lat, lng: coords.lng,
       });
-      const data = await res.json();
       if (!data.success) { setError(data.message); return; }
       navigate('/store');
-    } catch { setError('Failed to register store.'); }
+    } catch (err) { setError(err.response?.data?.message || 'Failed to register store.'); }
     finally { setIsLoading(false); }
   };
 
