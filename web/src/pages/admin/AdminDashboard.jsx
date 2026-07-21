@@ -146,31 +146,43 @@ export default function AdminDashboard() {
 
         <div className="card">
           <h2 className="font-bold text-gray-900 mb-4">Order Distribution</h2>
-          <ResponsiveContainer width="100%" height={240}>
-            <PieChart>
-              <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80}
-                paddingAngle={3} dataKey="value">
-                {pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-              </Pie>
-              <Legend />
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+          {pieData.length === 0 ? (
+            <div className="h-[240px] flex items-center justify-center text-gray-400 text-sm">
+              No orders yet
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <PieChart>
+                <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80}
+                  paddingAngle={3} dataKey="value">
+                  {pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                </Pie>
+                <Legend />
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
       {/* Charts Row 2 — New Drivers bar chart */}
       <div className="card">
         <h2 className="font-bold text-gray-900 mb-4">New Driver Registrations — Last {period} days</h2>
-        <ResponsiveContainer width="100%" height={160}>
-          <BarChart data={timeSeries} barSize={20}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-            <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-            <Tooltip />
-            <Bar dataKey="newDrivers" fill="#40916C" radius={[4, 4, 0, 0]} name="New Drivers" />
-          </BarChart>
-        </ResponsiveContainer>
+        {timeSeries.every((d) => (d.newDrivers || 0) === 0) ? (
+          <div className="h-[160px] flex items-center justify-center text-gray-400 text-sm">
+            No new drivers in this period
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={timeSeries} barSize={20}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+              <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+              <Tooltip />
+              <Bar dataKey="newDrivers" fill="#40916C" radius={[4, 4, 0, 0]} name="New Drivers" />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
       {/* Quick Actions */}
