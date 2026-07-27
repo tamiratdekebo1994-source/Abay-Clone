@@ -2211,6 +2211,159 @@ app.patch('/admin/promo-codes/:codeId/deactivate', verifyToken, async (req, res)
   }
 });
 
+// ─── CSV Exports ────────────────────────────────────────────────────────────
+// downloadCSV() on the frontend fetches these directly (not through the axios
+// `api` instance) and expects a raw file body, not the {success, data} envelope
+// every other endpoint uses.
+
+function toCsv(rows, columns) {
+  const escape = (val) => {
+    if (val === null || val === undefined) return '';
+    const str = String(val);
+    return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+  };
+  const lines = [columns.map((c) => escape(c.label)).join(',')];
+  rows.forEach((row) => lines.push(columns.map((c) => escape(c.value(row))).join(',')));
+  return lines.join('\r\n');
+}
+
+function sendCsv(res, filename, csv) {
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.status(200).send(csv);
+}
+
+app.get('/admin/export/drivers.csv', verifyToken, async (req, res) => {
+  try {
+    const snapshot = await db.collection('drivers').get();
+    let drivers = [];
+    snapshot.forEach((doc) => drivers.push({ id: doc.id, ...doc.data() }));
+    drivers = await attachUserInfo(drivers);
+    drivers.sort((a, b) => (b.totalEarnings || 0) - (a.totalEarnings || 0));
+
+    const csv = toCsv(drivers, [
+      { label: 'Full Name', value: (d) => d.user?.fullName },
+      { label: 'Phone', value: (d) => d.user?.phone },
+      { label: 'City', value: (d) => d.city },
+      { label: 'Vehicle Type', value: (d) => d.vehicleType },
+      { label: 'Vehicle Plate', value: (d) => d.vehiclePlate },
+      { label: 'License Number', value: (d) => d.licenseNumber },
+      { label: 'License Expiry', value: (d) => d.licenseExpiry },
+      { label: 'Status', value: (d) => d.status },
+      { label: 'Rating', value: (d) => d.rating ?? 0 },
+      { label: 'Total Deliveries', value: (d) => d.totalDeliveries ?? 0 },
+      { label: 'Total Earnings (ETB)', value: (d) => d.totalEarnings ?? 0 },
+    ]);
+    sendCsv(res, `drivers_${Date.now()}.csv`, csv);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/admin/export/orders.csv', verifyToken, async (req, res) => {
+  try {
+    const [ordersSnapshot, storesSnapshot] = await Promise.all([
+      db.collection('orders').get(),
+      db.collection('stores').get(),
+    ]);
+
+    const storeNameByUserId = {};
+    storesSnapshot.forEach((doc) => { storeNameByUserId[doc.data().userId] = doc.data().storeName; });
+
+    let orders = [];
+    ordersSnapshot.forEach((doc) => orders.push({ id: doc.id, ...doc.data() }));
+    orders.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+
+    const driverIds = [...new Set(orders.map((o) => o.driverId).filter(Boolean))];
+    const driverUserDocs = await Promise.all(driverIds.map((id) => db.collection('users').doc(id).get()));
+    const driverNameById = Object.fromEntries(driverUserDocs.map((d, i) => [driverIds[i], d.exists ? d.data().fullName : null]));
+
+    const csv = toCsv(orders, [
+      { label: 'Order #', value: (o) => o.orderNumber },
+      { label: 'Store', value: (o) => storeNameByUserId[o.storeId] },
+      { label: 'Driver', value: (o) => driverNameById[o.driverId] },
+      { label: 'Delivery Address', value: (o) => o.deliveryAddress },
+      { label: 'Recipient', value: (o) => o.recipientName },
+      { label: 'Recipient Phone', value: (o) => o.recipientPhone },
+      { label: 'Distance (km)', value: (o) => o.distanceKm ?? '' },
+      { label: 'Total (ETB)', value: (o) => o.totalAmount ?? 0 },
+      { label: 'Platform Fee (ETB)', value: (o) => o.platformFee ?? 0 },
+      { label: 'Driver Fee (ETB)', value: (o) => o.driverFee ?? 0 },
+      { label: 'Status', value: (o) => o.status },
+      { label: 'Created At', value: (o) => o.createdAt?.toDate?.().toISOString() ?? '' },
+    ]);
+    sendCsv(res, `orders_${Date.now()}.csv`, csv);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/admin/export/stores.csv', verifyToken, async (req, res) => {
+  try {
+    const [storesSnapshot, ordersSnapshot] = await Promise.all([
+      db.collection('stores').get(),
+      db.collection('orders').get(),
+    ]);
+
+    const orderCountByStoreUserId = {};
+    ordersSnapshot.forEach((doc) => {
+      const storeId = doc.data().storeId;
+      if (storeId) orderCountByStoreUserId[storeId] = (orderCountByStoreUserId[storeId] || 0) + 1;
+    });
+
+    let stores = [];
+    storesSnapshot.forEach((doc) => stores.push({ id: doc.id, ...doc.data() }));
+    stores.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+
+    const ownerIds = [...new Set(stores.map((s) => s.userId).filter(Boolean))];
+    const ownerDocs = await Promise.all(ownerIds.map((id) => db.collection('users').doc(id).get()));
+    const ownerById = Object.fromEntries(ownerDocs.map((d, i) => [ownerIds[i], d.exists ? d.data() : null]));
+
+    const csv = toCsv(stores, [
+      { label: 'Store Name', value: (s) => s.storeName },
+      { label: 'Store Type', value: (s) => s.storeType },
+      { label: 'Owner Name', value: (s) => ownerById[s.userId]?.fullName },
+      { label: 'Owner Phone', value: (s) => ownerById[s.userId]?.phone },
+      { label: 'City', value: (s) => s.city },
+      { label: 'Address', value: (s) => s.address },
+      { label: 'Total Orders', value: (s) => orderCountByStoreUserId[s.userId] || 0 },
+      { label: 'Verified', value: (s) => s.isVerified ? 'Yes' : 'No' },
+      { label: 'Joined', value: (s) => s.createdAt?.toDate?.().toISOString() ?? '' },
+    ]);
+    sendCsv(res, `stores_${Date.now()}.csv`, csv);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/admin/export/withdrawals.csv', verifyToken, async (req, res) => {
+  try {
+    const snapshot = await db.collection('withdrawals').get();
+    let withdrawals = [];
+    snapshot.forEach((doc) => withdrawals.push({ id: doc.id, ...doc.data() }));
+    withdrawals.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+
+    const driverIds = [...new Set(withdrawals.map((w) => w.driverId).filter(Boolean))];
+    const driverUserDocs = await Promise.all(driverIds.map((id) => db.collection('users').doc(id).get()));
+    const driverById = Object.fromEntries(driverUserDocs.map((d, i) => [driverIds[i], d.exists ? d.data() : null]));
+
+    const csv = toCsv(withdrawals, [
+      { label: 'Driver', value: (w) => driverById[w.driverId]?.fullName },
+      { label: 'Phone', value: (w) => driverById[w.driverId]?.phone },
+      { label: 'Amount (ETB)', value: (w) => w.amount ?? 0 },
+      { label: 'Method', value: (w) => w.method },
+      { label: 'Account Number', value: (w) => w.accountNumber },
+      { label: 'Account Name', value: (w) => w.accountName },
+      { label: 'Status', value: (w) => w.status },
+      { label: 'Reference', value: (w) => w.reference ?? '' },
+      { label: 'Requested At', value: (w) => w.createdAt?.toDate?.().toISOString() ?? '' },
+    ]);
+    sendCsv(res, `withdrawals_${Date.now()}.csv`, csv);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 app.get('/admin/audit-logs', verifyToken, async (req, res) => {
   try {
     const snapshot = await db.collection('auditLogs')
