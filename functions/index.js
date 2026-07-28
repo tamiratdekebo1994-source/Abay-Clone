@@ -2366,21 +2366,49 @@ app.get('/admin/export/withdrawals.csv', verifyToken, async (req, res) => {
 
 app.get('/admin/audit-logs', verifyToken, async (req, res) => {
   try {
-    const snapshot = await db.collection('auditLogs')
-      .orderBy('createdAt', 'desc')
-      .limit(100)
-      .get();
+    const snapshot = await db.collection('auditLogs').get();
+    let logs = [];
+    snapshot.forEach(doc => logs.push({ id: doc.id, ...doc.data() }));
 
-    const logs = [];
-    snapshot.forEach(doc => {
-      logs.push({ id: doc.id, ...doc.data() });
-    });
+    if (req.query.action) logs = logs.filter((l) => l.action === req.query.action);
+    if (req.query.resource) logs = logs.filter((l) => l.resource === req.query.resource);
+    logs.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
 
-    res.json({ success: true, data: { logs, total: logs.length } });
+    const total = logs.length;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit, 10) || 50);
+    const paged = logs.slice((page - 1) * limit, page * limit);
+
+    res.json({ success: true, data: { logs: paged, total } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+const FRAUD_SUBJECT_COLLECTION = { DRIVER: 'drivers', STORE: 'stores', CUSTOMER: 'customers' };
+
+async function attachFraudSubject(flag) {
+  const collectionName = FRAUD_SUBJECT_COLLECTION[flag.subjectType];
+  if (!collectionName || !flag.subjectId) return flag;
+
+  if (flag.subjectType === 'DRIVER') {
+    const [driverDoc, userDoc] = await Promise.all([
+      db.collection('drivers').doc(flag.subjectId).get(),
+      db.collection('users').doc(flag.subjectId).get(),
+    ]);
+    if (!driverDoc.exists) return flag;
+    return { ...flag, driver: { ...driverDoc.data(), user: userDoc.exists ? { fullName: userDoc.data().fullName, phone: userDoc.data().phone } : null } };
+  }
+  if (flag.subjectType === 'STORE') {
+    const storeDoc = await db.collection('stores').doc(flag.subjectId).get();
+    return storeDoc.exists ? { ...flag, store: { id: storeDoc.id, ...storeDoc.data() } } : flag;
+  }
+  if (flag.subjectType === 'CUSTOMER') {
+    const customerDoc = await db.collection('customers').doc(flag.subjectId).get();
+    return customerDoc.exists ? { ...flag, customer: { id: customerDoc.id, ...customerDoc.data() } } : flag;
+  }
+  return flag;
+}
 
 app.get('/admin/fraud-flags', verifyToken, async (req, res) => {
   try {
@@ -2391,32 +2419,67 @@ app.get('/admin/fraud-flags', verifyToken, async (req, res) => {
     const snapshot = await db.collection('fraudFlags').get();
 
     let flags = [];
-    snapshot.forEach(doc => {
-      flags.push({ id: doc.id, ...doc.data() });
-    });
+    snapshot.forEach(doc => flags.push({ id: doc.id, ...doc.data() }));
 
-    if (status) {
-      flags = flags.filter((f) => f.status === status);
-    }
+    if (status) flags = flags.filter((f) => f.status === status);
     flags.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
-    flags = flags.slice(0, 50);
 
-    res.json({ success: true, data: { flags, total: flags.length } });
+    const total = flags.length;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit, 10) || 20);
+    const paged = await Promise.all(flags.slice((page - 1) * limit, page * limit).map(attachFraudSubject));
+
+    res.json({ success: true, data: { flags: paged, total } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
+// subjectPhone lets an admin report someone by the phone number they actually
+// know, rather than needing to already have the internal Firestore doc ID.
 app.post('/admin/fraud-flags', verifyToken, async (req, res) => {
   try {
-    const { flagType, severity, description, subjectId } = req.body;
+    const { flagType, severity, description, subjectType, subjectPhone, subjectId: rawSubjectId } = req.body;
+    if (!flagType || !severity || !subjectType || !FRAUD_SUBJECT_COLLECTION[subjectType]) {
+      return res.status(400).json({ success: false, message: 'flagType, severity, and a valid subjectType are required' });
+    }
+
+    let subjectId = rawSubjectId || null;
+    if (!subjectId && subjectPhone) {
+      if (subjectType === 'CUSTOMER') {
+        const orderSnap = await db.collection('orders').where('recipientPhone', '==', subjectPhone).limit(1).get();
+        if (orderSnap.empty) return res.status(404).json({ success: false, message: 'No customer found with that phone number' });
+        subjectId = orderSnap.docs[0].data().recipientPhone;
+        await db.collection('customers').doc(subjectId).set({
+          name: orderSnap.docs[0].data().recipientName || 'Customer',
+          phone: subjectId,
+        }, { merge: true });
+      } else {
+        const userSnap = await db.collection('users').where('phone', '==', subjectPhone).limit(1).get();
+        if (userSnap.empty) return res.status(404).json({ success: false, message: 'No account found with that phone number' });
+        subjectId = userSnap.docs[0].id;
+      }
+    }
+    if (!subjectId) {
+      return res.status(400).json({ success: false, message: 'subjectPhone or subjectId is required' });
+    }
 
     const docRef = await db.collection('fraudFlags').add({
       flagType,
       severity,
-      description,
+      description: description || null,
+      subjectType,
       subjectId,
+      reportedBy: req.userId,
       status: 'OPEN',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    await db.collection('auditLogs').add({
+      userId: req.userId,
+      action: 'REPORT_FRAUD',
+      resource: 'FRAUD_FLAG',
+      resourceId: docRef.id,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 

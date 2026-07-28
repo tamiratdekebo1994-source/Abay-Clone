@@ -28,8 +28,8 @@ export default function AdminAuditLogsPage() {
     setIsLoading(true);
     try {
       const { data } = await adminAPI.getAuditLogs({ ...filters, page, limit: 50 });
-      setLogs(data.logs);
-      setTotal(data.total);
+      setLogs(data.data.logs);
+      setTotal(data.data.total);
     } catch (err) {
       console.error(err);
     } finally {
