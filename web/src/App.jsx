@@ -52,6 +52,7 @@ export default function App() {
       <Route path="/track/:orderId" element={<TrackingPage />} />
 
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/store/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
       {/* Customer Routes — phone OTP sign-in, own page (no sidebar layout) */}

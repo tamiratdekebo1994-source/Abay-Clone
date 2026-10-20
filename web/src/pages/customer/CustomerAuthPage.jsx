@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import api, { authAPI } from '../../services/api';
 import { saveSession, sessionStarted } from '../../store/authSlice';
@@ -152,6 +152,11 @@ export default function CustomerAuthPage() {
             </form>
           )}
         </div>
+
+        <p className="text-center text-primary/70 text-sm mt-6">
+          Store or admin?{' '}
+          <Link to="/store/login" className="text-primary font-bold hover:text-primary-700 transition-colors">Sign in with a password</Link>
+        </p>
       </div>
     </div>
   );
