@@ -214,10 +214,11 @@ app.post('/login', async (req, res) => {
     }
 
     if (!isValid) {
-      // Not the admin: check a store or customer account's password hash.
+      // Not the env-configured admin: check a store or customer account's password hash.
+      // ADMIN records are excluded so an admin's stored hash can never grant admin access.
       const accountDoc = await findAccountByLogin({ phone, email });
       const account = accountDoc?.data();
-      if (account?.passwordHash && await bcrypt.compare(password, account.passwordHash)) {
+      if (account && account.role !== 'ADMIN' && account.passwordHash && await bcrypt.compare(password, account.passwordHash)) {
         const accessToken = jwt.sign({ uid: accountDoc.id, phone: account.phone }, 'et-spark-secret-key', { expiresIn: '7d' });
         const { passwordHash, ...safeUser } = account;
         return res.json({ success: true, data: { accessToken, user: { uid: accountDoc.id, ...safeUser } } });
