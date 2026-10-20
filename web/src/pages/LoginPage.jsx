@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { login, clearError } from '../store/authSlice';
 
 export default function LoginPage() {
-  const [phone, setPhone] = useState('+251');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
 
@@ -20,7 +20,9 @@ export default function LoginPage() {
 
   const handlePasswordLogin = (e) => {
     e.preventDefault();
-    dispatch(login({ phone, password }));
+    // An "@" means email; anything else is treated as a phone number.
+    const value = identifier.trim();
+    dispatch(login(value.includes('@') ? { email: value, password } : { phone: value, password }));
   };
 
   return (
@@ -54,13 +56,14 @@ export default function LoginPage() {
 
             <form onSubmit={handlePasswordLogin}>
               <div className="mb-4">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Phone</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Phone or Email</label>
                 <input
-                  type="tel"
+                  type="text"
+                  autoComplete="username"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  value={phone}
-                  onChange={(e) => { setPhone(e.target.value); dispatch(clearError()); }}
-                  placeholder="+251 9XX XXX XXX"
+                  value={identifier}
+                  onChange={(e) => { setIdentifier(e.target.value); dispatch(clearError()); }}
+                  placeholder="+251 9XX XXX XXX or you@example.com"
                   required
                 />
               </div>

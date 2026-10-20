@@ -204,13 +204,22 @@ app.post('/login', async (req, res) => {
     const adminPassword = process.env.ADMIN_PASSWORD;
     const adminUID = 'D5eaxB7sbyTxFahEOL2kX9mqbkN2';
 
-    // Check credentials - accept either phone or email
+    // Check credentials - accept either phone (any common format) or email.
+    const phoneMatchesAdmin = !!phone && !!adminPhone
+      && normalizeEthiopiaPhone(phone) === normalizeEthiopiaPhone(adminPhone);
+    const emailMatchesAdmin = !!email && !!adminEmail && email.trim().toLowerCase() === adminEmail.trim().toLowerCase();
+    const passwordMatchesAdmin = !!adminPassword && password === adminPassword;
+
     let isValid = false;
-    if (adminPassword && phone && phone === adminPhone && password === adminPassword) {
+    if (passwordMatchesAdmin && phoneMatchesAdmin) {
       isValid = true;
       email = adminEmail; // Convert phone to email for consistency
-    } else if (adminPassword && email && email === adminEmail && password === adminPassword) {
+    } else if (passwordMatchesAdmin && emailMatchesAdmin) {
       isValid = true;
+    }
+    if (!isValid && (phoneMatchesAdmin || emailMatchesAdmin)) {
+      // Log which check failed, never the values themselves.
+      console.warn(`Admin login rejected: identifier matched=${phoneMatchesAdmin || emailMatchesAdmin}, password matched=${passwordMatchesAdmin}`);
     }
 
     if (!isValid) {
