@@ -250,7 +250,7 @@ After running `node backend/src/utils/seed.js`:
 
 | Role | Phone | Password |
 |------|-------|----------|
-| 👑 Admin | +251911000000 | Admin@1234 |
+| 👑 Admin | +251911000000 | Set via `SEED_ADMIN_PASSWORD`, or printed by the seed script |
 | 🏪 Store | +251922000001 | Store@1234 |
 | 🚗 Driver | +251933000002 | Driver@1234 |
 

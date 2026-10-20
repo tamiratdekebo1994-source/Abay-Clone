@@ -20,7 +20,8 @@ const { sendOtp, verifyOtp } = require('../../src/services/otpService');
 const app = createApp();
 const SECRET = process.env.JWT_SECRET;
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
-const ADMIN_HASH = bcrypt.hashSync('Admin@1234', 10);
+const ADMIN_TEST_PASSWORD = 'test-admin-password';
+const ADMIN_HASH = bcrypt.hashSync(ADMIN_TEST_PASSWORD, 10);
 
 // ─── Shared mock users ────────────────────────────────────────────────────────
 
@@ -84,7 +85,7 @@ describe('POST /api/auth/login', () => {
 
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ phone: '+251911000000', password: 'Admin@1234' });
+      .send({ phone: '+251911000000', password: ADMIN_TEST_PASSWORD });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -98,7 +99,7 @@ describe('POST /api/auth/login', () => {
 
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ phone: '+251911000000', password: 'Admin@1234' });
+      .send({ phone: '+251911000000', password: ADMIN_TEST_PASSWORD });
 
     expect(res.body.data.user.passwordHash).toBeUndefined();
   });
@@ -129,7 +130,7 @@ describe('POST /api/auth/login', () => {
 
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ phone: '+251911000000', password: 'Admin@1234' });
+      .send({ phone: '+251911000000', password: ADMIN_TEST_PASSWORD });
 
     expect(res.status).toBe(401);
   });

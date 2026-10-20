@@ -15,7 +15,10 @@ async function main() {
   }
 
   // Create admin user
-  const adminHash = await bcrypt.hash('Admin@1234', 12);
+  // Use SEED_ADMIN_PASSWORD if set; otherwise generate one and print it once.
+  const seedAdminPassword = process.env.SEED_ADMIN_PASSWORD
+    || require('crypto').randomBytes(12).toString('base64url');
+  const adminHash = await bcrypt.hash(seedAdminPassword, 12);
   const admin = await prisma.user.upsert({
     where: { phone: '+251911000000' },
     update: {},
@@ -118,7 +121,7 @@ async function main() {
   console.log('Pricing zones created');
 
   console.log('\n=== Seed Complete ===');
-  console.log('Admin:  +251911000000 / Admin@1234');
+  console.log(`Admin:  +251911000000 / ${process.env.SEED_ADMIN_PASSWORD ? '(from SEED_ADMIN_PASSWORD)' : seedAdminPassword}`);
   console.log('Store:  +251922000001 / Store@1234');
   console.log('Driver: +251933000002 / Driver@1234');
 }

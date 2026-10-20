@@ -24,10 +24,14 @@ async function createAdmin() {
   try {
     console.log('Creating admin user in Firebase...\n');
 
+    if (!process.env.ADMIN_PASSWORD) {
+      throw new Error('Set ADMIN_PASSWORD in your environment before running this script');
+    }
+
     const adminData = {
       phone: '+251972735128',
       email: 'admin@etspark.et',
-      password: 'Admin@1234',
+      password: process.env.ADMIN_PASSWORD,
       fullName: 'ET SPARK Admin',
       role: 'ADMIN',
     };

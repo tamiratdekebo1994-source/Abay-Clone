@@ -13,7 +13,11 @@ async function createAdmin() {
   try {
     console.log('Creating admin user...');
 
-    const passwordHash = await bcrypt.hash('Admin@1234', 12);
+    if (!process.env.ADMIN_PASSWORD) {
+      throw new Error('Set ADMIN_PASSWORD in your environment before running this script');
+    }
+
+    const passwordHash = await bcrypt.hash(process.env.ADMIN_PASSWORD, 12);
 
     const admin = await prisma.user.upsert({
       where: { phone: '+251972735128' },
@@ -32,7 +36,7 @@ async function createAdmin() {
     console.log('Login Credentials:');
     console.log('─────────────────────');
     console.log('Phone:    +251972735128');
-    console.log('Password: Admin@1234');
+    console.log('Password: (the ADMIN_PASSWORD you set)');
     console.log('─────────────────────\n');
     console.log('Admin Details:');
     console.log('─────────────────────');
