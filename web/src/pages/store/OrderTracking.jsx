@@ -5,6 +5,7 @@ import L from 'leaflet';
 import { io } from 'socket.io-client';
 import { orderAPI, chatAPI, SOCKET_URL } from '../../services/api';
 import { useSelector } from 'react-redux';
+import { whatsappShareUrl, smsShareUrl } from '../../utils/shareLinks';
 
 const FRONTEND_URL = window.location.origin;
 
@@ -153,6 +154,24 @@ export default function OrderTracking() {
         >
           {linkCopied ? '✓ Link Copied!' : '🔗 Share Tracking Link'}
         </button>
+        {order.recipientPhone && (
+          <>
+            <a
+              href={whatsappShareUrl({ phone: order.recipientPhone, orderNumber: order.orderNumber, orderId })}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              💬 WhatsApp
+            </a>
+            <a
+              href={smsShareUrl({ phone: order.recipientPhone, orderNumber: order.orderNumber, orderId })}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              ✉️ SMS
+            </a>
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

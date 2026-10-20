@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { orderAPI } from '../../services/api';
+import { whatsappShareUrl, smsShareUrl } from '../../utils/shareLinks';
 
 const FRONTEND_URL = window.location.origin;
 
@@ -148,6 +149,26 @@ export default function StoreOrders() {
                           >
                             {copiedId === order.id ? '✓ Copied' : '🔗'}
                           </button>
+                        )}
+                        {(isActive || order.status === 'DELIVERED') && order.recipientPhone && (
+                          <>
+                            <a
+                              href={whatsappShareUrl({ phone: order.recipientPhone, orderNumber: order.orderNumber, orderId: order.id })}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-green-700 hover:underline font-semibold"
+                              title="Send tracking link on WhatsApp"
+                            >
+                              WhatsApp
+                            </a>
+                            <a
+                              href={smsShareUrl({ phone: order.recipientPhone, orderNumber: order.orderNumber, orderId: order.id })}
+                              className="text-xs text-primary-600 hover:underline font-semibold"
+                              title="Send tracking link by SMS"
+                            >
+                              SMS
+                            </a>
+                          </>
                         )}
                       </div>
                     </td>
