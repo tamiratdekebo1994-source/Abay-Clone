@@ -1,6 +1,14 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { authAPI } from '../services/api';
 
+// Persists the session so a page refresh restores the role as well as the id.
+// Role-protected routes depend on it.
+export function saveSession(accessToken, user) {
+  localStorage.setItem('accessToken', accessToken);
+  localStorage.setItem('userId', user.uid);
+  localStorage.setItem('userRole', user.role || '');
+}
+
 export const login = createAsyncThunk('auth/login', async (credentials, { rejectWithValue }) => {
   try {
     console.log('Attempting login with:', credentials);
@@ -9,8 +17,7 @@ export const login = createAsyncThunk('auth/login', async (credentials, { reject
     if (!data.success) {
       return rejectWithValue(data.message || 'Login failed');
     }
-    localStorage.setItem('accessToken', data.data.accessToken);
-    localStorage.setItem('userId', data.data.user.uid);
+    saveSession(data.data.accessToken, data.data.user);
     return data.data;
   } catch (err) {
     console.error('Login error:', err);
@@ -23,7 +30,7 @@ export const loadUser = createAsyncThunk('auth/loadUser', async (_, { rejectWith
   try {
     const token = localStorage.getItem('accessToken');
     if (!token) return null;
-    return { uid: localStorage.getItem('userId') };
+    return { uid: localStorage.getItem('userId'), role: localStorage.getItem('userRole') || null };
   } catch {
     return rejectWithValue(null);
   }
@@ -32,12 +39,21 @@ export const loadUser = createAsyncThunk('auth/loadUser', async (_, { rejectWith
 export const logout = createAsyncThunk('auth/logout', async () => {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('userId');
+  localStorage.removeItem('userRole');
 });
 
 const authSlice = createSlice({
   name: 'auth',
   initialState: { user: null, isAuthenticated: false, isLoading: true, error: null },
-  reducers: { clearError: (state) => { state.error = null; } },
+  reducers: {
+    clearError: (state) => { state.error = null; },
+    // Used after OTP sign-in, which doesn't go through the password login thunk.
+    sessionStarted: (state, { payload }) => {
+      state.isLoading = false;
+      state.isAuthenticated = true;
+      state.user = payload;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(login.pending, (state) => { state.isLoading = true; state.error = null; })
@@ -63,5 +79,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError } = authSlice.actions;
+export const { clearError, sessionStarted } = authSlice.actions;
 export default authSlice.reducer;

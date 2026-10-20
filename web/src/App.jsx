@@ -25,13 +25,15 @@ import AdminFraudPage from './pages/admin/AdminFraudPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import StoreProfile from './pages/store/StoreProfile';
 import PaymentResult from './pages/store/PaymentResult';
+import CustomerAuthPage from './pages/customer/CustomerAuthPage';
+import CustomerOrdersPage from './pages/customer/CustomerOrdersPage';
 import Layout from './components/Layout';
 import TrackingPage from './pages/TrackingPage';
 
 function PrivateRoute({ children, roles }) {
   const { isAuthenticated, user, isLoading } = useSelector((s) => s.auth);
   if (isLoading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent" /></div>;
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAuthenticated) return <Navigate to={roles?.includes('CUSTOMER') ? '/customer/login' : '/login'} replace />;
   if (roles && !roles.includes(user?.role)) return <Navigate to="/" replace />;
   return children;
 }
@@ -51,6 +53,10 @@ export default function App() {
 
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+
+      {/* Customer Routes — phone OTP sign-in, own page (no sidebar layout) */}
+      <Route path="/customer/login" element={<CustomerAuthPage />} />
+      <Route path="/customer" element={<PrivateRoute roles={['CUSTOMER']}><CustomerOrdersPage /></PrivateRoute>} />
 
       {/* Store Routes */}
       <Route path="/store" element={<PrivateRoute roles={['STORE']}><Layout /></PrivateRoute>}>
@@ -84,6 +90,7 @@ export default function App() {
         <PrivateRoute>
           {user?.role === 'ADMIN' ? <Navigate to="/admin" replace /> :
            user?.role === 'STORE' ? <Navigate to="/store" replace /> :
+           user?.role === 'CUSTOMER' ? <Navigate to="/customer" replace /> :
            <Navigate to="/login" replace />}
         </PrivateRoute>
       } />

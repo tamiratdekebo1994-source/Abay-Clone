@@ -126,6 +126,18 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
+// Canonical form for Ethiopian numbers (251XXXXXXXXX), so an order's recipient
+// phone can be matched against a customer's login phone regardless of how the
+// store typed it ("0911…", "911…", "+251 911…").
+const normalizeEthiopiaPhone = (raw) => {
+  const digits = String(raw || '').replace(/\D/g, '');
+  if (!digits) return null;
+  if (digits.startsWith('251')) return digits;
+  if (digits.startsWith('0')) return `251${digits.slice(1)}`;
+  if (digits.length === 9) return `251${digits}`;
+  return digits;
+};
+
 // ─── Auth Routes ────────────────────────────────────────────────────────────
 
 app.post('/register', async (req, res) => {
@@ -444,6 +456,12 @@ app.post('/auth/register/complete', async (req, res) => {
     if (decoded.purpose !== 'REGISTER' || !decoded.phone) {
       return res.status(401).json({ success: false, message: 'Invalid verification token' });
     }
+    // Self-service sign-up is only for stores and customers. Drivers and admins
+    // are provisioned through their own flows, never from this public endpoint.
+    if (!['STORE', 'CUSTOMER'].includes(role)) {
+      return res.status(400).json({ success: false, message: 'Role must be STORE or CUSTOMER' });
+    }
+
     const phone = decoded.phone;
 
     const existing = await db.collection('users').where('phone', '==', phone).limit(1).get();
@@ -1194,6 +1212,7 @@ app.post('/orders', verifyToken, async (req, res) => {
       deliveryLng: Number(deliveryLng),
       recipientName: recipientName || '',
       recipientPhone: recipientPhone || '',
+      recipientPhoneNormalized: normalizeEthiopiaPhone(recipientPhone),
       description: description || '',
       weight: weight ? Number(weight) : null,
       isFragile: !!isFragile,
@@ -1473,6 +1492,89 @@ app.get('/orders', verifyToken, async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── Customer Routes ────────────────────────────────────────────────────────
+// Customers sign in with phone OTP (same /auth/otp/* flow as everyone else) and
+// see the orders where they are the recipient. Ownership is the order's
+// recipientPhoneNormalized matching the customer's own phone.
+
+const requireCustomer = async (req, res) => {
+  const userDoc = await db.collection('users').doc(req.userId).get();
+  if (!userDoc.exists || userDoc.data().role !== 'CUSTOMER') {
+    res.status(403).json({ success: false, message: 'Customer account required' });
+    return null;
+  }
+  const phone = normalizeEthiopiaPhone(userDoc.data().phone);
+  if (!phone) {
+    res.status(400).json({ success: false, message: 'Account has no phone number' });
+    return null;
+  }
+  return phone;
+};
+
+app.get('/customer/orders', verifyToken, async (req, res) => {
+  try {
+    const phone = await requireCustomer(req, res);
+    if (!phone) return;
+
+    const snapshot = await db.collection('orders').where('recipientPhoneNormalized', '==', phone).get();
+    const orders = [];
+    snapshot.forEach((doc) => orders.push({ id: doc.id, ...doc.data() }));
+    orders.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+
+    res.json({ success: true, data: { orders } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/customer/orders/:orderId/review', verifyToken, async (req, res) => {
+  try {
+    const phone = await requireCustomer(req, res);
+    if (!phone) return;
+
+    const ratingNum = Number(req.body.rating);
+    if (!ratingNum || ratingNum < 1 || ratingNum > 5) {
+      return res.status(400).json({ success: false, message: 'rating must be between 1 and 5' });
+    }
+
+    const orderRef = db.collection('orders').doc(req.params.orderId);
+    const doc = await orderRef.get();
+    if (!doc.exists) return res.status(404).json({ success: false, message: 'Order not found' });
+    const data = doc.data();
+
+    if (data.recipientPhoneNormalized !== phone) {
+      return res.status(403).json({ success: false, message: 'This order is not yours to review' });
+    }
+    if (data.status !== 'DELIVERED') {
+      return res.status(400).json({ success: false, message: 'Order must be delivered before it can be reviewed' });
+    }
+    if (data.customerReview) {
+      return res.status(400).json({ success: false, message: 'You have already reviewed this order' });
+    }
+
+    const comment = typeof req.body.comment === 'string' ? req.body.comment.trim().slice(0, 500) : '';
+    await orderRef.update({
+      customerReview: { rating: ratingNum, comment: comment || null, createdAt: admin.firestore.FieldValue.serverTimestamp() },
+    });
+
+    if (data.driverId) {
+      await db.runTransaction(async (tx) => {
+        const driverRef = db.collection('drivers').doc(data.driverId);
+        const driverDoc = await tx.get(driverRef);
+        const current = driverDoc.data() || {};
+        const prevCount = current.ratingCount || 0;
+        const prevRating = current.rating || 0;
+        const newCount = prevCount + 1;
+        tx.update(driverRef, { rating: (prevRating * prevCount + ratingNum) / newCount, ratingCount: newCount });
+      }).catch((err) => console.error('Driver rating rollup failed:', err.message));
+    }
+
+    res.json({ success: true, message: 'Thanks for your review' });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
   }
 });
 

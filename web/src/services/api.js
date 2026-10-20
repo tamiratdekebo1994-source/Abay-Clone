@@ -38,7 +38,13 @@ export const authAPI = {
   register: (data) => api.post('/register', data),
   requestOtp: (phone, purpose) => api.post('/auth/otp/request', { phone, purpose }),
   verifyOtpRegister: (phone, code) => api.post('/auth/otp/verify-register', { phone, code }),
+  verifyOtpLogin: (phone, code) => api.post('/auth/otp/verify-login', { phone, code }),
   completeRegistration: (data) => api.post('/auth/register/complete', data),
+};
+
+export const customerAPI = {
+  getOrders: () => api.get('/customer/orders'),
+  reviewOrder: (orderId, data) => api.post(`/customer/orders/${orderId}/review`, data),
 };
 
 export const driverAPI = {
