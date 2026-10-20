@@ -175,6 +175,18 @@ app.post('/register', async (req, res) => {
   }
 });
 
+const findAccountByLogin = async ({ phone, email }) => {
+  if (phone) {
+    const snap = await db.collection('users').where('phone', '==', phone).limit(1).get();
+    if (!snap.empty) return snap.docs[0];
+  }
+  if (email) {
+    const snap = await db.collection('users').where('email', '==', email).limit(1).get();
+    if (!snap.empty) return snap.docs[0];
+  }
+  return null;
+};
+
 app.post('/login', async (req, res) => {
   try {
     console.log('Login request received');
@@ -201,6 +213,14 @@ app.post('/login', async (req, res) => {
     }
 
     if (!isValid) {
+      // Not the admin: check a store or customer account's password hash.
+      const accountDoc = await findAccountByLogin({ phone, email });
+      const account = accountDoc?.data();
+      if (account?.passwordHash && await bcrypt.compare(password, account.passwordHash)) {
+        const accessToken = jwt.sign({ uid: accountDoc.id, phone: account.phone }, 'et-spark-secret-key', { expiresIn: '7d' });
+        const { passwordHash, ...safeUser } = account;
+        return res.json({ success: true, data: { accessToken, user: { uid: accountDoc.id, ...safeUser } } });
+      }
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
@@ -442,9 +462,12 @@ app.post('/auth/firebase/provision-simple', async (req, res) => {
 // phone number can't be spoofed by the client) rather than a raw phone field.
 app.post('/auth/register/complete', async (req, res) => {
   try {
-    const { verificationToken, fullName, email, role } = req.body;
+    const { verificationToken, fullName, email, role, password } = req.body;
     if (!verificationToken || !fullName || !role) {
       return res.status(400).json({ success: false, message: 'verificationToken, fullName, and role are required' });
+    }
+    if (role === 'STORE' && (typeof password !== 'string' || password.length < 8)) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
     }
 
     let decoded;
@@ -486,6 +509,7 @@ app.post('/auth/register/complete', async (req, res) => {
       email: email || null,
       role,
       isVerified: true,
+      ...(password ? { passwordHash: await bcrypt.hash(password, 10) } : {}),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });

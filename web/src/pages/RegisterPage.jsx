@@ -42,6 +42,10 @@ export default function RegisterPage() {
   const [countdown, setCountdown] = useState(0);
   const [verificationToken, setVerificationToken] = useState('');
 
+  // Step 2 - Personal (password is what the store signs in with)
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
   // Step 2 - Personal
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -95,10 +99,12 @@ export default function RegisterPage() {
 
   const createAccount = async () => {
     if (!fullName.trim()) { setError('Please enter your full name'); return; }
+    if (password.length < 8) { setError('Password must be at least 8 characters'); return; }
+    if (password !== confirmPassword) { setError('Passwords do not match'); return; }
     setIsLoading(true); setError('');
     try {
       const { data } = await authAPI.completeRegistration({
-        verificationToken, fullName, email: email || undefined, role: 'STORE',
+        verificationToken, fullName, email: email || undefined, role: 'STORE', password,
       });
       if (!data.success) { setError(data.message); return; }
       // Start the session in Redux too, or the role guard sends the user back to login.
@@ -232,6 +238,14 @@ export default function RegisterPage() {
                 <div>
                   <label className="label">Email (optional)</label>
                   <input className="input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" />
+                </div>
+                <div>
+                  <label className="label">Password * (at least 8 characters)</label>
+                  <input className="input" type="password" value={password} onChange={e => { setPassword(e.target.value); setError(''); }} placeholder="Choose a password" autoComplete="new-password" />
+                </div>
+                <div>
+                  <label className="label">Confirm Password *</label>
+                  <input className="input" type="password" value={confirmPassword} onChange={e => { setConfirmPassword(e.target.value); setError(''); }} placeholder="Type it again" autoComplete="new-password" />
                 </div>
               </div>
 
