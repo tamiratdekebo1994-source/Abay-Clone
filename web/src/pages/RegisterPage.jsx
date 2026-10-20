@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { authAPI, storeAPI } from '../services/api';
+import { saveSession, sessionStarted } from '../store/authSlice';
 
 const STEP_LABELS = ['Phone Verification', 'Your Details', 'Store Information'];
 
@@ -28,6 +30,7 @@ const ADDIS_SUBCITIES = [
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -98,8 +101,9 @@ export default function RegisterPage() {
         verificationToken, fullName, email: email || undefined, role: 'STORE',
       });
       if (!data.success) { setError(data.message); return; }
-      localStorage.setItem('accessToken', data.data.accessToken);
-      localStorage.setItem('userId', data.data.user?.uid);
+      // Start the session in Redux too, or the role guard sends the user back to login.
+      saveSession(data.data.accessToken, data.data.user);
+      dispatch(sessionStarted(data.data.user));
       setStep(3);
     } catch (err) { setError(err.response?.data?.message || 'Failed to create account.'); }
     finally { setIsLoading(false); }
