@@ -14,7 +14,8 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      navigate(user.role === 'ADMIN' ? '/admin' : '/store', { replace: true });
+      const home = { ADMIN: '/admin', CUSTOMER: '/customer' }[user.role] || '/store';
+      navigate(home, { replace: true });
     }
   }, [isAuthenticated, user]);
 
@@ -96,7 +97,7 @@ export default function LoginPage() {
         </p>
         <p className="text-center text-primary/70 text-sm mt-3">
           Customer?{' '}
-          <Link to="/customer/login" className="text-primary font-bold hover:text-primary-700 transition-colors">Sign in with a phone code</Link>
+          <Link to="/customer/login" className="text-primary font-bold hover:text-primary-700 transition-colors">Sign in with a code</Link>
         </p>
         <p className="text-center text-primary/50 text-xs mt-3">© 2025 ET SPARK • Powering Ethiopia</p>
       </div>
