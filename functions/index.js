@@ -197,18 +197,19 @@ app.post('/login', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Password required' });
     }
 
-    // Hardcoded admin credentials for testing
-    const adminPhone = '+251972735128';
-    const adminEmail = 'admin@etspark.et';
-    const adminPassword = 'Admin@1234';
+    // Admin credentials come from Secret Manager (see exports.api below), never from source.
+    // If a secret is missing, admin sign-in is disabled rather than falling back to a default.
+    const adminPhone = process.env.ADMIN_PHONE;
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
     const adminUID = 'D5eaxB7sbyTxFahEOL2kX9mqbkN2';
 
     // Check credentials - accept either phone or email
     let isValid = false;
-    if (phone && phone === adminPhone && password === adminPassword) {
+    if (adminPassword && phone && phone === adminPhone && password === adminPassword) {
       isValid = true;
       email = adminEmail; // Convert phone to email for consistency
-    } else if (email && email === adminEmail && password === adminPassword) {
+    } else if (adminPassword && email && email === adminEmail && password === adminPassword) {
       isValid = true;
     }
 
@@ -2905,6 +2906,9 @@ app.get('/test', (req, res) => {
 
 // ─── Export Functions ───────────────────────────────────────────────────────
 
+// ADMIN_PHONE, ADMIN_EMAIL and ADMIN_PASSWORD are Secret Manager secrets.
+// Set them with `firebase functions:secrets:set <NAME>` before deploying.
 exports.api = functions
+  .runWith({ secrets: ['ADMIN_PHONE', 'ADMIN_EMAIL', 'ADMIN_PASSWORD'] })
   .region('europe-west1')
   .https.onRequest(app);
