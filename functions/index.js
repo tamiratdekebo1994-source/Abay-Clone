@@ -2717,9 +2717,7 @@ app.get('/test', (req, res) => {
 
 // ─── Export Functions ───────────────────────────────────────────────────────
 
-// ADMIN_PHONE, ADMIN_EMAIL and ADMIN_PASSWORD are Secret Manager secrets.
-// Set them with `firebase functions:secrets:set <NAME>` before deploying.
+// No Secret Manager secrets are needed: admin sign-in uses Firebase Auth.
 exports.api = functions
-  .runWith({ secrets: ['ADMIN_PHONE', 'ADMIN_EMAIL', 'ADMIN_PASSWORD'] })
   .region('europe-west1')
   .https.onRequest(app);
