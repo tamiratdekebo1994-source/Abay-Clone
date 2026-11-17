@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { auth } from './firebase';
 
 const API_ORIGIN = import.meta.env.VITE_API_BASE_URL || 'https://europe-west1-abay-clone-project-36721.cloudfunctions.net/api';
 
@@ -15,8 +16,15 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
+// Firebase sessions (admin and store) get a fresh ID token on every request.
+// Phone-code sessions (customers, new sign-ups) use the token saved at sign-in.
+export async function getAuthToken() {
+  if (auth.currentUser) return auth.currentUser.getIdToken();
+  return localStorage.getItem('accessToken');
+}
+
+api.interceptors.request.use(async (config) => {
+  const token = await getAuthToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -34,7 +42,7 @@ api.interceptors.response.use(
 );
 
 export const authAPI = {
-  login: (data) => api.post('/login', data),
+  me: () => api.get('/auth/me'),
   register: (data) => api.post('/register', data),
   requestOtp: (phone, purpose) => api.post('/auth/otp/request', { phone, purpose }),
   verifyOtpRegister: (phone, code) => api.post('/auth/otp/verify-register', { phone, code }),
@@ -109,7 +117,7 @@ export const notificationAPI = {
 };
 
 export async function downloadCSV(path, filename) {
-  const token = localStorage.getItem('accessToken');
+  const token = await getAuthToken();
   const res = await fetch(`${API_ORIGIN}${path}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });

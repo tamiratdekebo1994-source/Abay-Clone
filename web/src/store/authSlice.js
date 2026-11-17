@@ -1,5 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { authAPI } from '../services/api';
+import { auth } from '../services/firebase';
 
 // Persists the session so a page refresh restores the role as well as the id.
 // Role-protected routes depend on it.
@@ -9,17 +11,35 @@ export function saveSession(accessToken, user) {
   localStorage.setItem('userRole', user.role || '');
 }
 
-export const login = createAsyncThunk('auth/login', async (credentials, { rejectWithValue }) => {
+const FIREBASE_LOGIN_ERRORS = [
+  'auth/invalid-credential',
+  'auth/invalid-email',
+  'auth/user-not-found',
+  'auth/wrong-password',
+  'auth/missing-password',
+];
+
+// Admin and store sign-in: Firebase Auth email and password, then the backend
+// profile (role) for that Firebase user.
+export const login = createAsyncThunk('auth/login', async ({ email, password }, { rejectWithValue }) => {
   try {
-    console.log('Attempting login with:', credentials);
-    const { data } = await authAPI.login(credentials);
-    console.log('Login response:', data);
-    if (!data.success) {
-      return rejectWithValue(data.message || 'Login failed');
+    await signInWithEmailAndPassword(auth, email, password);
+    const { data } = await authAPI.me();
+    const user = data.data;
+    if (user.role === 'CUSTOMER') {
+      await signOut(auth);
+      return rejectWithValue('Customers sign in with a phone code at /customer/login');
     }
-    saveSession(data.data.accessToken, data.data.user);
-    return data.data;
+    const accessToken = await auth.currentUser.getIdToken();
+    saveSession(accessToken, user);
+    return { accessToken, user };
   } catch (err) {
+    if (FIREBASE_LOGIN_ERRORS.includes(err.code)) {
+      return rejectWithValue('Invalid email or password');
+    }
+    if (err.code === 'auth/too-many-requests') {
+      return rejectWithValue('Too many attempts. Wait a few minutes and try again.');
+    }
     console.error('Login error:', err);
     const message = err.response?.data?.message || err.message || 'Network error - check your connection';
     return rejectWithValue(message);
@@ -37,6 +57,7 @@ export const loadUser = createAsyncThunk('auth/loadUser', async (_, { rejectWith
 });
 
 export const logout = createAsyncThunk('auth/logout', async () => {
+  await signOut(auth).catch(() => {});
   localStorage.removeItem('accessToken');
   localStorage.removeItem('userId');
   localStorage.removeItem('userRole');

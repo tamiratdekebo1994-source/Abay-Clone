@@ -140,129 +140,16 @@ const normalizeEthiopiaPhone = (raw) => {
 
 // ─── Auth Routes ────────────────────────────────────────────────────────────
 
-app.post('/register', async (req, res) => {
-  try {
-    if (!auth || !db) {
-      return res.status(503).json({ success: false, message: 'Auth service unavailable' });
-    }
-
-    const { phone, fullName, email, password, role } = req.body;
-
-    // Create Firebase Auth user
-    const userRecord = await auth.createUser({
-      email: email || `${phone}@etspark.et`,
-      password,
-    });
-
-    // Hash password for local verification
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    // Store user data in Firestore
-    await db.collection('users').doc(userRecord.uid).set({
-      phone,
-      fullName,
-      email: email || `${phone}@etspark.et`,
-      passwordHash,
-      role: role || 'STORE',
-      isVerified: true,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    res.json({ success: true, message: 'User registered', uid: userRecord.uid });
-  } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
-  }
+// Retired: this endpoint accepted any role from the request body, so anyone could
+// create an ADMIN account. Sign-up now goes through /auth/otp/* and /auth/register/complete.
+app.post('/register', (req, res) => {
+  res.status(410).json({ success: false, message: 'Use /auth/otp/request and /auth/register/complete to sign up' });
 });
 
-const findAccountByLogin = async ({ phone, email }) => {
-  if (phone) {
-    const snap = await db.collection('users').where('phone', '==', phone).limit(1).get();
-    if (!snap.empty) return snap.docs[0];
-  }
-  if (email) {
-    const snap = await db.collection('users').where('email', '==', email).limit(1).get();
-    if (!snap.empty) return snap.docs[0];
-  }
-  return null;
-};
-
-app.post('/login', async (req, res) => {
-  try {
-    console.log('Login request received');
-
-    let { email, phone, password } = req.body;
-
-    if (!password) {
-      return res.status(400).json({ success: false, message: 'Password required' });
-    }
-
-    // Admin credentials come from Secret Manager (see exports.api below), never from source.
-    // If a secret is missing, admin sign-in is disabled rather than falling back to a default.
-    const adminPhone = process.env.ADMIN_PHONE;
-    const adminEmail = process.env.ADMIN_EMAIL;
-    const adminPassword = process.env.ADMIN_PASSWORD;
-    const adminUID = 'D5eaxB7sbyTxFahEOL2kX9mqbkN2';
-
-    // Check credentials - accept either phone (any common format) or email.
-    const phoneMatchesAdmin = !!phone && !!adminPhone
-      && normalizeEthiopiaPhone(phone) === normalizeEthiopiaPhone(adminPhone);
-    const emailMatchesAdmin = !!email && !!adminEmail && email.trim().toLowerCase() === adminEmail.trim().toLowerCase();
-    const passwordMatchesAdmin = !!adminPassword && password === adminPassword;
-
-    let isValid = false;
-    if (passwordMatchesAdmin && phoneMatchesAdmin) {
-      isValid = true;
-      email = adminEmail; // Convert phone to email for consistency
-    } else if (passwordMatchesAdmin && emailMatchesAdmin) {
-      isValid = true;
-    }
-    if (!isValid && (phoneMatchesAdmin || emailMatchesAdmin)) {
-      // Log which check failed, never the values themselves.
-      console.warn(`Admin login rejected: identifier matched=${phoneMatchesAdmin || emailMatchesAdmin}, password matched=${passwordMatchesAdmin}`);
-    }
-
-    if (!isValid) {
-      // Not the env-configured admin: check a store or customer account's password hash.
-      // ADMIN records are excluded so an admin's stored hash can never grant admin access.
-      const accountDoc = await findAccountByLogin({ phone, email });
-      const account = accountDoc?.data();
-      if (account && account.role !== 'ADMIN' && account.passwordHash && await bcrypt.compare(password, account.passwordHash)) {
-        const accessToken = jwt.sign({ uid: accountDoc.id, phone: account.phone }, 'et-spark-secret-key', { expiresIn: '7d' });
-        const { passwordHash, ...safeUser } = account;
-        return res.json({ success: true, data: { accessToken, user: { uid: accountDoc.id, ...safeUser } } });
-      }
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
-    }
-
-    // Create JWT token
-    const accessToken = jwt.sign(
-      { uid: adminUID, email: adminEmail },
-      'et-spark-secret-key',
-      { expiresIn: '7d' }
-    );
-
-    const userData = {
-      uid: adminUID,
-      email: adminEmail,
-      phone: adminPhone,
-      fullName: 'ET SPARK Admin',
-      role: 'ADMIN',
-      isVerified: true
-    };
-
-    res.json({
-      success: true,
-      data: {
-        accessToken,
-        user: userData
-      }
-    });
-
-  } catch (err) {
-    console.error('Login error:', err.message);
-    res.status(500).json({ success: false, message: err.message || 'Login failed' });
-  }
+// Retired: admin and store sign-in now goes through Firebase Auth on the client
+// (see web/src/store/authSlice.js). Kept as a 410 so old clients get a clear answer.
+app.post('/login', (req, res) => {
+  res.status(410).json({ success: false, message: 'Password login has moved to Firebase sign-in. Update the app.' });
 });
 
 app.get('/auth/me', async (req, res) => {
@@ -477,6 +364,9 @@ app.post('/auth/register/complete', async (req, res) => {
     if (!verificationToken || !fullName || !role) {
       return res.status(400).json({ success: false, message: 'verificationToken, fullName, and role are required' });
     }
+    if (role === 'STORE' && !email) {
+      return res.status(400).json({ success: false, message: 'Email is required for store accounts' });
+    }
     if (role === 'STORE' && (typeof password !== 'string' || password.length < 8)) {
       return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
     }
@@ -503,12 +393,25 @@ app.post('/auth/register/complete', async (req, res) => {
       return res.status(409).json({ success: false, message: 'An account with this phone number already exists' });
     }
 
+    // Stores get a Firebase Auth email and password so they can sign in on the web.
+    // Customers have no password; they sign in with the phone code.
+    const credentials = {
+      displayName: fullName,
+      ...(email ? { email } : {}),
+      ...(role === 'STORE' ? { password } : {}),
+    };
+
     let userRecord;
     try {
-      userRecord = await auth.createUser({ phoneNumber: phone, email: email || undefined, displayName: fullName });
+      userRecord = await auth.createUser({ phoneNumber: phone, ...credentials });
     } catch (createErr) {
+      if (createErr.code === 'auth/email-already-exists') {
+        return res.status(409).json({ success: false, message: 'An account with this email already exists' });
+      }
       if (createErr.code === 'auth/phone-number-already-exists') {
+        // Orphaned Firebase Auth account from earlier testing: reuse it and set the new credentials.
         userRecord = await auth.getUserByPhoneNumber(phone);
+        await auth.updateUser(userRecord.uid, credentials);
       } else {
         throw createErr;
       }
@@ -520,7 +423,6 @@ app.post('/auth/register/complete', async (req, res) => {
       email: email || null,
       role,
       isVerified: true,
-      ...(password ? { passwordHash: await bcrypt.hash(password, 10) } : {}),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
@@ -2791,107 +2693,6 @@ app.patch('/admin/settings/commission', verifyToken, async (req, res) => {
 
     res.json({ success: true, message: 'Commission settings updated' });
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
-  }
-});
-
-// ─── Debug endpoint to check user data ──────────────────────────────────────
-
-app.get('/debug/user/:email', async (req, res) => {
-  try {
-    const { email } = req.params;
-    console.log(`Checking user: ${email}`);
-
-    let user;
-    try {
-      user = await auth.getUserByEmail(email);
-      console.log(`Found in Auth: ${user.uid}`);
-    } catch (err) {
-      return res.json({ success: false, message: `Not in Auth: ${err.message}` });
-    }
-
-    const userDoc = await db.collection('users').doc(user.uid).get();
-    console.log(`Firestore doc exists: ${userDoc.exists}`);
-
-    res.json({
-      success: true,
-      authUser: {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName
-      },
-      firestoreDoc: userDoc.exists ? userDoc.data() : null
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-// ─── Admin Setup (One-time) ─────────────────────────────────────────────────
-
-app.post('/admin/setup-password', async (req, res) => {
-  try {
-    const { email, phone, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Email and password required' });
-    }
-
-    console.log(`Setting up password for: ${email}, phone: ${phone}`);
-
-    let user;
-    try {
-      user = await auth.getUserByEmail(email);
-      console.log(`Found user: ${user.uid}`);
-    } catch (err) {
-      console.error(`User lookup failed: ${err.code} - ${err.message}`);
-      return res.status(404).json({ success: false, message: 'User not found in Firebase Auth' });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 10);
-    console.log(`Password hashed`);
-
-    // Try to update existing document
-    const userRef = db.collection('users').doc(user.uid);
-
-    try {
-      const userDoc = await userRef.get();
-      console.log(`Document exists: ${userDoc.exists}`);
-
-      if (userDoc.exists) {
-        // Update existing document
-        await userRef.update({
-          passwordHash,
-          phone: phone || userDoc.data().phone,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-        console.log(`Document updated`);
-      } else {
-        // Create new document
-        await userRef.set({
-          uid: user.uid,
-          email: user.email,
-          phone: phone,
-          fullName: user.displayName || 'Admin',
-          passwordHash,
-          role: 'ADMIN',
-          isVerified: true,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-        console.log(`Document created`);
-      }
-
-      res.json({ success: true, message: 'Password setup complete', userId: user.uid });
-    } catch (err) {
-      console.error(`Firestore error: ${err.code} - ${err.message}`, err);
-      res.status(400).json({
-        success: false,
-        message: `Firestore error: ${err.message}`,
-        code: err.code
-      });
-    }
-  } catch (err) {
-    console.error('Setup password error:', err);
     res.status(400).json({ success: false, message: err.message });
   }
 });

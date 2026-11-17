@@ -21,9 +21,7 @@ export default function LoginPage() {
 
   const handlePasswordLogin = (e) => {
     e.preventDefault();
-    // An "@" means email; anything else is treated as a phone number.
-    const value = identifier.trim();
-    dispatch(login(value.includes('@') ? { email: value, password } : { phone: value, password }));
+    dispatch(login({ email: identifier.trim(), password }));
   };
 
   return (
@@ -58,14 +56,14 @@ export default function LoginPage() {
 
             <form onSubmit={handlePasswordLogin}>
               <div className="mb-4">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Phone or Email</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Email</label>
                 <input
-                  type="text"
+                  type="email"
                   autoComplete="username"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   value={identifier}
                   onChange={(e) => { setIdentifier(e.target.value); dispatch(clearError()); }}
-                  placeholder="+251 9XX XXX XXX or you@example.com"
+                  placeholder="you@example.com"
                   required
                 />
               </div>

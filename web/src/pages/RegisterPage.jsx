@@ -99,12 +99,13 @@ export default function RegisterPage() {
 
   const createAccount = async () => {
     if (!fullName.trim()) { setError('Please enter your full name'); return; }
+    if (!email.trim()) { setError('Please enter your email'); return; }
     if (password.length < 8) { setError('Password must be at least 8 characters'); return; }
     if (password !== confirmPassword) { setError('Passwords do not match'); return; }
     setIsLoading(true); setError('');
     try {
       const { data } = await authAPI.completeRegistration({
-        verificationToken, fullName, email: email || undefined, role: 'STORE', password,
+        verificationToken, fullName, email: email.trim(), role: 'STORE', password,
       });
       if (!data.success) { setError(data.message); return; }
       // Start the session in Redux too, or the role guard sends the user back to login.
@@ -236,8 +237,8 @@ export default function RegisterPage() {
                   <input className="input" value={fullName} onChange={e => { setFullName(e.target.value); setError(''); }} placeholder="e.g. Almaz Tadesse" autoFocus />
                 </div>
                 <div>
-                  <label className="label">Email (optional)</label>
-                  <input className="input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" />
+                  <label className="label">Email * (you sign in with this)</label>
+                  <input className="input" type="email" value={email} onChange={e => { setEmail(e.target.value); setError(''); }} placeholder="you@example.com" required />
                 </div>
                 <div>
                   <label className="label">Password * (at least 8 characters)</label>

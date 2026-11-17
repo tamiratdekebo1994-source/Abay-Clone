@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { io } from 'socket.io-client';
-import { orderAPI, chatAPI, SOCKET_URL } from '../../services/api';
+import { orderAPI, chatAPI, SOCKET_URL, getAuthToken } from '../../services/api';
 import { useSelector } from 'react-redux';
 import { whatsappShareUrl, smsShareUrl } from '../../utils/shareLinks';
 
@@ -102,8 +102,7 @@ export default function OrderTracking() {
   };
 
   const setupSocket = () => {
-    const token = localStorage.getItem('accessToken');
-    const socket = io(SOCKET_URL, { auth: { token } });
+    const socket = io(SOCKET_URL, { auth: async (cb) => cb({ token: await getAuthToken() }) });
 
     socket.emit('join_order', orderId);
     socket.on('driver_location', ({ lat, lng }) => setDriverPos([lat, lng]));

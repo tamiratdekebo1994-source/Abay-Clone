@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate, useLocation, Link } from 'react-router-do
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../store/authSlice';
 import { io } from 'socket.io-client';
-import { SOCKET_URL } from '../services/api';
+import { SOCKET_URL, getAuthToken } from '../services/api';
 import ErrorBoundary from './ErrorBoundary';
 
 const storeNav = [
@@ -41,8 +41,8 @@ export default function Layout() {
   // Real-time order alerts for store users
   useEffect(() => {
     if (user?.role !== 'STORE') return;
-    const token = localStorage.getItem('accessToken');
-    const socket = io(SOCKET_URL, { auth: { token } });
+    // Function form, so reconnects send a fresh Firebase token instead of an expired one.
+    const socket = io(SOCKET_URL, { auth: async (cb) => cb({ token: await getAuthToken() }) });
 
     socket.on('order_status_updated', (data) => {
       setOrderAlert({ ...data, ts: Date.now() });

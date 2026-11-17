@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import { signOut } from 'firebase/auth';
 import api, { authAPI } from '../../services/api';
+import { auth } from '../../services/firebase';
 import { saveSession, sessionStarted } from '../../store/authSlice';
 
 // Phone sign-in for customers. A new number signs up with a name; an existing
@@ -37,6 +39,8 @@ export default function CustomerAuthPage() {
   };
 
   const startSession = async (accessToken) => {
+    // A leftover admin or store Firebase session would override this token on every request.
+    await signOut(auth).catch(() => {});
     localStorage.setItem('accessToken', accessToken);
     const { data } = await api.get('/auth/me');
     const me = data.data;
